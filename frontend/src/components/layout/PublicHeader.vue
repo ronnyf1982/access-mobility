@@ -16,9 +16,9 @@
       </nav>
 
       <!-- CTA -->
-      <RouterLink to="/dashboard" class="am-btn am-btn-primary pub-cta">
-        <i class="pi pi-user" aria-hidden="true"></i>
-        Anmelden&nbsp;/&nbsp;Registrieren
+      <RouterLink to="/login" class="am-btn am-btn-primary pub-cta">
+        <i class="pi pi-sign-in" aria-hidden="true"></i>
+        Anmelden
       </RouterLink>
     </div>
   </header>

@@ -12,6 +12,24 @@
       </RouterLink>
     </div>
 
+    <!-- Rollen-Kontext -->
+    <div v-if="authStore.user" class="role-context" role="region" aria-label="Ihr Konto">
+      <div class="role-context-inner">
+        <div class="role-context-icon" aria-hidden="true">
+          <i class="pi pi-user"></i>
+        </div>
+        <div class="role-context-text">
+          <span class="role-context-name">
+            Willkommen, <strong>{{ authStore.fullName }}</strong>
+          </span>
+          <span class="role-context-desc">
+            <span class="am-badge am-badge-neutral role-badge">{{ currentRoleLabel }}</span>
+            {{ currentRoleContext }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- KPI Kacheln -->
     <div class="kpi-grid" role="region" aria-label="Kennzahlen">
       <div class="kpi-card am-card" v-for="kpi in kpiCards" :key="kpi.label">
@@ -167,6 +185,16 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { ROLE_LABELS, ROLE_CONTEXT } from '@/types'
+
+const authStore = useAuthStore()
+const currentRoleLabel = computed(() =>
+  authStore.role ? ROLE_LABELS[authStore.role] : 'Unbekannte Rolle',
+)
+const currentRoleContext = computed(() =>
+  authStore.role ? ROLE_CONTEXT[authStore.role] : '',
+)
 
 /* ── KPI-Kacheln ─────────────────────────────────────── */
 const kpiCards = [
@@ -685,6 +713,59 @@ const quickActions = [
 .map-sub {
   font-size: 0.7rem !important;
   color: var(--am-text-muted) !important;
+}
+
+/* Role context */
+.role-context {
+  background: var(--am-bg-surface);
+  border: 1px solid var(--am-border);
+  border-radius: var(--am-radius-m);
+  padding: var(--am-space-m) var(--am-space-l);
+}
+
+.role-context-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--am-space-m);
+}
+
+.role-context-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--am-accent-bg);
+  border: 1px solid rgba(255, 214, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--am-accent);
+  font-size: 1rem;
+}
+
+.role-context-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.role-context-name {
+  font-size: 0.9rem;
+  color: var(--am-text-primary);
+}
+
+.role-context-desc {
+  font-size: 0.82rem;
+  color: var(--am-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  flex-wrap: wrap;
+}
+
+.role-badge {
+  font-size: 0.7rem;
+  flex-shrink: 0;
 }
 
 /* Quick Actions */

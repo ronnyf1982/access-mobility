@@ -193,6 +193,63 @@ dass Matching später ohne Umstrukturierung implementiert werden kann.
 
 ---
 
+## Auth & JWT (Sprint 3)
+
+**Bibliotheken:** `bcrypt==4.2.1` + `PyJWT==2.9.0`
+
+- `passlib` nicht verwendet — Abhängigkeit von `crypt`-Modul, das in Python 3.13 entfernt wurde.
+- `bcrypt` direkt verwendet (kein Zwischenschicht-Wrapper).
+- `PyJWT` statt `python-jose`: aktiver gepflegt, Python 3.13 kompatibel.
+
+**Token-Ablauf:** 60 Minuten (konfigurierbar via `ACCESS_TOKEN_EXPIRE_MINUTES` in `.env`).
+
+**Kein Refresh-Token:** Im MVP nur ein kurzlebiger Access-Token. Abgelaufene Tokens → erneuter Login.  
+Begründung: Refresh-Tokens erfordern serverseitigen Widerruf-Mechanismus (Datenbankeintrag oder Redis),
+was den MVP-Scope deutlich erweitert. Ein 60-Minuten-Token ist für interne Nutzer (Dispatcher, Admins)
+ausreichend. Im Produktivbetrieb (Phase 2): Keycloak/Auth0 mit Refresh-Tokens.
+
+---
+
+## Token-Speicherung im Frontend (MVP/Dev-only)
+
+**Entscheidung:** JWT wird in `localStorage` gespeichert (Key: `am_token`).
+
+**Risiko:** `localStorage` ist anfällig für XSS-Angriffe — im Gegensatz zu `httpOnly`-Cookies,
+die für JavaScript unzugänglich sind.
+
+**Begründung für MVP:**
+- Kein SSR, kein Cookie-basiertes Auth-Backend — ein `httpOnly`-Cookie würde einen separaten
+  Cookie-Endpoint und CSRF-Schutz erfordern.
+- Interne Plattform: keine öffentlich zugänglichen Seiten im Portal-Bereich.
+- Vite-Dev-Server: kein HTTPS, daher Secure-Cookies ohnehin nicht möglich.
+
+**Vorgesehene Ablösung:** In der Produktivversion (Phase 2) wird Auth über Keycloak/Auth0 mit
+`httpOnly`-Cookies oder Auth-Code-Flow mit PKCE ersetzt. Bis dahin gilt:
+- Kein `eval()`, kein dynamisches Script-Loading
+- Strikte Content-Security-Policy vorbereiten (Sprint 7+)
+
+---
+
+## Rollenmodell (Sprint 3)
+
+8 Rollen als Python `str`-Enum — werden im JWT-Payload als `role`-Claim mitgeführt:
+
+| Rolle                    | Beschreibung |
+|--------------------------|--------------|
+| `passenger`              | Fahrgast — bucht eigene Fahrten |
+| `trusted_person`         | Angehöriger/Betreuer — kann für Fahrgäste buchen (Berechtigungsmodell: TrustedRelationship) |
+| `organization_admin`     | Verwaltet Organisation, Mitglieder, Kontingente |
+| `organization_coordinator` | Bucht Fahrten für Org-Mitglieder |
+| `provider_admin`         | Verwaltet Fahrdienst, Fahrzeuge, Fahrer |
+| `dispatcher`             | Disponiert Fahrten, weist Fahrzeuge/Fahrer zu |
+| `driver`                 | Sieht und quittiert zugewiesene Aufträge |
+| `platform_admin`         | Vollzugriff auf alle Plattformfunktionen |
+
+Vollständiges RBAC (rollenbasierte UI-Einschränkungen) folgt in Sprint 6.
+Im MVP: Rolle wird im Dashboard angezeigt — Zugriffsbeschränkungen kommen schrittweise.
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
 - Auth/JWT: Sprint 3

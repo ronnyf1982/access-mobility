@@ -50,7 +50,14 @@ uvicorn app.main:app --reload --port 8010
 Backend läuft auf http://localhost:8010  
 Swagger UI: http://localhost:8010/docs
 
-### 4. Frontend starten (neues Terminal)
+### 4. Demo-Daten einmalig laden
+
+```bash
+cd backend
+python -m app.scripts.seed_demo_data
+```
+
+### 5. Frontend starten (neues Terminal)
 
 ```bash
 cd frontend
@@ -59,6 +66,21 @@ npm run dev
 ```
 
 Frontend läuft auf http://localhost:5180
+
+---
+
+## Demo-Zugangsdaten (alle mit Passwort `Access123!`)
+
+| E-Mail                    | Rolle                   |
+|---------------------------|-------------------------|
+| passenger@access.test     | Fahrgast                |
+| relative@access.test      | Vertrauensperson        |
+| orgadmin@access.test      | Organisations-Admin     |
+| coordinator@access.test   | Koordinator:in          |
+| provider@access.test      | Fahrdienst-Admin        |
+| dispatcher@access.test    | Disponent:in            |
+| driver@access.test        | Fahrer:in               |
+| admin@access.test         | Plattform-Admin         |
 
 ---
 
@@ -77,7 +99,7 @@ alembic upgrade head
 ```bash
 docker compose -f docker-compose.dev.yml down -v
 docker compose -f docker-compose.dev.yml up -d
-cd backend && alembic upgrade head
+cd backend && alembic upgrade head && python -m app.scripts.seed_demo_data
 ```
 
 ### Docker-Datenbank stoppen

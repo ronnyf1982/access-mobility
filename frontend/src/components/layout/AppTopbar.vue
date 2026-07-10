@@ -24,24 +24,42 @@
       <div class="topbar-divider" aria-hidden="true"></div>
 
       <!-- User -->
-      <div class="topbar-user" role="button" tabindex="0" aria-label="Benutzerprofil öffnen">
-        <div class="topbar-avatar" aria-hidden="true">MM</div>
+      <div class="topbar-user" role="group" aria-label="Benutzerkonto">
+        <div class="topbar-avatar" aria-hidden="true">{{ authStore.initials }}</div>
         <div class="topbar-user-info am-hide-mobile">
-          <span class="topbar-user-name">Max Mustermann</span>
-          <span class="topbar-user-role">Administrator</span>
+          <span class="topbar-user-name">{{ authStore.fullName || 'Kein Name' }}</span>
+          <span class="topbar-user-role">{{ roleLabel }}</span>
         </div>
-        <i class="pi pi-chevron-down topbar-chevron am-hide-mobile" aria-hidden="true"></i>
       </div>
+
+      <!-- Abmelden -->
+      <button
+        class="topbar-icon-btn topbar-logout"
+        aria-label="Abmelden"
+        title="Abmelden"
+        @click="handleLogout"
+      >
+        <i class="pi pi-sign-out" aria-hidden="true"></i>
+      </button>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from '@/stores/auth'
+import { ROLE_LABELS } from '@/types'
 
-const searchQuery = ref('')
+const authStore = useAuthStore()
+const router = useRouter()
 const toast = useToast()
+const searchQuery = ref('')
+
+const roleLabel = computed(
+  () => (authStore.role ? ROLE_LABELS[authStore.role] : 'Unbekannte Rolle'),
+)
 
 function showNotifications() {
   toast.add({
@@ -50,6 +68,11 @@ function showNotifications() {
     detail: 'Benachrichtigungsmodul folgt in einem späteren Sprint.',
     life: 3000,
   })
+}
+
+async function handleLogout() {
+  await authStore.logout()
+  await router.push('/login')
 }
 </script>
 
@@ -80,7 +103,7 @@ function showNotifications() {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--am-text-muted);
+  color: var(--am-text-secondary);
   font-size: 0.875rem;
   pointer-events: none;
 }
@@ -99,7 +122,7 @@ function showNotifications() {
 }
 
 .topbar-search-input::placeholder {
-  color: var(--am-text-muted);
+  color: var(--am-text-secondary);
 }
 
 .topbar-search-input:focus {
@@ -162,14 +185,8 @@ function showNotifications() {
   display: flex;
   align-items: center;
   gap: var(--am-space-s);
-  cursor: pointer;
   padding: 4px 8px;
   border-radius: var(--am-radius-s);
-  transition: background var(--am-transition);
-}
-
-.topbar-user:hover {
-  background: var(--am-bg-raised);
 }
 
 .topbar-avatar {
@@ -201,12 +218,13 @@ function showNotifications() {
 
 .topbar-user-role {
   font-size: 0.7rem;
-  color: var(--am-text-muted);
+  color: var(--am-text-secondary);
   line-height: 1.2;
 }
 
-.topbar-chevron {
-  color: var(--am-text-muted);
-  font-size: 0.7rem;
+.topbar-logout:hover {
+  color: var(--am-danger);
+  border-color: var(--am-danger);
+  background: var(--am-danger-bg);
 }
 </style>

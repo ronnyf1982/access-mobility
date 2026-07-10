@@ -34,21 +34,28 @@
       </template>
     </nav>
 
-    <!-- Support -->
+    <!-- Support + Abmelden -->
     <div class="sidebar-support">
       <div class="support-label">Support</div>
       <a href="mailto:support@access-mobility.de" class="sidebar-nav-item support-link">
         <i class="pi pi-question-circle" aria-hidden="true"></i>
         <span>Hilfe &amp; Support</span>
       </a>
+      <button class="sidebar-nav-item sidebar-logout" @click="handleLogout">
+        <i class="pi pi-sign-out" aria-hidden="true"></i>
+        <span>Abmelden</span>
+      </button>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 interface NavItem {
   label: string
@@ -70,6 +77,11 @@ const navItems: NavItem[] = [
 
 function isActive(to: string): boolean {
   return route.path === to || route.path.startsWith(to + '/')
+}
+
+async function handleLogout() {
+  await authStore.logout()
+  await router.push('/login')
 }
 </script>
 
@@ -192,7 +204,7 @@ function isActive(to: string): boolean {
   padding: 1px 6px;
   border-radius: 99px;
   background: var(--am-bg-raised);
-  color: var(--am-text-muted);
+  color: var(--am-text-secondary);
   border: 1px solid var(--am-border);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -203,6 +215,9 @@ function isActive(to: string): boolean {
   padding: var(--am-space-m) var(--am-space-s);
   border-top: 1px solid var(--am-border);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .support-label {
@@ -210,12 +225,21 @@ function isActive(to: string): boolean {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--am-text-muted);
+  color: var(--am-text-secondary);
   padding: 0 var(--am-space-m);
   margin-bottom: var(--am-space-xs);
 }
 
 .support-link {
-  color: var(--am-text-muted);
+  color: var(--am-text-secondary);
+}
+
+.sidebar-logout {
+  color: var(--am-text-secondary);
+}
+
+.sidebar-logout:hover {
+  color: var(--am-danger);
+  background: var(--am-danger-bg);
 }
 </style>

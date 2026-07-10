@@ -29,7 +29,7 @@
 
 ---
 
-## Aktueller Sprint: Sprint 2 — Designbasis, Landingpage & Portal-Layout ✅
+## Sprint 2 — Designbasis, Landingpage & Portal-Layout ✅
 
 **Abgeschlossen:** 2026-07-10
 
@@ -58,21 +58,10 @@
 **Routing**
 - [x] Nested Routes: `/` → PublicLayout, `/dashboard` → PortalLayout
 - [x] Catch-all → `/dashboard` (für noch nicht implementierte Portal-Routen)
-- [x] „Anmelden / Registrieren" führt zu `/dashboard` (kein echter Login)
+- [x] „Anmelden / Registrieren" führte zu `/dashboard` (kein echter Login)
 
 **Backend**
 - [x] Unverändert — Health-Endpoint bleibt, keine neuen Modelle
-
-### Noch nicht umgesetzt (bewusst)
-
-- Authentifizierung / JWT / Login
-- Rollenmodell / RBAC
-- Echte Daten: Benutzer, Organisationen, Fahrzeuge, Fahrer
-- Fahrtenbuchung (Wizard)
-- Serienfahrten
-- Zahlungsintegration, Krankenkassenabrechnung
-- Externe APIs / Live-GPS / Kartenintegration
-- Native Mobile App
 
 ---
 
@@ -90,4 +79,63 @@
 
 ---
 
-## Nächster Sprint: Sprint 3 — Auth, User & Stammdaten
+## Sprint 3 — Auth, Rollen & Benutzerstammdaten ✅
+
+**Abgeschlossen:** 2026-07-10
+
+### Backend
+
+- [x] `bcrypt==4.2.1` + `PyJWT==2.9.0` (Python 3.13 kompatibel) zu `requirements.txt`
+- [x] `app/core/config.py` — `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` ergänzt
+- [x] `app/core/security.py` — `hash_password`, `verify_password`, `create_access_token`, `decode_access_token`
+- [x] `app/models/user.py` — `UserRole` (8 Rollen als Enum), `User`-Modell
+- [x] `app/models/organization.py` — `OrganizationType` (7 Typen), `Organization`-Modell
+- [x] `app/models/membership.py` — `OrganizationMembership`-Modell
+- [x] `app/models/trusted_relationship.py` — `TrustStatus` (3 Zustände), `TrustedRelationship`-Modell
+- [x] `app/db/base.py` — alle Modelle für Alembic importiert
+- [x] `app/schemas/user.py` — `UserPublic`, `LoginRequest`
+- [x] `app/schemas/token.py` — `Token`
+- [x] `app/crud/crud_user.py` — `get_by_email`, `get_by_id`
+- [x] `app/api/deps.py` — `get_current_user` (OAuth2 Bearer)
+- [x] `app/api/v1/endpoints/auth.py` — `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
+- [x] `app/api/v1/router.py` — Auth-Router eingebunden
+- [x] Alembic-Migration `20260710_0000-a1b2c3d4e5f6_sprint3_auth_user_org.py`
+- [x] `app/scripts/seed_demo_data.py` — 7 Demo-Nutzer, 2 Orgs, 4 Memberships, 1 TrustedRelationship
+
+### Frontend
+
+- [x] `src/types/index.ts` — `UserPublic`, `TokenResponse`, `UserRole`, `ROLE_LABELS`, `ROLE_CONTEXT`
+- [x] `src/api/auth.ts` — `login`, `fetchMe`, `logout`
+- [x] `src/api/client.ts` — Bearer-Interceptor, 401-Handler (Redirect zu `/login`)
+- [x] `src/stores/auth.ts` — Pinia Auth-Store (token, user, isAuthenticated, role, fullName, initials, login, loadUser, logout)
+- [x] `src/views/auth/LoginView.vue` — Barrierefreies Login (ARIA, aria-live Fehler, Passwort anzeigen/verbergen, Demo-Auswahl)
+- [x] `src/router/index.ts` — `/login`-Route + `beforeEach`-Guard (unauthentifiziert → /login)
+- [x] `PublicHeader.vue` — CTA geändert: „Anmelden" → `/login`
+- [x] `AppTopbar.vue` — echter Nutzername/Rolle aus Store, Abmelden-Button
+- [x] `AppSidebar.vue` — Abmelden-Button im Support-Bereich
+- [x] `DashboardView.vue` — Rollen-Kontext-Box mit Willkommensnachricht
+
+### Docs
+
+- [x] `README.md` — Demo-Logins + Seed-Befehl ergänzt
+- [x] `docs/PROJECT_STATUS.md` — Sprint 3 dokumentiert
+- [x] `docs/DECISIONS.md` — Auth-Entscheidungen dokumentiert
+- [x] `.env.example` — `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` ergänzt
+
+### Bewusst nicht umgesetzt (Sprint 3)
+
+- Keine öffentliche Registrierung
+- Kein Passwort-Reset / E-Mail-Verifikation
+- Kein SSO / OAuth / externe Identitätsprovider
+- Kein RBAC (rollenbasierte UI-Einschränkungen) — folgt Sprint 6
+- TrustedRelationship nur als Datenmodell — keine eigene UI
+- Kein Refresh-Token (localStorage ist MVP/Dev-only; Entscheidung in DECISIONS.md)
+
+---
+
+## Nächster Sprint: Sprint 4 — Stammdaten
+
+- Modelle: `MobilityProfile`, `Vehicle`, `Driver`, `Qualification`
+- CRUD-Endpoints für Stammdaten
+- Pinia Stores + List-/Detail-Views
+- Mobilitätsprofil: GET/PUT für eigenes Nutzerprofil
