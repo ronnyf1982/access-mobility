@@ -121,6 +121,33 @@
 
       <!-- Rechte Spalte -->
       <aside class="dashboard-sidebar-right">
+        <!-- Mobilitätsprofil-Status -->
+        <section
+          v-if="authStore.role === 'passenger' || authStore.role === 'trusted_person'"
+          class="am-card profile-status-card"
+          aria-labelledby="profile-status-heading"
+        >
+          <h3 id="profile-status-heading" class="widget-title">Mein Mobilitätsprofil</h3>
+          <div v-if="profileStore.isProfileFilled" class="profile-status profile-status--filled">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>
+            <div>
+              <p class="profile-status-line">Profil hinterlegt</p>
+              <p class="profile-status-sub">Ihre Angaben helfen, das richtige Fahrzeug zu finden.</p>
+            </div>
+          </div>
+          <div v-else class="profile-status profile-status--empty">
+            <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+            <div>
+              <p class="profile-status-line">Noch kein Profil</p>
+              <p class="profile-status-sub">Hinterlegen Sie Ihren Mobilitätsbedarf für bessere Fahrtenplanung.</p>
+            </div>
+          </div>
+          <RouterLink to="/mobility-profile" class="am-btn am-btn-primary profile-status-btn">
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+            {{ profileStore.isProfileFilled ? 'Profil bearbeiten' : 'Profil anlegen' }}
+          </RouterLink>
+        </section>
+
         <!-- Buchungsübersicht -->
         <section class="am-card" aria-labelledby="booking-overview-heading">
           <h3 id="booking-overview-heading" class="widget-title">Buchungsübersicht</h3>
@@ -184,11 +211,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useMobilityProfileStore } from '@/stores/mobilityProfile'
 import { ROLE_LABELS, ROLE_CONTEXT } from '@/types'
 
 const authStore = useAuthStore()
+const profileStore = useMobilityProfileStore()
+
+onMounted(async () => {
+  const role = authStore.role
+  if ((role === 'passenger' || role === 'trusted_person') && !profileStore.profile) {
+    await profileStore.load()
+  }
+})
 const currentRoleLabel = computed(() =>
   authStore.role ? ROLE_LABELS[authStore.role] : 'Unbekannte Rolle',
 )
@@ -813,5 +849,62 @@ const quickActions = [
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--am-text-primary);
+}
+
+/* Profile Status Card */
+.profile-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+}
+
+.profile-status {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--am-space-s);
+  padding: var(--am-space-s);
+  border-radius: var(--am-radius-s);
+  font-size: 0.82rem;
+}
+
+.profile-status--filled {
+  background: var(--am-success-bg);
+  border: 1px solid var(--am-success);
+  color: var(--am-success);
+}
+
+.profile-status--empty {
+  background: rgba(255, 214, 0, 0.06);
+  border: 1px solid rgba(255, 214, 0, 0.3);
+  color: var(--am-accent);
+}
+
+.profile-status .pi {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.profile-status-line {
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: inherit;
+}
+
+.profile-status-sub {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--am-text-secondary);
+}
+
+.profile-status-btn {
+  font-size: 0.82rem;
+  min-height: 36px;
+  padding: 0 var(--am-space-m);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--am-space-s);
 }
 </style>

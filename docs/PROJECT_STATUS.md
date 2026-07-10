@@ -133,9 +133,54 @@
 
 ---
 
-## Nächster Sprint: Sprint 4 — Stammdaten
+---
 
-- Modelle: `MobilityProfile`, `Vehicle`, `Driver`, `Qualification`
-- CRUD-Endpoints für Stammdaten
-- Pinia Stores + List-/Detail-Views
-- Mobilitätsprofil: GET/PUT für eigenes Nutzerprofil
+## Sprint 4 — Fahrgastprofil & Mobilitätsbedarf ✅
+
+**Abgeschlossen:** 2026-07-10
+
+### Backend
+
+- [x] `app/models/mobility_profile.py` — `WheelchairType`-Enum (manual/electric/unknown), `MobilityProfile`-Modell (22 Felder inkl. alle Bedarfs-Flags, Notfallkontakt, Hinweise); `unique=True` auf `user_id`
+- [x] `app/db/base.py` — `mobility_profile`-Import für Alembic ergänzt
+- [x] `app/schemas/mobility_profile.py` — `MobilityProfileBase`, `MobilityProfileCreate`, `MobilityProfileUpdate` (alle Felder `Optional` für Partial-Update), `MobilityProfilePublic`
+- [x] `app/crud/crud_mobility_profile.py` — `get_by_user_id`, `get_or_create` (gibt `tuple[MobilityProfile, bool]` zurück), `upsert` (Partial-Update via `exclude_unset=True`)
+- [x] `app/api/v1/endpoints/mobility_profile.py` — `GET /mobility-profile/options` (ohne Auth), `GET /mobility-profile/me` (Auto-Create), `PUT /mobility-profile/me` (Partial-Update)
+- [x] `app/api/v1/router.py` — `mobility_profile`-Router eingebunden
+- [x] Alembic-Migration `20260710_0001-b2c3d4e5f6a1_sprint4_mobility_profile.py`
+- [x] `app/scripts/seed_demo_data.py` — Demo-Profil für `passenger@access.test` (Rollstuhl manuell, Rampe, Einstiegshilfe, Notfallkontakt Anna Muster)
+
+### Frontend
+
+- [x] `src/types/index.ts` — `WheelchairType`, `MobilityProfile`, `MobilityProfileUpdate`, `MobilityNeedOption`, `MOBILITY_NEED_KEYS` ergänzt
+- [x] `src/api/mobilityProfile.ts` — `getMyProfile()`, `updateMyProfile()`, `getOptions()`
+- [x] `src/stores/mobilityProfile.ts` — Pinia Store mit `profile`, `loading`, `saving`, `hasProfile`, `isProfileFilled`, `mobilityNeedItems`, `load()`, `save()`; statische `NEED_DEFINITIONS` (11 Bedarfstypen mit Icon + Beschreibung)
+- [x] `src/views/MobilityProfileView.vue` — Accessibility-first Profil-Seite (5 Abschnitte: Notfallkontakt, 11 Bedarf-Toggle-Karten, Fahrzeughinweise, Freitextfelder, Speichern); ARIA-Rollen (`role="checkbox"`, `role="switch"`, `aria-checked`), `aria-live` für Erfolg/Fehler
+- [x] `src/router/index.ts` — Route `/mobility-profile` unter `PortalLayout` als Kind von `/dashboard` ergänzt
+- [x] `src/components/layout/AppSidebar.vue` — „Mobilitätsprofil"-Eintrag als aktive Route nach Dashboard eingefügt
+- [x] `src/views/dashboard/DashboardView.vue` — Profilstatus-Karte in rechter Sidebar (nur für Fahrgäste/Vertrauenspersonen), lädt Profil on mount
+
+### Docs
+
+- [x] `README.md` — Sprint-4-Migrationsschritt dokumentiert
+- [x] `docs/PROJECT_STATUS.md` — Sprint 4 dokumentiert
+- [x] `docs/DECISIONS.md` — Auto-Create-Profil, Partial-Update, medizinische Freiwilligkeit dokumentiert
+- [x] `docs/ROADMAP.md` — Sprints 1–4 als abgeschlossen markiert
+
+### Bewusst nicht umgesetzt (Sprint 4)
+
+- Kein echtes Fahrzeugmatching / Fahrtenbuchung
+- Kein Vehicle- oder Driver-Stammdatenmodell (folgt Sprint 5+)
+- Medizinische Felder sind freiwillig — kein Pflichtfeld, kein serverseitiger Zwang
+- Kein Datumsfeld `date_of_birth` in der UI sichtbar (Datenfeld im Modell vorhanden, aber Sprint 4 setzt es nicht ein)
+- Kein Rollenwechsel in der UI — Rollensperren folgen Sprint 6
+
+---
+
+## Nächster Sprint: Sprint 5 — Fahrtenbuchung
+
+- Modell: `Ride` mit Statusmaschine
+- Buchungs-Wizard für Fahrgäste
+- Disponenten-Zuteilung (Fahrzeug + Fahrer)
+- Fahrtenliste (reale Daten statt Dummy)
+- Fahrer-View: zugewiesene Aufträge + Statuswechsel

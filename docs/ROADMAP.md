@@ -4,22 +4,27 @@
 Lauffähiges Fullstack-Grundgerüst: FastAPI + Vue 3 + PostgreSQL via Docker.
 Health-Endpoint, Axios-Client, PrimeVue, Pinia, Vue Router.
 
-## Sprint 2 — Stammdaten
-Kernobjekte anlegen und verwalten.
+## Sprint 2 — Designbasis, Landingpage & Portal-Layout ✅
+Globale CSS-Designbasis, Layouts (PublicLayout / PortalLayout), Komponenten (Sidebar, Topbar, Header, Footer),
+LandingView, DashboardView (Dummy-Daten).
 
-- Backend: `Organization`, `Vehicle`, `Driver`, `Qualification`, `MobilityProfile` — SQLAlchemy-Modelle, Alembic-Migrationen, CRUD, REST-Endpoints
-- Frontend: Pinia Stores, DataTable-Views, Formulare für Fahrer, Fahrzeuge, Organisationen
-- Mobilitätsprofil: GET + PUT für eigenen Nutzer
+## Sprint 3 — Auth, Rollen & Benutzerstammdaten ✅
+JWT-Authentifizierung (bcrypt + PyJWT), 8 Benutzerrollen, Login-View, Route-Guard,
+Auth-Pinia-Store, 8 Demo-Nutzer + 2 Demo-Orgs.
 
-## Sprint 3 — Fahrtenbuchung
+## Sprint 4 — Fahrgastprofil & Mobilitätsbedarf ✅
+MobilityProfile-Modell (22 Felder, 11 Bedarfstypen), GET/PUT-Endpunkte (Auto-Create, Partial-Update),
+MobilityProfileView (Accessibility-first, 5 Sektionen), Pinia Store, Sidebar-Eintrag, Dashboard-Profilkarte.
+
+## Sprint 5 — Fahrtenbuchung
 Einzelne Fahrt buchen, disponieren, ausführen.
 
 - Backend: `Ride`-Modell, Statusmaschine, Zuteilungs-Endpoint
-- Frontend: Buchungs-Wizard (PrimeVue Stepper), Fahrtenliste, Fahrer-View mit Statuswechsel
+- Frontend: Buchungs-Wizard (PrimeVue Stepper), Fahrtenliste (reale Daten), Fahrer-View mit Statuswechsel
 - Koordinator-Flow: Fahrt für andere Person buchen
 
-## Sprint 4 — Organisationsansicht & Admin
-Org-Kontext vollständig, Admin-Dashboard.
+## Sprint 6 — Organisationsansicht, RBAC & Admin
+Org-Kontext vollständig, rollenbasierte UI-Einschränkungen, Admin-Dashboard.
 
 - Fahrtenliste gefiltert nach Organisation
 - Kostenstellen-Referenz an Fahrt
@@ -27,7 +32,7 @@ Org-Kontext vollständig, Admin-Dashboard.
 - Admin-Dashboard mit Statistik-Karten
 - Benutzer-Rollenverwaltung
 
-## Sprint 5 — Serienfahrten & Stabilisierung
+## Sprint 7 — Serienfahrten & Stabilisierung
 Wiederkehrende Fahrten, Fehlerbehandlung, erste Tests.
 
 - Backend: `RecurringRide` + RRULE-Auflösung (`python-dateutil`)

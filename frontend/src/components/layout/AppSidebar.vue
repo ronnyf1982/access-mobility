@@ -64,15 +64,16 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard',      icon: 'pi-th-large',       to: '/dashboard' },
-  { label: 'Fahrten',        icon: 'pi-car' },
-  { label: 'Buchen',         icon: 'pi-plus-circle' },
-  { label: 'Fahrgäste',      icon: 'pi-users' },
-  { label: 'Fahrzeuge',      icon: 'pi-truck' },
-  { label: 'Fahrer',         icon: 'pi-id-card' },
-  { label: 'Organisationen', icon: 'pi-building' },
-  { label: 'Abrechnung',     icon: 'pi-file' },
-  { label: 'Einstellungen',  icon: 'pi-cog' },
+  { label: 'Dashboard',        icon: 'pi-th-large',       to: '/dashboard' },
+  { label: 'Mobilitätsprofil', icon: 'pi-heart',          to: '/mobility-profile' },
+  { label: 'Fahrten',          icon: 'pi-car' },
+  { label: 'Buchen',           icon: 'pi-plus-circle' },
+  { label: 'Fahrgäste',        icon: 'pi-users' },
+  { label: 'Fahrzeuge',        icon: 'pi-truck' },
+  { label: 'Fahrer',           icon: 'pi-id-card' },
+  { label: 'Organisationen',   icon: 'pi-building' },
+  { label: 'Abrechnung',       icon: 'pi-file' },
+  { label: 'Einstellungen',    icon: 'pi-cog' },
 ]
 
 function isActive(to: string): boolean {

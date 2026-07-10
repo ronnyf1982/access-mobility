@@ -250,6 +250,32 @@ Im MVP: Rolle wird im Dashboard angezeigt — Zugriffsbeschränkungen kommen sch
 
 ---
 
+## Mobilitätsprofil (Sprint 4)
+
+### Auto-Create bei GET
+
+`GET /mobility-profile/me` erzeugt automatisch ein leeres Profil, falls noch keins existiert.  
+**Begründung:** Das Frontend ist einfacher, wenn es nach dem ersten Login immer ein Profil-Objekt erhält — kein Sonderfall „404 → neues Formular vs. 200 → bestehende Daten".  
+Das leere Profil ist vollständig gültig; alle Felder haben sinnvolle Defaults (`False`, `null`).
+
+### Partial-Update via `exclude_unset=True`
+
+`PUT /mobility-profile/me` schreibt nur die im JSON tatsächlich gesendeten Felder.  
+**Begründung:** Der Client muss nicht das gesamte Profil zurücksenden. Nicht gesendete Felder werden nicht auf `null` zurückgesetzt. Implementiert über Pydantic v2 `model_dump(exclude_unset=True)`.
+
+### Medizinische Angaben sind freiwillig
+
+`medical_notes` hat keinen `nullable=False`-Constraint; in der UI kein `required`.  
+**Begründung:** Medizinische Daten unterliegen erhöhten Datenschutzanforderungen. Fahrgäste entscheiden selbst, ob sie diese angeben. Das System darf sie nicht als Pflichtfeld voraussetzen.
+
+### Rollstuhl-Typ nur bei aktivem Rollstuhl sichtbar
+
+Die Rollstuhltyp-Auswahl (`wheelchair_type`) erscheint in der UI nur, wenn `uses_wheelchair = true`.  
+Wird der Rollstuhl deaktiviert, wird `wheelchair_type` automatisch auf `null` zurückgesetzt.  
+**Begründung:** Relevante Felder kontextsensitiv einblenden — reduziert kognitive Last für Fahrgäste.
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
 - Auth/JWT: Sprint 3

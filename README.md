@@ -43,7 +43,10 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+
+# Alle Migrationen ausführen (Sprint 3: users/orgs + Sprint 4: mobility_profiles)
 alembic upgrade head
+
 uvicorn app.main:app --reload --port 8010
 ```
 

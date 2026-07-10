@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models.membership import OrganizationMembership
+from app.models.mobility_profile import MobilityProfile, WheelchairType
 from app.models.organization import Organization, OrganizationType
 from app.models.trusted_relationship import TrustedRelationship, TrustStatus
 from app.models.user import User, UserRole
@@ -196,9 +197,37 @@ def main() -> None:
                 )
                 print("  +trust relative@access.test -> passenger@access.test (aktiv)")
 
+        # MobilityProfile für passenger@access.test
+        passenger_user = created_users.get("passenger@access.test")
+        if passenger_user:
+            existing_profile = (
+                db.query(MobilityProfile)
+                .filter(MobilityProfile.user_id == passenger_user.id)
+                .first()
+            )
+            if not existing_profile:
+                db.add(
+                    MobilityProfile(
+                        user_id=passenger_user.id,
+                        uses_wheelchair=True,
+                        wheelchair_type=WheelchairType.manual,
+                        needs_ramp=True,
+                        requires_wheelchair_space=True,
+                        needs_entry_assistance=True,
+                        needs_escort=False,
+                        emergency_contact_name="Anna Muster",
+                        emergency_contact_phone="+49 30 123456",
+                        communication_notes="Bitte langsam und klar kommunizieren.",
+                        general_notes="Demo-Profil fuer lokale Entwicklung.",
+                    )
+                )
+                print("  +prof passenger@access.test (Rollstuhl manuell, Rampe, Einstiegshilfe)")
+            else:
+                print("  skip  MobilityProfile passenger@access.test (bereits vorhanden)")
+
         db.commit()
         print("\nDemo-Daten erfolgreich angelegt.")
-        print(f"Passwort für alle Konten: {DEMO_PASSWORD}")
+        print(f"Passwort fuer alle Konten: {DEMO_PASSWORD}")
     except Exception as exc:
         db.rollback()
         print(f"Fehler: {exc}", file=sys.stderr)

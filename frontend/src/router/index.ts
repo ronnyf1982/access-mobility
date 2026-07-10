@@ -5,6 +5,7 @@ import PortalLayout from '@/layouts/PortalLayout.vue'
 import LandingView from '@/views/LandingView.vue'
 import LoginView from '@/views/auth/LoginView.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
+import MobilityProfileView from '@/views/MobilityProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -28,6 +29,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         { path: '', name: 'dashboard', component: DashboardView },
+        { path: '/mobility-profile', name: 'mobility-profile', component: MobilityProfileView },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/login' },
