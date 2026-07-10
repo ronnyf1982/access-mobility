@@ -62,6 +62,68 @@ Zwei Bereiche:
 
 ---
 
+## Designreferenzen
+
+Die visuellen Leitbilder liegen unter `docs/Design/` und wurden am 2026-07-05 freigegeben.
+Sie sind keine 1:1-Pflichtvorlage, sondern definieren Farbgebung, Struktur und Qualitätsniveau.
+UI wird ausschließlich mit Vue-Komponenten und CSS umgesetzt — keine Bilddateien als UI-Elemente.
+Barrierefreiheit und Lesbarkeit haben Vorrang vor exakter Reproduktion der Referenz.
+
+### `docs/Design/Landingpage.png` — Öffentlicher Bereich
+
+**Aufbau:**
+- Topnav: Logo links, Navigationslinks (Für Fahrgäste, Für Fahrdienste, Organisationen, Kontakt), CTA-Button rechts
+- Hero: großer Headlineblock links, Fahrzeugbild rechts, gelber Subheadline-Akzent
+- Feature-Iconleiste unterhalb Hero (3 Punkte: Zuverlässigkeit, Bedarfsanpassung, Flexibilität)
+- Zielgruppen-Sektion: drei Kacheln nebeneinander (Fahrgäste / Fahrdienste / Organisationen)
+- Vorteile-Sektion: Feature-Cards auf dunklem Hintergrund
+- Footer: mehrspaltiges Link-Grid mit Logo
+
+**Farben & Stil:**
+- Hintergrund: nahezu schwarz (`#0d0d0d` / sehr dunkles Anthrazit)
+- Headline-Akzent: leuchtendes Gelb (`~#F5C400` / `#FFD600`)
+- Fließtext: helles Grau auf dunklem Grund
+- Buttons primär: gelber Hintergrund, schwarzer Text
+- Buttons sekundär: transparenter Hintergrund, gelber Rahmen/Text
+- Karten/Sektionen: leicht aufgehelltes Dunkelgrau als Trennebene
+
+### `docs/Design/dashboard.png` — Portal / geschützter Bereich
+
+**Layout:**
+- Linke Sidebar (fixiert): Logo oben, Navigationsitems mit Icon + Label, aktiver Eintrag gelb hinterlegt, Support-Block unten
+- Topbar: globale Suche, Benachrichtigungs-Glocke, User-Avatar + Name rechts
+- Hauptbereich: KPI-Kachelreihe oben, darunter Datentabelle (Anstehende Fahrten), rechts schmale Sidebar (Buchungsübersicht, Karte, Schnellaktionen)
+
+**KPI-Kacheln (Beispiele aus Referenz):**
+- Fahrten heute, Ausstehende Buchungen, Erfolgsquote, Plankapazität
+- Kacheln: dunkle Card, gelbes Icon-Hintergrundfeld, weißer Zahlenwert, graues Label
+
+**Datentabelle Anstehende Fahrten:**
+- Spalten: Datum, Uhrzeit, Fahrgast, Strecke (Von → Nach), Fahrzeug, Fahrer, Status, Aktionen
+- Status-Badges: Grün für "Bestätigt", Gelb für "In Bearbeitung"
+- Zeilendesign: dunkler Hintergrund, dezente Trennlinien, kein starkes Grid
+
+**Rechte Sidebar:**
+- Buchungsübersicht (Donut-Chart-Bereich)
+- Einsatzübersicht (Karten-/Kartenblock, dunkles Tile-Design)
+- Schnellaktionen (gelbe Icon-Buttons)
+
+**Sidebar-Navigation (Referenz):**
+- Dashboard, Fahrten, Buchen, Fahrgäste, Fahrer, Fahrzeuge, Abrechnung, Einstellungen
+- Aktiver Eintrag: gelb hinterlegt, schwarzer Text/Icon
+
+**Farben & Stil (Dashboard):**
+- Hintergrund gesamt: `~#111111` bis `#1a1a1a`
+- Sidebar: `~#0f0f0f`, leicht dunkler als Hauptbereich
+- Cards/Kacheln: `~#1e1e1e` mit subtiler Border
+- Akzent aktiv/primär: Gelb (`~#FFD600`)
+- Text primär: Weiß / helles Grau
+- Text sekundär: mittleres Grau
+- Erfolg/Grün: für positive Status-Badges
+- Warnung/Gelb: für "In Bearbeitung"-Status
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
 - Auth/JWT: Sprint 2

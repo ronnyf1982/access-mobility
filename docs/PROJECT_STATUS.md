@@ -28,6 +28,8 @@
 - [x] Designrichtung: Schwarz/Anthrazit + Gelb als Akzentfarbe
 - [x] Stil: modern, premium, barrieregerecht, klar, nicht überladen
 - [x] Gelb für Buttons, aktive Navigation, Icons, Status, CTAs
+- [x] Designreferenzen abgelegt: `docs/Design/Landingpage.png`, `docs/Design/dashboard.png`
+- [x] Verbindlicher Design Guide erstellt: `docs/Design/DESIGN_GUIDE.md`
 
 ### Noch nicht umgesetzt (bewusst)
 
