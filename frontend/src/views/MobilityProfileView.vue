@@ -611,57 +611,38 @@ function toggleMedDetail(key: MedDetailKey) {
   ;(form[key] as boolean) = !(form[key] as boolean)
 }
 
-type PresetBoolField =
-  | 'needs_stretcher_transport'
-  | 'requires_transport_chair'
-  | 'requires_two_person_assistance'
-  | 'requires_medical_transport'
-  | 'brings_oxygen'
-  | 'requires_oxygen_mount'
-  | 'brings_medical_device'
-  | 'requires_medical_equipment_storage'
-  | 'requires_infusion_mount'
-  | 'requires_special_positioning'
-  | 'infection_or_hygiene_note'
-  | 'requires_medical_attendant'
-
-const PRESET_BOOL_FIELDS: PresetBoolField[] = [
-  'needs_stretcher_transport',
-  'requires_transport_chair',
-  'requires_two_person_assistance',
-  'requires_medical_transport',
-  'brings_oxygen',
-  'requires_oxygen_mount',
-  'brings_medical_device',
-  'requires_medical_equipment_storage',
-  'requires_infusion_mount',
-  'requires_special_positioning',
-  'infection_or_hygiene_note',
-  'requires_medical_attendant',
-]
-
-function resetPresetFields() {
-  for (const field of PRESET_BOOL_FIELDS) {
-    ;(form[field] as boolean) = false
-  }
-  form.attendant_type_required = 'none'
+// All boolean form fields that presets may set — reset before every preset change.
+const PRESET_RESET: Partial<MobilityProfile> = {
+  needs_stretcher_transport: false,
+  requires_transport_chair: false,
+  requires_two_person_assistance: false,
+  requires_medical_transport: false,
+  brings_oxygen: false,
+  requires_oxygen_mount: false,
+  brings_medical_device: false,
+  requires_medical_equipment_storage: false,
+  requires_infusion_mount: false,
+  requires_special_positioning: false,
+  infection_or_hygiene_note: false,
+  requires_medical_attendant: false,
+  attendant_type_required: 'none' as AttendantType,
 }
 
 function applyTransportType(tt: TransportType) {
   if (selectedTransportType.value === tt.id) {
-    // Same card clicked again: deselect and reset all preset-controlled fields
-    resetPresetFields()
+    // Same card clicked again: deselect and clear all preset-controlled fields.
+    Object.assign(form, PRESET_RESET)
     selectedTransportType.value = null
     return
   }
-  // New selection: reset first, then apply the new preset
-  resetPresetFields()
-  selectedTransportType.value = tt.id
+  // Build new preset values from suggested_profile_fields (all boolean = true).
+  const presetValues: Record<string, boolean> = {}
   for (const field of tt.suggested_profile_fields) {
-    if (field in form) {
-      ;(form as Record<string, unknown>)[field] = true
-    }
+    if (field in form) presetValues[field] = true
   }
+  // Single Object.assign: reset first, then apply preset (last key wins).
+  Object.assign(form, PRESET_RESET, presetValues)
+  selectedTransportType.value = tt.id
 }
 
 async function handleSave() {
