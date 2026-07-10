@@ -76,4 +76,18 @@
 
 ---
 
+## Produktgrundsätze (freigegeben 2026-07-10)
+
+- [x] **Accessibility-first:** Barrierefreiheit ist Grundlage, kein nachträgliches Feature
+- [x] **Fahrgast-Oberfläche:** Wizard-Prinzip, große Buttons, Icon + Text, eine Entscheidung pro Schritt
+- [x] **Technische Barrierefreiheit:** ARIA, Tastaturbedienung, Fokuszustände, WCAG AA/AAA, vorlesbare Fehlermeldungen
+- [x] **Sprachführung** als späteres Kernfeature vorgesehen (nicht im MVP)
+- [x] **Remote-Buchung:** Angehörige/Betreuer/Org können für Fahrgäste buchen — erweitertes Vertrauenspersonen-Modell später
+- [x] **Mobilitätsprofil:** 11 Bedarfstypen definiert (Rollstuhl, E-Rollstuhl, Rollator, Krücken, blind, gehörlos, Begleitperson, Einstiegshilfe, Rampe, Lift, Liegendtransport)
+- [x] **Fahrzeugausstattung:** 10 Merkmale definiert — Grundlage für späteres Matching
+- [x] **Matching-Grundsatz:** Fahrgastbedarf + Fahrzeugausstattung + Fahrerqualifikation müssen gemeinsam passen
+- [x] Anforderungsdokument erstellt: `docs/Product/ACCESSIBILITY_AND_MATCHING_REQUIREMENTS.md`
+
+---
+
 ## Nächster Sprint: Sprint 3 — Auth, User & Stammdaten

@@ -124,10 +124,83 @@ Barrierefreiheit und Lesbarkeit haben Vorrang vor exakter Reproduktion der Refer
 
 ---
 
+## Accessibility-first — Produktgrundsatz (freigegeben 2026-07-10)
+
+Access Mobility wird **accessibility-first** entwickelt. Barrierefreiheit ist kein
+nachträgliches Feature, sondern Grundlage jeder Designentscheidung.
+
+### Fahrgast-Oberfläche
+
+Die Buchungsoberfläche für Fahrgäste folgt streng dem Prinzip: **weniger ist mehr**.
+
+- Große, eindeutig beschriftete Buttons (min. 44×44 px Klickfläche)
+- Jedes Icon hat einen sichtbaren Textlabel — keine Nur-Icon-Bedienung
+- Maximal eine Entscheidung pro Schritt (Wizard-Prinzip)
+- Klare, einfache Sprache — keine Fachjargon-Oberflächen
+- Keine überladenen Verwaltungsansichten für Fahrgäste (Verwaltung liegt beim Portal)
+
+### Barrierefreiheit (technisch)
+
+- Screenreader-taugliche UI: ARIA-Labels, Rollen, Live-Regions für Statusänderungen
+- Vollständige Tastaturbedienung (kein Element nur per Maus erreichbar)
+- Sichtbare Fokuszustände auf allen interaktiven Elementen (bereits in Sprint 2 umgesetzt)
+- Kontrastverhältnisse ≥ WCAG AA — Ziel WCAG AAA für kritische Bereiche
+- Fehlermeldungen: verständlich formuliert, programmatisch mit Feldern verknüpft (`aria-describedby`), vorlesbar
+- Keine zeitgesteuerten Interaktionen ohne Verlängerungsoption
+
+### Sprachführung / Sprachmenü
+
+- Wird als **späteres Kernfeature** vorgesehen (nicht im MVP)
+- Fahrgäste sollen Fahrten per Spracheingabe buchen können
+- Erfordert separat: Speech-to-Text-Integration, Sprachausgabe (TTS), vereinfachter Dialogflow
+
+### Remote-Buchung
+
+Angehörige, Betreuer:innen und Organisationen müssen Fahrten **für andere Personen aus der Ferne** buchen können.
+- Im MVP: Organisations-Koordinator kann Fahrt für Org-Mitglied buchen
+- Später: erweitertes Vertrauenspersonen-Modell (Person A darf für Person B buchen, mit expliziter Freigabe)
+- Erfordert separates Berechtigungsmodell (außerhalb MVP)
+
+### Mobilitätsbedarf (Datenmodell-Grundsatz)
+
+Jeder Fahrgast hat ein **Mobilitätsprofil**. Die Auswahl des Bedarfs erfolgt über
+eindeutige Icons mit Textlabel — niemals nur über Text-Dropdowns.
+
+Definierte Mobilitätsbedarfe (vollständige Liste in `docs/Product/ACCESSIBILITY_AND_MATCHING_REQUIREMENTS.md`):
+Rollstuhl · Elektrorollstuhl · Rollator · Krücken · blind/sehbehindert · gehörlos ·
+Begleitperson · Einstiegshilfe · Rampe · Lift · Liegendtransport
+
+### Fahrzeugausstattung (Datenmodell-Grundsatz)
+
+Fahrdienste erfassen ihre Fahrzeuge mit **exakter Ausstattung** — Grundlage für das spätere Matching.
+
+Definierte Ausstattungsmerkmale (vollständige Liste in `docs/Product/ACCESSIBILITY_AND_MATCHING_REQUIREMENTS.md`):
+Rollstuhlplätze · Sitzplätze · Rampe · Lift · Fixiersystem · E-Rollstuhl geeignet ·
+Begleitplatz · Tragestuhl · Liegendfahrt · Fahrerqualifikation
+
+### Matching-Grundsatz
+
+Das System darf nur Fahrten an Fahrzeuge und Fahrdienste vermitteln, die zum
+Mobilitätsbedarf des Fahrgastes **vollständig passen**.
+
+Geprüft werden müssen:
+1. Fahrgastbedarf (Mobilitätsprofil)
+2. Fahrzeugausstattung
+3. Fahrerqualifikation
+
+Automatisches Matching ist außerhalb des MVP — das Datenmodell wird jedoch so aufgebaut,
+dass Matching später ohne Umstrukturierung implementiert werden kann.
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
-- Auth/JWT: Sprint 2
-- Rollenmodell: Sprint 2
-- Echte Fachmodule: ab Sprint 2
-- Serienfahrten (RRULE): Sprint 5
+- Auth/JWT: Sprint 3
+- Rollenmodell: Sprint 3
+- Stammdaten (Org, Fahrzeug, Fahrer): Sprint 4
+- Fahrtenbuchung: Sprint 5
+- Serienfahrten (RRULE): Sprint 7
+- Automatisches Matching: nach MVP
+- Sprachführung / Sprachmenü: nach MVP
+- Vertrauenspersonen-Modell (Remote-Buchung): nach MVP
 - Zahlungen, Abrechnung, externe APIs: außerhalb MVP
