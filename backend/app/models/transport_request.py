@@ -12,6 +12,7 @@ from app.db.base import Base
 class TransportRequestStatus(str, Enum):
     draft = "draft"
     requested = "requested"
+    assigned = "assigned"
     cancelled = "cancelled"
 
 
@@ -22,6 +23,8 @@ class TransportRequest(Base):
         Index("ix_transport_requests_requester_user_id", "requester_user_id"),
         Index("ix_transport_requests_status", "status"),
         Index("ix_transport_requests_pickup_date", "pickup_date"),
+        Index("ix_transport_requests_assigned_vehicle_id", "assigned_vehicle_id"),
+        Index("ix_transport_requests_assigned_driver_profile_id", "assigned_driver_profile_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -58,6 +61,19 @@ class TransportRequest(Base):
     requirement_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     mobility_profile_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Disposition / Zuweisung
+    assigned_vehicle_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("vehicles.id"), nullable=True
+    )
+    assigned_driver_profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("driver_profiles.id"), nullable=True
+    )
+    assigned_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    assignment_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Zeitstempel
     created_at: Mapped[datetime] = mapped_column(

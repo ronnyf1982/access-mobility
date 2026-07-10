@@ -50,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -63,10 +64,16 @@ interface NavItem {
   to?: string
 }
 
-const navItems: NavItem[] = [
+const _DISPO_ROLES = ['provider_admin', 'dispatcher', 'platform_admin']
+
+const navItems = computed<NavItem[]>(() => [
   { label: 'Dashboard',        icon: 'pi-th-large',       to: '/dashboard' },
   { label: 'Mobilitätsprofil', icon: 'pi-heart',          to: '/mobility-profile' },
-  { label: 'Fahrten anfragen', icon: 'pi-car',         to: '/transport-requests' },
+  {
+    label: _DISPO_ROLES.includes(authStore.role ?? '') ? 'Disposition' : 'Fahrten anfragen',
+    icon: 'pi-car',
+    to: '/transport-requests',
+  },
   { label: 'Buchen',           icon: 'pi-plus-circle' },
   { label: 'Fahrgäste',        icon: 'pi-users' },
   { label: 'Fahrzeuge',        icon: 'pi-truck',   to: '/vehicles' },
@@ -74,7 +81,7 @@ const navItems: NavItem[] = [
   { label: 'Organisationen',   icon: 'pi-building' },
   { label: 'Abrechnung',       icon: 'pi-file' },
   { label: 'Einstellungen',    icon: 'pi-cog' },
-]
+])
 
 function isActive(to: string): boolean {
   return route.path === to || route.path.startsWith(to + '/')

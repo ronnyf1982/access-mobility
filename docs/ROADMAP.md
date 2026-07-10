@@ -37,13 +37,29 @@ aus Backend-Daten statt lokal hart kodiert.
 - Seed-Daten: 1 draft + 1 requested für passenger@access.test (idempotent)
 - Kein Matching, keine Disposition, keine Fahrerzuweisung in diesem Sprint
 
-## Sprint 7 — Manuelles Matching & Disposition
-Anfrage → Fahrt zuweisen, Fahrdienst bestätigt.
+## Sprint 7 — Manuelles Matching & Disposition ✅
+Anfrage-Snapshot → Matching-Bewertung → manuelle Zuweisung durch Disponenten.
 
-- Backend: `Ride`-Modell (Zuteilung TransportRequest → Fahrzeug + Fahrer), Status-Maschine
-- Disponent-Flow: offene Anfragen sehen, Fahrzeug/Fahrer zuweisen, Bestätigung auslösen
-- Benachrichtigung: Fahrgast erhält Bestätigung (In-App-Notification)
-- Frontend: Dispositions-View (Dispatcher-Rolle), Fahrtbestätigungs-Banner für Fahrgäste
+- Backend: `assigned`-Status + 5 Zuweisungsfelder auf `TransportRequest`, Alembic-Migration
+- `manual_matching.py`: Snapshot-basiertes Matching (8 Fahrzeug- + 6 Fahrerregeln), 3 Status: `suitable` / `warning` / `unsuitable`
+- 3 neue Endpoints: `GET matching-options`, `POST assign`, `POST unassign`
+- Matching ist Entscheidungshilfe — kein Block, Disponent kann immer überschreiben
+- **Dual-UI-Modus:** Fahrgast-Ansicht (Wizard, „Meine Fahrten") vs. Dispo-Ansicht (Fahrgastdaten, Matching, kein Wizard)
+- Sidebar-Label rollenbasiert: „Fahrten anfragen" (Fahrgäste) / „Disposition" (Provider/Disponent)
+- Fahrgast-Kontaktdaten (`passenger_display_name`, email, phone, emergency_contact_*) in API-Responses für Dispo-Rollen
+- Frontend: Fahrgastdaten-Infobox + schreibgeschützte Anfragedetails in Dispo-Detailansicht
+- Dashboard: `assignedCount` in KPI-Kachel
+- Seed: 2 neue Demo-Anfragen (gute Übereinstimmung + Warnungsfall), Fahrer-Qualifikation aktualisiert
+- Tests: 26 Pytest-Tests (alle bestanden), TypeScript-Check ✅, Build ✅
+
+## Sprint 8 — Kontakt & Erreichbarkeit
+Vollständige Kontaktdaten für Fahrgäste und bessere Erreichbarkeit für Disponenten.
+
+- Telefon-Pflichtfeld oder Alternativtelefon im Benutzerkonto (`User.phone`, Pflicht vs. optional)
+- Alternativtelefon / Mobilnummer als zweites Feld
+- Abholkontakt (Ansprechperson vor Ort, kann vom Fahrgast abweichen)
+- Notfallkontakt direkt im Mobilitätsprofil besser sichtbar / einfacher befüllbar
+- Dispatcher-Ansicht: direkte Telefon-Shortcut-Links (tel:) in Listenansicht und Detailansicht
 
 ## Sprint 8 — Fahrtstart & Fahreransicht
 Fahrer sieht Tagesaufträge, startet Fahrt, markiert Abschluss.

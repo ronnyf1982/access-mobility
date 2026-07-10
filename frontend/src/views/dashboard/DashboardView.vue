@@ -289,12 +289,18 @@ const kpiCards = computed(() => [
     value: String(transportStore.totalCount),
     icon: 'pi-send',
     iconBg: 'rgba(99,102,241,0.2)',
-    sub: transportStore.draftCount > 0
-      ? `${transportStore.draftCount} Entwurf${transportStore.draftCount !== 1 ? 'e' : ''} offen`
-      : transportStore.requestedCount > 0
-        ? `${transportStore.requestedCount} gestellt`
-        : 'Keine offenen Anfragen',
-    subClass: transportStore.draftCount > 0 ? 'kpi-sub-warn' : 'kpi-sub-neutral',
+    sub: transportStore.assignedCount > 0
+      ? `${transportStore.assignedCount} zugewiesen`
+      : transportStore.draftCount > 0
+        ? `${transportStore.draftCount} Entwurf${transportStore.draftCount !== 1 ? 'e' : ''} offen`
+        : transportStore.requestedCount > 0
+          ? `${transportStore.requestedCount} gestellt`
+          : 'Keine offenen Anfragen',
+    subClass: transportStore.assignedCount > 0
+      ? 'kpi-sub-positive'
+      : transportStore.draftCount > 0
+        ? 'kpi-sub-warn'
+        : 'kpi-sub-neutral',
     to: '/transport-requests',
   },
   {

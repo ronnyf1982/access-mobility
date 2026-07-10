@@ -80,9 +80,10 @@ Der aktuelle MVP (access-mobility, lokale Entwicklung) deckt das Web-Portal ab �
 | Plattform | Responsive Web-App | Native iOS/Android-Apps (Phase 1 & 2) |
 | Auth | JWT, einfaches Login | Keycloak / Auth0, SSO |
 | Fahrgastprofil | Mobilitätsprofil (Rollstuhl, Rampe, Escort) | Erkrankungen, Fahrzeugpräferenzen, Notfallkontakt (App) |
-| Buchung | Transportanfrage erfassen (Sprint 6 ✅) — Matching + Disposition folgt Sprint 7 | Sofortbuchung mit Live-Matching, Fahrzeuge in der Nähe |
+| Buchung | Transportanfrage erfassen (Sprint 6 ✅) + Matching & Disposition (Sprint 7 ✅) | Sofortbuchung mit Live-Matching, Fahrzeuge in der Nähe |
+| Disposition | Manuelles Snapshot-Matching + Zuweisung (Sprint 7 ✅) | Automatische Optimierung, KI-gestützte Vorschläge |
 | Fahrtstatus | Manuell im Portal (Dispatcher) | App-geführt durch Fahrer, Live-Updates |
-| Fahrzeug-Matching | Manuelle Zuteilung | Automatisches Matching nach Ausstattung & Bedarf |
+| Fahrzeug-Matching | Snapshot-basiertes Regelwerk (Sprint 7 ✅) | Automatisches Echtzeit-Matching nach Ausstattung & Bedarf |
 | Verordnungen | Notiz-Feld, keine echte Prüfung | Scan/Upload, Markierung als KK-abrechenbar |
 | Zahlung | Keine | Stripe (Karte, Apple/Google Pay, SEPA, Klarna, Giropay), Barzahlung, Verordnung |
 | Abrechnung | Keine | Sammelabrechnung, xRechnung, ZUGFeRD |
@@ -142,11 +143,14 @@ Die folgenden Punkte sind im Konzept-PDF beschrieben, aber **außerhalb des aktu
 - TransportRequestView (Liste + Formular-Wizard), Pinia Store, Route `/transport-requests`
 - Sidebar, Dashboard-KPI-Kachel, Seed-Daten
 
-### Sprint 7 — Manuelles Matching & Disposition
-- Anfrage → Fahrt (manuelle Zuweisung Fahrzeug + Fahrer durch Dispatcher)
-- `Ride`-Modell als Verbindung von `TransportRequest` zu Fahrzeug + Fahrer
-- Disponent-View: offene Anfragen sehen, Fahrzeug/Fahrer zuweisen
-- Fahrgast-Bestätigungs-Banner
+### Sprint 7 — Manuelles Matching & Disposition ✅ (abgeschlossen)
+- `assigned`-Status + 5 Zuweisungsfelder direkt auf `TransportRequest` (kein separates `Ride`-Modell)
+- Snapshot-basiertes Matching: 8 Fahrzeugregeln + 6 Fahrerregeln, 3 Match-Level (suitable/warning/unsuitable)
+- 3 neue Endpoints: GET `matching-options`, POST `assign`, POST `unassign`
+- Disposition als Entscheidungshilfe — kein automatischer Block durch Matching
+- Frontend: Disposition-Abschnitt in `TransportRequestView`, Matching-Karten, Zuweisungsformular, Unassign
+- Dashboard: `assignedCount` in KPI-Kachel
+- 14 Pytest-Tests (alle grün), TypeScript ✅, Build ✅
 
 ### Sprint 8 — Fahrtstart & Fahrerverwaltung
 - Fahrer-Dashboard, Tagesaufträge, Statuswechsel (unterwegs → abgeschlossen)

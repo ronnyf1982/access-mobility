@@ -259,11 +259,12 @@ export const MOBILITY_NEED_KEYS: Array<keyof MobilityProfile> = [
 
 // ─── Transportanfragen ───────────────────────────────────────────────────────
 
-export type TransportRequestStatus = 'draft' | 'requested' | 'cancelled'
+export type TransportRequestStatus = 'draft' | 'requested' | 'assigned' | 'cancelled'
 
 export const TRANSPORT_REQUEST_STATUS_LABELS: Record<TransportRequestStatus, string> = {
   draft: 'Entwurf',
   requested: 'Anfrage gestellt',
+  assigned: 'Zugewiesen',
   cancelled: 'Storniert',
 }
 
@@ -321,10 +322,23 @@ export interface TransportRequestRead {
   requirement_snapshot: RequirementSnapshot | null
   mobility_profile_snapshot: MobilityProfileSnapshot | null
   notes: string | null
+  // Disposition
+  assigned_vehicle_id: string | null
+  assigned_driver_profile_id: string | null
+  assigned_by_user_id: string | null
+  assigned_at: string | null
+  assignment_notes: string | null
+  // Timestamps
   created_at: string
   updated_at: string
   submitted_at: string | null
   cancelled_at: string | null
+  // Fahrgast-Kontaktdaten (für Dispo-Rollen, sonst null)
+  passenger_display_name?: string | null
+  passenger_email?: string | null
+  passenger_phone?: string | null
+  passenger_emergency_contact_name?: string | null
+  passenger_emergency_contact_phone?: string | null
 }
 
 export type TransportRequestListItem = Pick<
@@ -332,6 +346,8 @@ export type TransportRequestListItem = Pick<
   | 'id' | 'requester_user_id' | 'passenger_user_id' | 'transport_type_id' | 'status'
   | 'pickup_address' | 'destination_address' | 'pickup_date' | 'pickup_time'
   | 'is_round_trip' | 'created_at' | 'submitted_at' | 'cancelled_at'
+  | 'assigned_vehicle_id' | 'assigned_driver_profile_id' | 'assigned_at' | 'assignment_notes'
+  | 'passenger_display_name' | 'passenger_phone' | 'passenger_email'
 >
 
 export interface TransportRequestCreate {
@@ -355,6 +371,48 @@ export interface TransportRequestCreate {
 }
 
 export type TransportRequestUpdate = Omit<TransportRequestCreate, 'passenger_user_id' | 'organization_id' | 'status'>
+
+export interface TransportRequestAssign {
+  vehicle_id: string
+  driver_profile_id: string
+  assignment_notes?: string | null
+}
+
+// ─── Matching ─────────────────────────────────────────────────────────────────
+
+export type MatchStatus = 'suitable' | 'warning' | 'unsuitable'
+
+export const MATCH_STATUS_LABELS: Record<MatchStatus, string> = {
+  suitable: 'Geeignet',
+  warning: 'Bedingt geeignet',
+  unsuitable: 'Nicht geeignet',
+}
+
+export interface MatchingVehicleOption {
+  vehicle_id: string
+  name: string
+  license_plate: string
+  vehicle_type: string
+  status: MatchStatus
+  reasons: string[]
+  missing_requirements: string[]
+  matched_requirements: string[]
+}
+
+export interface MatchingDriverOption {
+  driver_profile_id: string
+  display_name: string
+  status: MatchStatus
+  reasons: string[]
+  missing_requirements: string[]
+  matched_requirements: string[]
+}
+
+export interface MatchingOptionsResponse {
+  request_id: string
+  vehicles: MatchingVehicleOption[]
+  drivers: MatchingDriverOption[]
+}
 
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 

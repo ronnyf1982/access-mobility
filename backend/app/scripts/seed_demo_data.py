@@ -369,6 +369,17 @@ def main() -> None:
             else:
                 print("  skip  DriverProfile driver@access.test (bereits vorhanden)")
 
+        # ── Fahrerprofil-Erweiterung Sprint 7: Rollstuhlsicherungs-Training ───
+        if driver_user and wb:
+            existing_dp = (
+                db.query(DriverProfile)
+                .filter(DriverProfile.user_id == driver_user.id)
+                .first()
+            )
+            if existing_dp and not existing_dp.has_wheelchair_restraint_training:
+                existing_dp.has_wheelchair_restraint_training = True
+                print("  upd   DriverProfile driver@access.test — has_wheelchair_restraint_training gesetzt")
+
         # ── Transportanfragen (für passenger@access.test) ───────────────────
         if passenger_user:
             existing_requests = (
@@ -442,7 +453,84 @@ def main() -> None:
                 db.add(req2)
                 print("  +req  requested patient_ride_no_medical_care für passenger@access.test")
             else:
-                print(f"  skip  TransportRequests passenger@access.test ({existing_requests} vorhanden)")
+                print(f"  skip  Basis-TransportRequests passenger@access.test ({existing_requests} vorhanden)")
+
+            # Sprint 7: Anfragen 3+4 nur anlegen wenn noch nicht da (by pickup_address)
+            sprint7_seeds = [
+                {
+                    "pickup_address": "Müllerstraße 45, 13353 Berlin",
+                    "destination_address": "Tagespflege Sonnenschein, Seestraße 68, 13347 Berlin",
+                    "transport_type_id": "accessible_ride",
+                    "status": TransportRequestStatus.requested,
+                    "pickup_date": datetime.date(2026, 7, 28),
+                    "pickup_time": datetime.time(9, 15),
+                    "is_round_trip": True,
+                    "return_time_known": True,
+                    "return_pickup_time": datetime.time(15, 30),
+                    "requirement_snapshot": {
+                        "transport_type_id": "accessible_ride",
+                        "selected_profile_fields": [
+                            "uses_wheelchair", "needs_ramp", "needs_escort", "requires_wheelchair_space"
+                        ],
+                        "selected_field_values": {},
+                        "notes": "Rollstuhl manuell, Rampe und Begleitplatz erforderlich.",
+                    },
+                    "mobility_profile_snapshot": {
+                        "uses_wheelchair": True,
+                        "wheelchair_type": "manual",
+                        "needs_ramp": True,
+                        "needs_escort": True,
+                        "requires_wheelchair_space": True,
+                    },
+                    "notes": "Sprint-7-Demo: Gute Übereinstimmung mit Rollstuhlbus 1 und Demo Fahrer.",
+                    "submitted_at": datetime.datetime(2026, 7, 10, 16, 0, 0, tzinfo=datetime.timezone.utc),
+                    "label": "accessible_ride mit Rollstuhl + Rampe + Begleitung (Sprint 7 — gute Übereinstimmung)",
+                },
+                {
+                    "pickup_address": "Sonnenallee 200, 12059 Berlin",
+                    "destination_address": "Vivantes Klinikum Neukölln, Rudower Str. 48, 12351 Berlin",
+                    "transport_type_id": "stretcher_ride",
+                    "status": TransportRequestStatus.requested,
+                    "pickup_date": datetime.date(2026, 7, 30),
+                    "pickup_time": datetime.time(7, 45),
+                    "is_round_trip": False,
+                    "return_time_known": False,
+                    "requirement_snapshot": {
+                        "transport_type_id": "stretcher_ride",
+                        "selected_profile_fields": [
+                            "needs_stretcher_transport", "requires_special_positioning"
+                        ],
+                        "selected_field_values": {},
+                        "notes": "Liegendtransport, besondere Lagerung notwendig.",
+                    },
+                    "mobility_profile_snapshot": {
+                        "needs_stretcher_transport": True,
+                        "requires_special_positioning": True,
+                    },
+                    "notes": "Sprint-7-Demo: Warnungsfall — kein Fahrzeug mit Liegendtransport-Ausstattung.",
+                    "submitted_at": datetime.datetime(2026, 7, 10, 16, 5, 0, tzinfo=datetime.timezone.utc),
+                    "label": "stretcher_ride (Sprint 7 — Warnungsfall)",
+                },
+            ]
+            for seed in sprint7_seeds:
+                label = seed.pop("label")
+                exists = (
+                    db.query(TransportRequest)
+                    .filter(
+                        TransportRequest.passenger_user_id == passenger_user.id,
+                        TransportRequest.pickup_address == seed["pickup_address"],
+                    )
+                    .first()
+                )
+                if not exists:
+                    db.add(TransportRequest(
+                        requester_user_id=passenger_user.id,
+                        passenger_user_id=passenger_user.id,
+                        **seed,
+                    ))
+                    print(f"  +req  {label}")
+                else:
+                    print(f"  skip  TransportRequest '{seed['pickup_address']}' (bereits vorhanden)")
 
         db.commit()
         print("\nDemo-Daten erfolgreich angelegt.")

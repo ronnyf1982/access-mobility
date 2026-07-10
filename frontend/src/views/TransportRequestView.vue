@@ -3,13 +3,15 @@
     <!-- Header -->
     <div class="tr-header">
       <div>
-        <h1 class="tr-title">Fahrten anfragen</h1>
+        <h1 class="tr-title">{{ isDispositionUser ? 'Disposition' : 'Fahrten anfragen' }}</h1>
         <p class="tr-subtitle">
-          Neue Transportanfrage erstellen oder Ihre bisherigen Anfragen verwalten.
+          {{ isDispositionUser
+            ? 'Transportanfragen disponieren und Fahrzeuge sowie Fahrer:innen zuweisen.'
+            : 'Neue Transportanfrage erstellen oder Ihre bisherigen Anfragen verwalten.' }}
         </p>
       </div>
       <button
-        v-if="mode === 'list'"
+        v-if="mode === 'list' && isPassengerRequestUser"
         class="am-btn am-btn-primary"
         @click="startCreate"
         aria-label="Neue Transportanfrage erstellen"
@@ -18,7 +20,7 @@
         Neue Anfrage
       </button>
       <button
-        v-else
+        v-if="mode === 'form'"
         class="am-btn am-btn-ghost"
         @click="backToList"
         aria-label="Zurück zur Liste"
@@ -43,8 +45,12 @@
 
       <div v-else-if="store.requests.length === 0" class="tr-empty am-card">
         <i class="pi pi-inbox tr-empty-icon" aria-hidden="true"></i>
-        <p class="tr-empty-text">Noch keine Transportanfragen vorhanden.</p>
-        <button class="am-btn am-btn-primary" @click="startCreate">
+        <p class="tr-empty-text">
+          {{ isDispositionUser
+            ? 'Keine offenen Anfragen zur Disposition.'
+            : 'Noch keine Transportanfragen vorhanden.' }}
+        </p>
+        <button v-if="isPassengerRequestUser" class="am-btn am-btn-primary" @click="startCreate">
           <i class="pi pi-plus" aria-hidden="true"></i>
           Erste Anfrage erstellen
         </button>
@@ -78,6 +84,22 @@
             </span>
           </div>
 
+          <!-- Fahrgast-Kontakt: nur für Dispo-Rollen -->
+          <div v-if="isDispositionUser" class="tr-passenger-contact">
+            <i class="pi pi-user" aria-hidden="true"></i>
+            <span class="tr-passenger-name">{{ req.passenger_display_name || '—' }}</span>
+            <a
+              v-if="req.passenger_phone"
+              :href="`tel:${req.passenger_phone}`"
+              class="tr-passenger-phone"
+              :aria-label="`Anrufen: ${req.passenger_phone}`"
+            >
+              <i class="pi pi-phone" aria-hidden="true"></i>
+              {{ req.passenger_phone }}
+            </a>
+            <span v-else class="tr-passenger-phone--missing">kein Telefon hinterlegt</span>
+          </div>
+
           <div class="tr-card-route" v-if="req.pickup_address || req.destination_address">
             <div class="tr-route-item">
               <i class="pi pi-map-marker tr-route-icon tr-route-icon--from" aria-hidden="true"></i>
@@ -96,15 +118,34 @@
             Noch keine Adresse angegeben
           </div>
 
+          <div v-if="req.status === 'assigned'" class="tr-assignment-banner">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>
+            <span>Fahrzeug &amp; Fahrer:in zugewiesen</span>
+            <span v-if="req.assigned_at" class="tr-assignment-date">
+              {{ formatDate(req.assigned_at) }}
+            </span>
+          </div>
+
           <div class="tr-card-actions">
+            <!-- Bearbeiten: nur Fahrgast-Modus -->
             <button
-              v-if="req.status !== 'cancelled'"
+              v-if="isPassengerRequestUser && (req.status === 'draft' || req.status === 'requested')"
               class="am-btn am-btn-ghost tr-card-btn"
               @click="openEdit(req.id)"
               :aria-label="`Anfrage vom ${formatDate(req.pickup_date)} bearbeiten`"
             >
               <i class="pi pi-pencil" aria-hidden="true"></i>
               Bearbeiten
+            </button>
+            <!-- Disponieren: nur Dispo-Modus -->
+            <button
+              v-if="isDispositionUser && (req.status === 'requested' || req.status === 'assigned')"
+              class="am-btn am-btn-ghost tr-card-btn"
+              @click="openEdit(req.id)"
+              :aria-label="`Disposition für Anfrage vom ${formatDate(req.pickup_date)} öffnen`"
+            >
+              <i class="pi pi-sliders-v" aria-hidden="true"></i>
+              {{ req.status === 'assigned' ? 'Zuweisung' : 'Disponieren' }}
             </button>
             <button
               v-if="req.status !== 'cancelled'"
@@ -144,6 +185,114 @@
         <i class="pi pi-check-circle" aria-hidden="true"></i>
         {{ formSuccess }}
       </div>
+
+      <!-- Dispo-Modus: Fahrgastdaten -->
+      <section
+        v-if="isDispositionUser"
+        class="tr-section am-card tr-passenger-info-box"
+        aria-labelledby="s-pass-heading"
+      >
+        <h2 id="s-pass-heading" class="tr-section-title">
+          <i class="pi pi-user" aria-hidden="true"></i>
+          Fahrgastdaten
+        </h2>
+        <div class="tr-info-grid">
+          <div class="tr-info-row">
+            <span class="tr-info-label">Name</span>
+            <span class="tr-info-value">{{ store.current?.passenger_display_name || '—' }}</span>
+          </div>
+          <div class="tr-info-row">
+            <span class="tr-info-label">Telefon</span>
+            <span class="tr-info-value">
+              <a
+                v-if="store.current?.passenger_phone"
+                :href="`tel:${store.current.passenger_phone}`"
+              >{{ store.current.passenger_phone }}</a>
+              <em v-else class="tr-info-empty">nicht hinterlegt</em>
+            </span>
+          </div>
+          <div class="tr-info-row">
+            <span class="tr-info-label">E-Mail</span>
+            <span class="tr-info-value">
+              <a
+                v-if="store.current?.passenger_email"
+                :href="`mailto:${store.current.passenger_email}`"
+              >{{ store.current.passenger_email }}</a>
+              <em v-else class="tr-info-empty">—</em>
+            </span>
+          </div>
+          <template v-if="store.current?.passenger_emergency_contact_name">
+            <div class="tr-info-row">
+              <span class="tr-info-label">Notfallkontakt</span>
+              <span class="tr-info-value">{{ store.current.passenger_emergency_contact_name }}</span>
+            </div>
+            <div v-if="store.current?.passenger_emergency_contact_phone" class="tr-info-row">
+              <span class="tr-info-label">Notfall-Tel.</span>
+              <span class="tr-info-value">
+                <a :href="`tel:${store.current.passenger_emergency_contact_phone}`">
+                  {{ store.current.passenger_emergency_contact_phone }}
+                </a>
+              </span>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- Dispo-Modus: Anfragedetails (schreibgeschützt) -->
+      <section
+        v-if="isDispositionUser"
+        class="tr-section am-card"
+        aria-labelledby="s-req-heading"
+      >
+        <h2 id="s-req-heading" class="tr-section-title">
+          <i class="pi pi-file-o" aria-hidden="true"></i>
+          Anfragedetails
+        </h2>
+        <div class="tr-info-grid">
+          <div v-if="form.transport_type_id" class="tr-info-row">
+            <span class="tr-info-label">Transporttyp</span>
+            <span class="tr-info-value">{{ typeLabel(form.transport_type_id) }}</span>
+          </div>
+          <div class="tr-info-row">
+            <span class="tr-info-label">Abholung</span>
+            <span class="tr-info-value">
+              {{ formatDate(form.pickup_date) }}
+              <span v-if="form.pickup_time"> um {{ form.pickup_time }}</span>
+            </span>
+          </div>
+          <div class="tr-info-row">
+            <span class="tr-info-label">Von</span>
+            <span class="tr-info-value">{{ form.pickup_address || '—' }}</span>
+          </div>
+          <div class="tr-info-row">
+            <span class="tr-info-label">Nach</span>
+            <span class="tr-info-value">{{ form.destination_address || '—' }}</span>
+          </div>
+          <div v-if="form.is_round_trip" class="tr-info-row">
+            <span class="tr-info-label">Rückfahrt</span>
+            <span class="tr-info-value">
+              Ja<span v-if="form.return_pickup_time"> um {{ form.return_pickup_time }}</span>
+            </span>
+          </div>
+          <div v-if="activeMobilityNeeds.length" class="tr-info-row tr-info-row--needs">
+            <span class="tr-info-label">Anforderungen</span>
+            <div class="tr-needs-chips">
+              <span
+                v-for="need in activeMobilityNeeds"
+                :key="need"
+                class="tr-need-chip"
+              >{{ need }}</span>
+            </div>
+          </div>
+          <div v-if="form.notes" class="tr-info-row">
+            <span class="tr-info-label">Hinweise</span>
+            <span class="tr-info-value">{{ form.notes }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Abschnitt 1–4: Fahrgast-Wizard (nur für Fahrgäste) -->
+      <template v-if="isPassengerRequestUser">
 
       <!-- Abschnitt 1: Für wen -->
       <section class="tr-section am-card" aria-labelledby="s1-heading">
@@ -419,8 +568,171 @@
         </div>
       </section>
 
-      <!-- Abschnitt 5: Speichern / Absenden -->
-      <div class="tr-save-bar">
+      </template><!-- /isPassengerRequestUser -->
+
+      <!-- Abschnitt 5: Disposition (nur für Dispo-Rollen, requested / assigned) -->
+      <section
+        v-if="isDispositionUser && editId && (currentRequestStatus === 'requested' || currentRequestStatus === 'assigned')"
+        class="tr-section am-card tr-disposition"
+        aria-labelledby="s5-heading"
+      >
+        <h2 id="s5-heading" class="tr-section-title">
+          <i class="pi pi-sliders-v" aria-hidden="true"></i>
+          Disposition
+        </h2>
+        <p class="tr-section-desc">
+          Das Matching ist eine Entscheidungshilfe. Die finale Auswahl trifft der Disponent.
+          Eine Zuweisung trotz Warnung ist möglich — bitte fachlich prüfen.
+        </p>
+
+        <!-- Aktuelle Zuweisung -->
+        <div v-if="currentRequestStatus === 'assigned'" class="tr-current-assignment">
+          <div class="tr-current-assignment-header">
+            <i class="pi pi-check-circle" aria-hidden="true"></i>
+            <strong>Zuweisung aktiv</strong>
+          </div>
+          <p class="tr-section-desc">
+            Diese Anfrage ist bereits zugewiesen.
+            <span v-if="store.current?.assignment_notes">
+              Hinweis: {{ store.current.assignment_notes }}
+            </span>
+          </p>
+          <button
+            type="button"
+            class="am-btn am-btn-ghost tr-card-btn--danger"
+            :disabled="store.saving"
+            @click="handleUnassign"
+            aria-label="Zuweisung aufheben"
+          >
+            <i v-if="store.saving" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+            <i v-else class="pi pi-undo" aria-hidden="true"></i>
+            Zuweisung aufheben
+          </button>
+        </div>
+
+        <!-- Matching laden -->
+        <div v-if="!store.matchingOptions && !store.matchingLoading">
+          <button
+            type="button"
+            class="am-btn am-btn-ghost"
+            @click="handleLoadMatching"
+            aria-label="Passende Fahrzeuge und Fahrer prüfen"
+          >
+            <i class="pi pi-search" aria-hidden="true"></i>
+            Passende Fahrzeuge und Fahrer prüfen
+          </button>
+        </div>
+
+        <div v-if="store.matchingLoading" class="tr-loading" role="status" aria-live="polite">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+          Matching wird berechnet …
+        </div>
+
+        <!-- Matching-Ergebnisse -->
+        <div v-if="store.matchingOptions && !store.matchingLoading" class="tr-matching">
+          <!-- Fahrzeuge -->
+          <div class="tr-matching-group">
+            <h3 class="tr-matching-group-title">
+              <i class="pi pi-car" aria-hidden="true"></i>
+              Fahrzeuge
+            </h3>
+            <div v-if="store.matchingOptions.vehicles.length === 0" class="tr-matching-empty">
+              Keine aktiven Fahrzeuge vorhanden.
+            </div>
+            <div class="tr-matching-list">
+              <button
+                v-for="v in store.matchingOptions.vehicles"
+                :key="v.vehicle_id"
+                type="button"
+                class="tr-matching-card"
+                :class="[`tr-matching-card--${v.status}`, selectedVehicleId === v.vehicle_id ? 'tr-matching-card--selected' : '']"
+                @click="selectedVehicleId = selectedVehicleId === v.vehicle_id ? null : v.vehicle_id"
+                :aria-pressed="selectedVehicleId === v.vehicle_id"
+                :aria-label="`${v.name} (${v.license_plate}): ${MATCH_STATUS_LABELS[v.status]}`"
+              >
+                <div class="tr-matching-card-top">
+                  <span class="tr-match-name">{{ v.name }}</span>
+                  <span class="tr-match-plate">{{ v.license_plate }}</span>
+                  <span class="tr-match-badge" :class="`tr-match-badge--${v.status}`">
+                    <i :class="['pi', matchIcon(v.status)]" aria-hidden="true"></i>
+                    {{ MATCH_STATUS_LABELS[v.status] }}
+                  </span>
+                </div>
+                <div v-if="v.reasons.length" class="tr-match-reasons">
+                  <span v-for="(r, i) in v.reasons" :key="i" class="tr-match-reason">{{ r }}</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Fahrer:innen -->
+          <div class="tr-matching-group">
+            <h3 class="tr-matching-group-title">
+              <i class="pi pi-id-card" aria-hidden="true"></i>
+              Fahrer:innen
+            </h3>
+            <div v-if="store.matchingOptions.drivers.length === 0" class="tr-matching-empty">
+              Keine aktiven Fahrerprofile vorhanden.
+            </div>
+            <div class="tr-matching-list">
+              <button
+                v-for="d in store.matchingOptions.drivers"
+                :key="d.driver_profile_id"
+                type="button"
+                class="tr-matching-card"
+                :class="[`tr-matching-card--${d.status}`, selectedDriverId === d.driver_profile_id ? 'tr-matching-card--selected' : '']"
+                @click="selectedDriverId = selectedDriverId === d.driver_profile_id ? null : d.driver_profile_id"
+                :aria-pressed="selectedDriverId === d.driver_profile_id"
+                :aria-label="`${d.display_name}: ${MATCH_STATUS_LABELS[d.status]}`"
+              >
+                <div class="tr-matching-card-top">
+                  <span class="tr-match-name">{{ d.display_name }}</span>
+                  <span class="tr-match-badge" :class="`tr-match-badge--${d.status}`">
+                    <i :class="['pi', matchIcon(d.status)]" aria-hidden="true"></i>
+                    {{ MATCH_STATUS_LABELS[d.status] }}
+                  </span>
+                </div>
+                <div v-if="d.reasons.length" class="tr-match-reasons">
+                  <span v-for="(r, i) in d.reasons" :key="i" class="tr-match-reason">{{ r }}</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Zuweisungsformular -->
+          <div v-if="selectedVehicleId && selectedDriverId" class="tr-assign-form">
+            <div class="tr-field">
+              <label for="assign-notes" class="tr-label">
+                Dispositionshinweis
+                <span class="tr-optional-badge">optional</span>
+              </label>
+              <textarea
+                id="assign-notes"
+                v-model="assignNotes"
+                class="tr-textarea"
+                rows="2"
+                placeholder="z. B. Besonderheiten für Fahrer:in"
+                aria-label="Dispositionshinweis"
+              ></textarea>
+            </div>
+            <button
+              type="button"
+              class="am-btn am-btn-primary"
+              :disabled="store.saving"
+              :aria-busy="store.saving"
+              @click="handleAssign"
+              aria-label="Fahrzeug und Fahrer:in jetzt zuweisen"
+            >
+              <i v-if="store.saving" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              <i v-else class="pi pi-check" aria-hidden="true"></i>
+              {{ store.saving ? 'Wird zugewiesen …' : 'Jetzt zuweisen' }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Speichern / Absenden: nur Fahrgast-Modus -->
+      <div v-if="isPassengerRequestUser" class="tr-save-bar">
         <button
           type="button"
           class="am-btn am-btn-ghost"
@@ -449,21 +761,31 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useTransportRequestStore } from '@/stores/transportRequests'
 import { useMobilityProfileStore } from '@/stores/mobilityProfile'
+import { useAuthStore } from '@/stores/auth'
 import { getTransportOptions } from '@/api/transportOptions'
-import type { TransportType, TransportRequestCreate, MobilityProfileSnapshot, RequirementSnapshot } from '@/types'
-import { TRANSPORT_REQUEST_STATUS_LABELS } from '@/types'
+import type { TransportType, TransportRequestCreate, MobilityProfileSnapshot, RequirementSnapshot, TransportRequestStatus, MatchStatus } from '@/types'
+import { TRANSPORT_REQUEST_STATUS_LABELS, MATCH_STATUS_LABELS } from '@/types'
 
 const store = useTransportRequestStore()
 const profileStore = useMobilityProfileStore()
+const authStore = useAuthStore()
+
+const _DISPO_ROLES = ['provider_admin', 'dispatcher', 'platform_admin']
+const isDispositionUser = computed(() => _DISPO_ROLES.includes(authStore.role ?? ''))
+const isPassengerRequestUser = computed(() => !isDispositionUser.value)
 
 const mode = ref<'list' | 'form'>('list')
 const editId = ref<string | null>(null)
+const currentRequestStatus = ref<TransportRequestStatus | null>(null)
 const formError = ref('')
 const formSuccess = ref('')
 const transportTypes = ref<TransportType[]>([])
+const selectedVehicleId = ref<string | null>(null)
+const selectedDriverId = ref<string | null>(null)
+const assignNotes = ref('')
 
 const BLANK_FORM: TransportRequestCreate = {
   transport_type_id: null,
@@ -499,6 +821,10 @@ const REQUIREMENT_OPTIONS = [
   { key: 'requires_medical_attendant',    label: 'Med. Begleitung',            icon: 'pi-heart',          desc: 'Medizinisch qualifizierte Begleitperson' },
 ] as const
 
+const activeMobilityNeeds = computed(() =>
+  REQUIREMENT_OPTIONS.filter(opt => !!snapshotFields[opt.key]).map(opt => opt.label)
+)
+
 function statusLabel(status: string): string {
   return TRANSPORT_REQUEST_STATUS_LABELS[status as keyof typeof TRANSPORT_REQUEST_STATUS_LABELS] ?? status
 }
@@ -506,6 +832,7 @@ function statusLabel(status: string): string {
 function statusIcon(status: string): string {
   if (status === 'draft') return 'pi-pencil'
   if (status === 'requested') return 'pi-send'
+  if (status === 'assigned') return 'pi-check-circle'
   if (status === 'cancelled') return 'pi-times-circle'
   return 'pi-circle'
 }
@@ -623,9 +950,14 @@ function startCreate() {
 async function openEdit(id: string) {
   formError.value = ''
   formSuccess.value = ''
+  selectedVehicleId.value = null
+  selectedDriverId.value = null
+  assignNotes.value = ''
+  store.matchingOptions = null
   try {
     const req = await store.loadOne(id)
     editId.value = id
+    currentRequestStatus.value = req.status
     Object.assign(form, {
       transport_type_id: req.transport_type_id,
       pickup_address: req.pickup_address,
@@ -658,8 +990,13 @@ async function openEdit(id: string) {
 function backToList() {
   mode.value = 'list'
   editId.value = null
+  currentRequestStatus.value = null
   formError.value = ''
   formSuccess.value = ''
+  selectedVehicleId.value = null
+  selectedDriverId.value = null
+  assignNotes.value = ''
+  store.matchingOptions = null
 }
 
 async function handleSaveDraft() {
@@ -720,6 +1057,59 @@ async function save(action: 'draft' | 'submit') {
   } catch (e: unknown) {
     const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
     formError.value = msg ?? 'Fehler beim Speichern. Bitte prüfen Sie alle Pflichtfelder.'
+  }
+}
+
+function matchIcon(status: MatchStatus): string {
+  if (status === 'suitable') return 'pi-check-circle'
+  if (status === 'warning') return 'pi-exclamation-triangle'
+  return 'pi-times-circle'
+}
+
+async function handleLoadMatching() {
+  if (!editId.value) return
+  formError.value = ''
+  try {
+    await store.loadMatchingOptions(editId.value)
+  } catch {
+    formError.value = 'Matching-Optionen konnten nicht geladen werden.'
+  }
+}
+
+async function handleAssign() {
+  if (!editId.value || !selectedVehicleId.value || !selectedDriverId.value) return
+  formError.value = ''
+  formSuccess.value = ''
+  try {
+    const req = await store.assign(editId.value, {
+      vehicle_id: selectedVehicleId.value,
+      driver_profile_id: selectedDriverId.value,
+      assignment_notes: assignNotes.value || null,
+    })
+    currentRequestStatus.value = req.status
+    formSuccess.value = 'Anfrage wurde erfolgreich zugewiesen.'
+    selectedVehicleId.value = null
+    selectedDriverId.value = null
+    assignNotes.value = ''
+  } catch (e: unknown) {
+    const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+    formError.value = msg ?? 'Fehler bei der Zuweisung.'
+  }
+}
+
+async function handleUnassign() {
+  if (!editId.value) return
+  if (!window.confirm('Zuweisung wirklich aufheben? Die Anfrage wird auf "Anfrage gestellt" zurückgesetzt.')) return
+  formError.value = ''
+  formSuccess.value = ''
+  try {
+    const req = await store.unassign(editId.value)
+    currentRequestStatus.value = req.status
+    formSuccess.value = 'Zuweisung wurde aufgehoben.'
+    store.matchingOptions = null
+  } catch (e: unknown) {
+    const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+    formError.value = msg ?? 'Fehler beim Aufheben der Zuweisung.'
   }
 }
 
@@ -849,6 +1239,12 @@ onMounted(async () => {
   background: rgba(34, 197, 94, 0.12);
   color: var(--am-success);
   border: 1px solid var(--am-success);
+}
+
+.tr-status-badge--assigned {
+  background: rgba(255, 214, 0, 0.15);
+  color: var(--am-accent);
+  border: 1px solid var(--am-accent);
 }
 
 .tr-status-badge--cancelled {
@@ -1344,6 +1740,275 @@ onMounted(async () => {
   background: var(--am-accent);
   border-color: var(--am-accent);
   color: var(--am-text-on-accent);
+}
+
+/* Assignment banner in list cards */
+.tr-assignment-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  padding: 8px var(--am-space-m);
+  background: rgba(255, 214, 0, 0.08);
+  border: 1px solid rgba(255, 214, 0, 0.3);
+  border-radius: var(--am-radius-s);
+  font-size: 0.82rem;
+  color: var(--am-accent);
+  font-weight: 600;
+}
+
+.tr-assignment-date {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--am-text-secondary);
+  font-size: 0.78rem;
+}
+
+/* Disposition section */
+.tr-disposition {}
+
+.tr-current-assignment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+  padding: var(--am-space-m);
+  background: rgba(255, 214, 0, 0.06);
+  border: 1px solid rgba(255, 214, 0, 0.25);
+  border-radius: var(--am-radius-s);
+}
+
+.tr-current-assignment-header {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  color: var(--am-accent);
+  font-size: 0.9rem;
+}
+
+/* Matching */
+.tr-matching {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-l);
+}
+
+.tr-matching-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+}
+
+.tr-matching-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--am-text-primary);
+  margin: 0;
+}
+
+.tr-matching-group-title .pi { color: var(--am-accent); }
+
+.tr-matching-empty {
+  font-size: 0.82rem;
+  color: var(--am-text-secondary);
+  font-style: italic;
+}
+
+.tr-matching-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tr-matching-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--am-space-m);
+  background: var(--am-bg-raised);
+  border: 2px solid var(--am-border);
+  border-radius: var(--am-radius-s);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--am-transition), background var(--am-transition);
+}
+
+.tr-matching-card:hover { border-color: var(--am-border-strong); }
+.tr-matching-card--selected { border-color: var(--am-accent); background: var(--am-accent-bg); }
+
+.tr-matching-card--unsuitable { opacity: 0.7; }
+
+.tr-matching-card-top {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  flex-wrap: wrap;
+}
+
+.tr-match-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--am-text-primary);
+  flex: 1;
+}
+
+.tr-match-plate {
+  font-size: 0.78rem;
+  color: var(--am-text-secondary);
+  font-family: monospace;
+}
+
+.tr-match-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tr-match-badge--suitable {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--am-success);
+  border: 1px solid var(--am-success);
+}
+
+.tr-match-badge--warning {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+  border: 1px solid #eab308;
+}
+
+.tr-match-badge--unsuitable {
+  background: var(--am-danger-bg);
+  color: var(--am-danger);
+  border: 1px solid var(--am-danger);
+}
+
+.tr-match-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tr-match-reason {
+  font-size: 0.75rem;
+  color: var(--am-text-secondary);
+  line-height: 1.4;
+}
+
+.tr-assign-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-m);
+  padding: var(--am-space-m);
+  background: var(--am-bg-raised);
+  border: 1px solid var(--am-border);
+  border-radius: var(--am-radius-s);
+}
+
+/* Fahrgast-Kontakt in Listenkarte (Dispo-Modus) */
+.tr-passenger-contact {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  padding: 6px var(--am-space-m);
+  background: var(--am-bg-base);
+  border-radius: var(--am-radius-s);
+  border: 1px solid var(--am-border);
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+.tr-passenger-name {
+  font-weight: 600;
+  color: var(--am-text-primary);
+  flex: 1;
+  min-width: 0;
+}
+
+.tr-passenger-phone {
+  color: var(--am-accent);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tr-passenger-phone:hover { text-decoration: underline; }
+
+.tr-passenger-phone--missing {
+  color: var(--am-text-secondary);
+  font-style: italic;
+  font-size: 0.78rem;
+}
+
+/* Fahrgast-Infobox im Formular (Dispo-Modus) */
+.tr-passenger-info-box {
+  border-left: 3px solid var(--am-accent);
+}
+
+.tr-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tr-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--am-space-m);
+  font-size: 0.875rem;
+}
+
+.tr-info-row--needs {
+  align-items: flex-start;
+}
+
+.tr-info-label {
+  min-width: 120px;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--am-text-secondary);
+  font-size: 0.8rem;
+}
+
+.tr-info-value {
+  color: var(--am-text-primary);
+  flex: 1;
+  line-height: 1.5;
+}
+
+.tr-info-value a {
+  color: var(--am-accent);
+  text-decoration: none;
+}
+
+.tr-info-value a:hover { text-decoration: underline; }
+
+.tr-info-empty {
+  color: var(--am-text-secondary);
+  font-style: italic;
+}
+
+.tr-needs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tr-need-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--am-bg-raised);
+  border: 1px solid var(--am-border);
+  font-size: 0.72rem;
+  color: var(--am-text-secondary);
 }
 
 /* Save bar */

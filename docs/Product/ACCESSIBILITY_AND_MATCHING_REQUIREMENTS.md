@@ -1,8 +1,49 @@
 # Accessibility & Matching — Anforderungen
 
 Freigegeben: 2026-07-10  
-Status: **Dokumentiert — noch keine technische Umsetzung in diesem Schritt.**  
-Vollständige Architekturentscheidung: `docs/DECISIONS.md` → Abschnitt „Accessibility-first"
+Matching implementiert: Sprint 7 (2026-07-10)  
+Status: **Matching-Regeln aktiv — `backend/app/services/manual_matching.py`**  
+Vollständige Architekturentscheidung: `docs/DECISIONS.md` → Abschnitt „Accessibility-first" + „Manuelles Matching"
+
+---
+
+## Matching-Regeln Sprint 7
+
+### Fahrzeugbewertung (harte Anforderungen → unsuitable)
+
+| Anforderungsfeld | geprüfte Fahrzeugfelder |
+|---|---|
+| `needs_stretcher_transport` | `supports_stretcher_transport` + `has_stretcher` + `has_stretcher_mount` |
+| `requires_transport_chair` | `has_transport_chair` |
+| `brings_oxygen` / `requires_oxygen_mount` | `has_oxygen_mount` |
+| `brings_medical_device` / `requires_medical_equipment_storage` | `has_medical_equipment_storage` |
+| `requires_infusion_mount` | `has_infusion_mount` |
+| `uses_wheelchair` / `requires_wheelchair_space` | `wheelchair_space_count > 0` |
+
+### Fahrzeugbewertung (weiche Anforderungen → warning)
+
+| Anforderungsfeld | geprüfte Fahrzeugfelder |
+|---|---|
+| `requires_medical_transport` | `supports_non_emergency_medical_transport` + `has_first_aid_kit` + `has_hygiene_equipment` |
+| `requires_two_person_assistance` | `supports_two_person_crew` |
+| `uses_wheelchair` / `requires_wheelchair_space` | `has_ramp or has_lift` + `has_wheelchair_restraint` |
+
+### Fahrerbewertung (harte Anforderungen → unsuitable)
+
+| Anforderungsfeld | geprüfte Fahrerfelder |
+|---|---|
+| `needs_stretcher_transport` | `can_handle_stretcher` |
+
+### Fahrerbewertung (weiche Anforderungen → warning)
+
+| Anforderungsfeld | geprüfte Fahrerfelder |
+|---|---|
+| `needs_stretcher_transport` | `has_stretcher_handling_training` |
+| `requires_transport_chair` | `has_transport_chair_training` |
+| `requires_medical_transport` | `can_support_medical_transport` + `has_first_aid_training` |
+| `requires_medical_attendant` | mind. 1 aus: SanH / RettH / RettSan / RettAss / NotSan / Pflege / MFA |
+| `infection_or_hygiene_note` | `has_hygiene_training` + `has_infection_protection_training` |
+| `uses_wheelchair` / `requires_wheelchair_space` | `can_secure_wheelchair` + `has_wheelchair_restraint_training` |
 
 ---
 
@@ -38,6 +79,13 @@ Die Buchungsoberfläche für Fahrgäste folgt diesen unveränderlichen Prinzipie
 5. **Keine überladenen Ansichten:** Fahrgäste sehen nur das, was für ihre Buchung
    relevant ist. Verwaltungsfunktionen (Disposition, Abrechnung, Org-Management)
    sind ausschließlich im Portal für Fahrdienste und Organisationen sichtbar.
+   Ab Sprint 7: Die Route `/transport-requests` rendiert je nach Rolle zwei vollständig
+   unterschiedliche Ansichten — Fahrgast-Wizard vs. Dispositions-Ansicht.
+
+6a. **Disponenten brauchen Kontaktdaten:** Ein Disponent muss Fahrgäste erreichen können.
+   Name, Telefon, E-Mail und Notfallkontakt erscheinen in der Dispo-Ansicht. Medizinische
+   Daten (Diagnosen, Erkrankungen) sind **nicht** für Disponenten sichtbar — nur transport-
+   relevante Bedarfsfelder (aus `requirement_snapshot`) und Kontaktdaten.
 
 6. **Rückgängig & Korrektur:** Fahrgäste können jeden Buchungsschritt zurückgehen
    und korrigieren, bevor sie bestätigen.
@@ -337,7 +385,9 @@ Technisch umgesetzt in folgenden Sprints:
 | Medizinische Detailfelder (Profil, Fahrzeug, Fahrer) | Sprint 5 ✅ |
 | Transporttypen-Schnellauswahl | Sprint 5B ✅ |
 | `TransportRequest`-Modell + Snapshots | Sprint 6 ✅ |
-| Matching-Validierung (manuell, Dispatcher) | Sprint 7 |
+| Matching-Validierung (manuell, Dispatcher) | Sprint 7 ✅ |
+| Fahrgast-Kontaktdaten für Disponenten | Sprint 7 ✅ |
+| Dual-UI-Modus (Fahrgast / Disposition) | Sprint 7 ✅ |
 | KI-Transportberater (Advisor-Modul) | nach MVP |
 | Routenoptimierung (Dimensionen, Wendekreis) | nach MVP |
 | Automatisches Matching | nach MVP |

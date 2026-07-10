@@ -4,6 +4,8 @@ import type {
   TransportRequestListItem,
   TransportRequestCreate,
   TransportRequestUpdate,
+  TransportRequestAssign,
+  MatchingOptionsResponse,
 } from '@/types'
 
 export async function getTransportRequests(): Promise<TransportRequestListItem[]> {
@@ -38,5 +40,30 @@ export async function submitTransportRequest(id: string): Promise<TransportReque
 
 export async function cancelTransportRequest(id: string): Promise<TransportRequestRead> {
   const { data } = await apiClient.post<TransportRequestRead>(`/transport-requests/${id}/cancel`)
+  return data
+}
+
+export async function getMatchingOptions(id: string): Promise<MatchingOptionsResponse> {
+  const { data } = await apiClient.get<MatchingOptionsResponse>(
+    `/transport-requests/${id}/matching-options`,
+  )
+  return data
+}
+
+export async function assignTransportRequest(
+  id: string,
+  payload: TransportRequestAssign,
+): Promise<TransportRequestRead> {
+  const { data } = await apiClient.post<TransportRequestRead>(
+    `/transport-requests/${id}/assign`,
+    payload,
+  )
+  return data
+}
+
+export async function unassignTransportRequest(id: string): Promise<TransportRequestRead> {
+  const { data } = await apiClient.post<TransportRequestRead>(
+    `/transport-requests/${id}/unassign`,
+  )
   return data
 }

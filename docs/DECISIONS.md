@@ -29,6 +29,21 @@ zwingend. PostgreSQL ist produktionserprobt und wird lokal via Docker betrieben.
 
 ---
 
+## Dual-UI-Modus: Fahrgast vs. Disposition (Sprint 7)
+
+`/transport-requests` rendert zwei verschiedene Ansichten abhängig von der Nutzerrolle:
+
+- **Fahrgast-Modus** (`passenger`, `trusted_person`, alle anderen): Seitentitel „Meine Fahrten", „Neue Anfrage"-Button, Booking-Wizard (Abschnitte 1–4), Speichern/Absenden-Leiste
+- **Dispo-Modus** (`provider_admin`, `dispatcher`, `platform_admin`): Seitentitel „Disposition", kein „Neue Anfrage"-Button, kein Wizard; stattdessen Fahrgastdaten-Infobox + schreibgeschützte Anfragedetails + Disposition-Abschnitt (Matching, Zuweisung)
+
+Die Rollenprüfung erfolgt im Frontend via `authStore.role` (computed `isDispositionUser`). Die API filtert die Liste bereits serverseitig: Dispo-Rollen erhalten alle `requested`/`assigned`-Anfragen, Fahrgäste nur ihre eigenen.
+
+**Fahrgast-Kontaktfelder** (`passenger_display_name`, `passenger_email`, `passenger_phone`, `passenger_emergency_contact_name`, `passenger_emergency_contact_phone`) werden serverseitig per Batch-Query (List) bzw. Einzelabfrage (Detail) aus `users`- und `mobility_profiles`-Tabellen befüllt und nur bei Bedarf gerendert. `User.phone` ist nullable — das Frontend zeigt „nicht hinterlegt" wenn kein Wert vorhanden.
+
+**Sidebar:** Das Nav-Label „Fahrten anfragen" / „Disposition" wird ebenfalls rollenbasiert berechnet (computed `navItems`).
+
+---
+
 ## CORS
 
 Nur `http://localhost:5180` ist als erlaubter Origin konfiguriert — auch im Dev kein Wildcard `*`.
@@ -416,16 +431,55 @@ wird informiert, kein Fahrzeug wird vorgeschlagen. Das Matching folgt in Sprint 
 
 ---
 
+## Manuelles Matching (Sprint 7)
+
+### Snapshot-basiertes Matching
+
+Das Matching liest ausschließlich `requirement_snapshot` und `mobility_profile_snapshot` — nicht das aktuelle `MobilityProfile` des Fahrgastes. Begründung: Profil-Updates nach Anfragedatum dürfen das Matching bestehender Anfragen nicht beeinflussen. Der Snapshot ist die vertragliche Grundlage.
+
+**`_extract_needs(request) → set[str]`:** Vereinigt beide Snapshot-Quellen. Die `selected_profile_fields` aus dem Anforderungs-Snapshot werden mit allen auf `True` gesetzten booleschen Feldern aus `mobility_profile_snapshot` gemergt. Das Ergebnis ist eine Menge von Anforderungsbezeichnern, die von Fahrzeug- und Fahrerregeln abgefragt werden.
+
+### Drei Match-Level
+
+- **`suitable`** — keine fehlenden Anforderungen
+- **`warning`** — nur weiche Anforderungen fehlen (fachlich prüfbar, nicht strukturell ausschließend)
+- **`unsuitable`** — mindestens eine harte Anforderung fehlt (strukturell nicht bedienbar ohne Anpassung)
+
+**Harte Anforderungen (→ `unsuitable`):** Liegendtransport-Grundausstattung, Transportliege + -aufnahme, Tragestuhl, Sauerstoff-/Infusionshalterung, med. Stauraum, Rollstuhlplatz, Liegendtransport-Fahrerbefähigung.
+
+**Weiche Anforderungen (→ `warning`):** KTP-Qualifikation, Rampe/Lift, Rollstuhlsicherung, KTP-Fahrerqualifikation, Trainings-Flags, Hygiene/Infektionsschutz.
+
+### Matching als Entscheidungshilfe — kein Block
+
+Der `POST /{id}/assign`-Endpoint prüft **nicht** das Matching-Ergebnis. Ein Disponent kann jede beliebige Kombination aus aktivem Fahrzeug + aktivem Fahrerprofil zuweisen, auch wenn das Matching `unsuitable` zurückgibt. Begründung: Das System hat keine Kenntnis von Sondersituationen, Zusatzvereinbarungen oder Notfallentscheidungen. Die fachliche Verantwortung liegt beim Menschen.
+
+### Statusmodell Sprint 7
+
+```
+draft → requested → assigned ← unassign
+draft → cancelled
+requested → cancelled
+assigned → cancelled
+```
+
+`unassign` setzt `assigned` zurück auf `requested`. Alle 5 Zuweisungsfelder werden auf `NULL` zurückgesetzt.
+
+PostgreSQL-Enum-Einschränkung: `ALTER TYPE ... ADD VALUE` kann in einer Transaktion ausgeführt werden (PostgreSQL 12+). Enum-Werte können **nicht** entfernt werden — die Alembic-Downgrade-Funktion lässt `assigned` bestehen und löscht nur die 5 Spalten.
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
-- Auth/JWT: Sprint 3
-- Rollenmodell: Sprint 3
-- Stammdaten (Org, Fahrzeug, Fahrer): Sprint 4
-- Fahrtenbuchung: Sprint 5
+- Auth/JWT: Sprint 3 ✅
+- Rollenmodell: Sprint 3 ✅
+- Stammdaten (Org, Fahrzeug, Fahrer): Sprint 4+5 ✅
+- Fahrtenbuchung: Sprint 5 ✅
 - Transportanfragen-Grundlage: Sprint 6 ✅
-- Manuelles Matching & Disposition: Sprint 7
-- Serienfahrten (RRULE): Sprint 8+
+- Manuelles Matching & Disposition: Sprint 7 ✅
+- Fahrerstatus / Fahrtstart: Sprint 8
 - Automatisches Matching (KI): nach MVP
+- Serienfahrten (RRULE): Sprint 8+
 - Sprachführung / Sprachmenü: nach MVP
 - Vertrauenspersonen-Modell (Remote-Buchung): nach MVP
 - Zahlungen, Abrechnung, externe APIs: außerhalb MVP
+- RBAC-Vollausbau (Mandantentrennung): nach Sprint 8
