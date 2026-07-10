@@ -26,29 +26,37 @@ Presets (kein Auto-Setzen med. Felder außer was eindeutig zutrifft), Backend li
 `preset_controlled_profile_fields` + `suggested_field_values`, Frontend-Reset dynamisch
 aus Backend-Daten statt lokal hart kodiert.
 
-## Sprint 6 — Fahrtenbuchung
-Einzelne Fahrt buchen, disponieren, ausführen.
+## Sprint 6 — Fahrt-/Transportanfrage Grundlage ✅
+`TransportRequest`-Domänenobjekt als Kern des Buchungsprozesses.
 
-- Backend: `Ride`-Modell, Statusmaschine, Zuteilungs-Endpoint
-- Frontend: Buchungs-Wizard (PrimeVue Stepper), Fahrtenliste (reale Daten), Fahrer-View mit Statuswechsel
-- Koordinator-Flow: Fahrt für andere Person buchen
+- Backend: `TransportRequest`-Modell (status: draft/requested/cancelled), Alembic-Migration, JSONB-Snapshots
+- 6 REST-Endpunkte: list, create, get, update, submit (draft→requested), cancel
+- Snapshots: `requirement_snapshot` + `mobility_profile_snapshot` frieren Anforderungen zum Anfragezeit­punkt ein
+- Frontend: `TransportRequestView` (Liste + Wizard-light), Pinia Store, API-Modul, Route `/transport-requests`
+- Sidebar-Eintrag „Fahrten anfragen", Dashboard-KPI-Kachel mit Count und Direktlink
+- Seed-Daten: 1 draft + 1 requested für passenger@access.test (idempotent)
+- Kein Matching, keine Disposition, keine Fahrerzuweisung in diesem Sprint
 
-## Sprint 6 — Organisationsansicht, RBAC & Admin
-Org-Kontext vollständig, rollenbasierte UI-Einschränkungen, Admin-Dashboard.
+## Sprint 7 — Manuelles Matching & Disposition
+Anfrage → Fahrt zuweisen, Fahrdienst bestätigt.
 
-- Fahrtenliste gefiltert nach Organisation
-- Kostenstellen-Referenz an Fahrt
-- Stornierung mit Bestätigungs-Dialog
-- Admin-Dashboard mit Statistik-Karten
-- Benutzer-Rollenverwaltung
+- Backend: `Ride`-Modell (Zuteilung TransportRequest → Fahrzeug + Fahrer), Status-Maschine
+- Disponent-Flow: offene Anfragen sehen, Fahrzeug/Fahrer zuweisen, Bestätigung auslösen
+- Benachrichtigung: Fahrgast erhält Bestätigung (In-App-Notification)
+- Frontend: Dispositions-View (Dispatcher-Rolle), Fahrtbestätigungs-Banner für Fahrgäste
 
-## Sprint 7 — Serienfahrten & Stabilisierung
-Wiederkehrende Fahrten, Fehlerbehandlung, erste Tests.
+## Sprint 8 — Fahrtstart & Fahreransicht
+Fahrer sieht Tagesaufträge, startet Fahrt, markiert Abschluss.
 
-- Backend: `RecurringRide` + RRULE-Auflösung (`python-dateutil`)
-- Frontend: Serienfahrt-Formular, Einzelfahrten-Übersicht
-- Globales Error-Handling (401 → Logout, 422 → Feldvalidierung)
-- Manuelles Test-Protokoll für Kernflows
+- Backend: Fahrtstart-/Abschluss-Endpoints, Zeitstempel
+- Frontend: Fahrer-Dashboard, Auftragsliste, Statuswechsel (unterwegs → abgeschlossen)
+
+## Sprint 9 — KI-Transportberater (Prototyp)
+Assistierter Anfrageprozess: KI schlägt Transporttyp und Anforderungen vor.
+
+- Integration Claude API (claude-sonnet-4-6 oder höher)
+- Kontext: Mobilitätsprofil + Fahrtdaten → Vorschlag-Text
+- Fahrgast kann Vorschlag übernehmen oder manuell anpassen
 
 ---
 

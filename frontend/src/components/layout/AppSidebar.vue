@@ -66,7 +66,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard',        icon: 'pi-th-large',       to: '/dashboard' },
   { label: 'Mobilitätsprofil', icon: 'pi-heart',          to: '/mobility-profile' },
-  { label: 'Fahrten',          icon: 'pi-car' },
+  { label: 'Fahrten anfragen', icon: 'pi-car',         to: '/transport-requests' },
   { label: 'Buchen',           icon: 'pi-plus-circle' },
   { label: 'Fahrgäste',        icon: 'pi-users' },
   { label: 'Fahrzeuge',        icon: 'pi-truck',   to: '/vehicles' },

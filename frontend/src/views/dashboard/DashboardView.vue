@@ -32,7 +32,14 @@
 
     <!-- KPI Kacheln -->
     <div class="kpi-grid" role="region" aria-label="Kennzahlen">
-      <div class="kpi-card am-card" v-for="kpi in kpiCards" :key="kpi.label">
+      <component
+        :is="kpi.to ? 'RouterLink' : 'div'"
+        v-for="kpi in kpiCards"
+        :key="kpi.label"
+        class="kpi-card am-card"
+        :class="{ 'kpi-card--link': !!kpi.to }"
+        :to="kpi.to ?? undefined"
+      >
         <div class="kpi-icon-box" :style="{ background: kpi.iconBg }" aria-hidden="true">
           <i :class="['pi', kpi.icon]"></i>
         </div>
@@ -41,7 +48,7 @@
           <span class="kpi-label">{{ kpi.label }}</span>
           <span class="kpi-sub" :class="kpi.subClass">{{ kpi.sub }}</span>
         </div>
-      </div>
+      </component>
     </div>
 
     <!-- Hauptbereich -->
@@ -241,12 +248,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useMobilityProfileStore } from '@/stores/mobilityProfile'
 import { useVehicleStore } from '@/stores/vehicle'
 import { useDriverProfileStore } from '@/stores/driverProfile'
+import { useTransportRequestStore } from '@/stores/transportRequests'
 import { ROLE_LABELS, ROLE_CONTEXT } from '@/types'
 
 const authStore = useAuthStore()
 const profileStore = useMobilityProfileStore()
 const vehicleStore = useVehicleStore()
 const driverStore = useDriverProfileStore()
+const transportStore = useTransportRequestStore()
 
 onMounted(async () => {
   const role = authStore.role
@@ -255,6 +264,7 @@ onMounted(async () => {
   }
   if (!vehicleStore.vehicles.length) vehicleStore.load()
   if (!driverStore.drivers.length) driverStore.load()
+  transportStore.load().catch(() => {})
 })
 const currentRoleLabel = computed(() =>
   authStore.role ? ROLE_LABELS[authStore.role] : 'Unbekannte Rolle',
@@ -264,7 +274,7 @@ const currentRoleContext = computed(() =>
 )
 
 /* ── KPI-Kacheln ─────────────────────────────────────── */
-const kpiCards = [
+const kpiCards = computed(() => [
   {
     label: 'Fahrten heute',
     value: '28',
@@ -272,14 +282,20 @@ const kpiCards = [
     iconBg: 'var(--am-accent)',
     sub: '↑ 3 mehr als gestern',
     subClass: 'kpi-sub-positive',
+    to: null,
   },
   {
-    label: 'Ausstehende Buchungen',
-    value: '6',
-    icon: 'pi-clock',
-    iconBg: 'rgba(255,214,0,0.2)',
-    sub: 'In Bearbeitung',
-    subClass: 'kpi-sub-neutral',
+    label: 'Transportanfragen',
+    value: String(transportStore.totalCount),
+    icon: 'pi-send',
+    iconBg: 'rgba(99,102,241,0.2)',
+    sub: transportStore.draftCount > 0
+      ? `${transportStore.draftCount} Entwurf${transportStore.draftCount !== 1 ? 'e' : ''} offen`
+      : transportStore.requestedCount > 0
+        ? `${transportStore.requestedCount} gestellt`
+        : 'Keine offenen Anfragen',
+    subClass: transportStore.draftCount > 0 ? 'kpi-sub-warn' : 'kpi-sub-neutral',
+    to: '/transport-requests',
   },
   {
     label: 'Aktive Fahrzeuge',
@@ -288,6 +304,7 @@ const kpiCards = [
     iconBg: 'rgba(34,197,94,0.2)',
     sub: 'von 15 verfügbar',
     subClass: 'kpi-sub-neutral',
+    to: '/vehicles',
   },
   {
     label: 'Pünktlichkeitsrate',
@@ -296,8 +313,9 @@ const kpiCards = [
     iconBg: 'rgba(34,197,94,0.2)',
     sub: '↑ +2 % zur Vorwoche',
     subClass: 'kpi-sub-positive',
+    to: null,
   },
-]
+])
 
 /* ── Fahrtentabelle (Dummy-Daten) ────────────────────── */
 interface Ride {
@@ -523,6 +541,21 @@ const quickActions = [
 
 .kpi-sub-neutral {
   color: var(--am-text-muted);
+}
+
+.kpi-sub-warn {
+  color: var(--am-accent);
+}
+
+.kpi-card--link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--am-transition), transform var(--am-transition);
+}
+
+.kpi-card--link:hover {
+  border-color: var(--am-accent);
+  transform: translateY(-1px);
 }
 
 /* ── Dashboard Body ───────────────────────────────────── */

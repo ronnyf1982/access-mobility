@@ -295,23 +295,50 @@ Zusätzliche Felder je Transporttyp (ab Sprint 5B):
 
 Alle `suggested_*`-Listen sind Orientierungshilfen für den Fahrgast, keine bindenden Matching-Regeln.
 
-## Abgrenzung — noch keine technische Umsetzung in diesem Schritt
+## Transportanfragen-Snapshots als Matching-Grundlage (Sprint 6)
+
+Ab Sprint 6 existiert `TransportRequest` mit zwei JSONB-Spalten:
+
+### `requirement_snapshot`
+Friert die Anforderungen zum Zeitpunkt der Anfrage ein:
+- `transport_type_id`: gewählter Transporttyp
+- `selected_profile_fields`: Bedarfsfelder, die für diese Fahrt gelten (aus Profil + Schnellauswahl)
+- `selected_field_values`: nicht-boolesche Überschreibungen (z. B. `attendant_type_required`)
+- `notes`: Freitext-Hinweis für den Fahrdienst
+
+### `mobility_profile_snapshot`
+Kopie der relevanten `MobilityProfile`-Felder zum Anfragezeit­punkt:
+alle booleschen Bedarfsfelder + `wheelchair_type` + `attendant_type_required`
+
+**Warum Snapshots?**
+Ein Fahrgast kann sein Profil nach der Anfrage ändern. Dispatcher und Matching-Engine
+lesen den eingefrorenen Snapshot — nie das aktuelle Profil. Dadurch bleibt eine
+gespeicherte Anfrage konsistent, auch wenn sich das Profil ändert.
+
+**Snapshot als Matching-Input (Sprint 7):**
+Das Matching-Modul (Sprint 7) vergleicht `requirement_snapshot.selected_profile_fields`
+gegen `Vehicle`-Ausstattungsmerkmale und `DriverProfile`-Qualifikationen.
+Der Snapshot ersetzt dabei das direkte Profil-Lookup — schneller, konsistenter,
+revisionsicher.
+
+---
+
+## Abgrenzung — Umsetzungsstand
 
 Dieses Dokument definiert **fachliche Anforderungen und Datenmodell-Grundsätze**.
-Technisch umgesetzt wird in folgenden Sprints:
+Technisch umgesetzt in folgenden Sprints:
 
 | Thema | Sprint |
 |---|---|
-| Mobilitätsprofil-Modell (`MobilityProfile`) | Sprint 4 |
-| Fahrzeugausstattungs-Modell (`VehicleFeature`) | Sprint 4 |
-| Fahrerqualifikations-Modell (`Qualification`) | Sprint 4 |
-| Matching-Validierung (manuell, Dispatcher) | Sprint 5 |
-| Mobilitätsprofil-UI (Icon-Auswahl) | Sprint 5 |
-| Fahrzeugmaße / Dimensionen | Sprint 5 (erfasst, noch kein Matching) |
-| Transporttypen-Schnellauswahl (Frontend) | Sprint 5 |
-| Medizinische Detailfelder (Profil, Fahrzeug, Fahrer) | Sprint 5 |
+| Mobilitätsprofil-Modell (`MobilityProfile`) | Sprint 4 ✅ |
+| Fahrzeugausstattungs-Modell | Sprint 5 ✅ |
+| Fahrerqualifikations-Modell | Sprint 5 ✅ |
+| Mobilitätsprofil-UI (Icon-Auswahl) | Sprint 5 ✅ |
+| Medizinische Detailfelder (Profil, Fahrzeug, Fahrer) | Sprint 5 ✅ |
+| Transporttypen-Schnellauswahl | Sprint 5B ✅ |
+| `TransportRequest`-Modell + Snapshots | Sprint 6 ✅ |
+| Matching-Validierung (manuell, Dispatcher) | Sprint 7 |
 | KI-Transportberater (Advisor-Modul) | nach MVP |
-| Crew/Teams (Zwei-Personen-Besatzung als eigenes Modell) | nach MVP |
 | Routenoptimierung (Dimensionen, Wendekreis) | nach MVP |
 | Automatisches Matching | nach MVP |
 | Vertrauenspersonen-Modell | nach MVP |

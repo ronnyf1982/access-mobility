@@ -369,14 +369,63 @@ Wird der Rollstuhl deaktiviert, wird `wheelchair_type` automatisch auf `null` zu
 
 ---
 
+## TransportRequest als Domänenobjekt (Sprint 6)
+
+### Transportanfrage ≠ Fahrt
+
+`TransportRequest` und `Ride` sind bewusst getrennte Modelle.
+
+- **`TransportRequest`** = Wunsch eines Fahrgastes (wer, wann, wohin, welche Anforderungen)
+- **`Ride`** (Sprint 7) = die tatsächlich disponierte und bestätigte Fahrt mit Fahrzeug + Fahrer
+
+**Begründung:** Eine Anfrage kann abgelehnt, umgeplant oder nie bedient werden. Eine Fahrt existiert
+erst, wenn ein Disponent sie aktiv erstellt. Beide Domänenobjekte nebeneinander ermöglichen
+spätere KI-unterstützte Vorschlagsgenerierung, ohne das Datenmodell umstrukturieren zu müssen.
+
+### Snapshot-Strategie: Anforderungen einfrieren
+
+`requirement_snapshot` und `mobility_profile_snapshot` werden als JSONB beim Erstellen oder
+Absenden der Anfrage befüllt und danach nicht mehr verändert.
+
+**Begründung:** Ein Fahrgast kann sein Mobilitätsprofil nach dem Absenden einer Anfrage ändern.
+Die Anforderungen, die der Fahrdienst zu bedienen hat, müssen den Stand zum Anfragezeit­punkt
+festhalten — nicht den aktuellen Profilstand. Ohne Snapshot könnte ein Profil-Update bestehende
+Anfragen lautlos inkonsistent machen.
+
+Der Snapshot ist gleichzeitig die Matching-Grundlage für Sprint 7: Dispatcher und (später) die
+Matching-Engine lesen den Snapshot, nicht das aktuelle Profil.
+
+### Statusmodell
+
+```
+draft → requested → (aus dem Scope dieses Modells)
+draft → cancelled
+requested → cancelled
+```
+
+Nur `draft`-Anfragen können über `POST /submit` abgesendet werden.  
+Pflichtfelder für Submit: `passenger_user_id`, `transport_type_id`, `pickup_address`,
+`destination_address`, `pickup_date`, `pickup_time`.
+
+Stornierung ist jederzeit möglich (draft oder requested). Stornierte Anfragen sind schreibgeschützt.
+
+### Kein Matching, keine Disposition in Sprint 6
+
+`TransportRequest` ist reine Daten-Erfassung. Keine automatische Fahrtplanung, kein Fahrer
+wird informiert, kein Fahrzeug wird vorgeschlagen. Das Matching folgt in Sprint 7.
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
 - Auth/JWT: Sprint 3
 - Rollenmodell: Sprint 3
 - Stammdaten (Org, Fahrzeug, Fahrer): Sprint 4
 - Fahrtenbuchung: Sprint 5
-- Serienfahrten (RRULE): Sprint 7
-- Automatisches Matching: nach MVP
+- Transportanfragen-Grundlage: Sprint 6 ✅
+- Manuelles Matching & Disposition: Sprint 7
+- Serienfahrten (RRULE): Sprint 8+
+- Automatisches Matching (KI): nach MVP
 - Sprachführung / Sprachmenü: nach MVP
 - Vertrauenspersonen-Modell (Remote-Buchung): nach MVP
 - Zahlungen, Abrechnung, externe APIs: außerhalb MVP

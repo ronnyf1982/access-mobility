@@ -80,7 +80,7 @@ Der aktuelle MVP (access-mobility, lokale Entwicklung) deckt das Web-Portal ab �
 | Plattform | Responsive Web-App | Native iOS/Android-Apps (Phase 1 & 2) |
 | Auth | JWT, einfaches Login | Keycloak / Auth0, SSO |
 | Fahrgastprofil | Mobilitätsprofil (Rollstuhl, Rampe, Escort) | Erkrankungen, Fahrzeugpräferenzen, Notfallkontakt (App) |
-| Buchung | Web-Wizard, Einzelfahrten, Serienfahrten | Sofortbuchung mit Live-Matching, Fahrzeuge in der Nähe |
+| Buchung | Transportanfrage erfassen (Sprint 6 ✅) — Matching + Disposition folgt Sprint 7 | Sofortbuchung mit Live-Matching, Fahrzeuge in der Nähe |
 | Fahrtstatus | Manuell im Portal (Dispatcher) | App-geführt durch Fahrer, Live-Updates |
 | Fahrzeug-Matching | Manuelle Zuteilung | Automatisches Matching nach Ausstattung & Bedarf |
 | Verordnungen | Notiz-Feld, keine echte Prüfung | Scan/Upload, Markierung als KK-abrechenbar |
@@ -135,19 +135,22 @@ Die folgenden Punkte sind im Konzept-PDF beschrieben, aber **außerhalb des aktu
 - Fahrer-View: eigene Aufträge, Statuswechsel
 - Buchung für andere Person (Org-Koordinator-Flow)
 
-### Sprint 6 — Organisations-Kontext & Admin
-- Fahrtenliste gefiltert nach Organisation
-- Kostenstellen-Referenz an Fahrt
-- Stornierung mit Bestätigungs-Dialog
-- Admin-Dashboard mit echten Aggregations-Daten
-- Benutzer-Rollenverwaltung (vollständiges RBAC)
+### Sprint 6 — Fahrt-/Transportanfrage Grundlage ✅ (abgeschlossen)
+- `TransportRequest`-Modell (status: draft/requested/cancelled)
+- Alembic-Migration, JSONB-Snapshots (requirement + mobility profile)
+- 6 REST-Endpunkte: list, create, get, update, submit, cancel
+- TransportRequestView (Liste + Formular-Wizard), Pinia Store, Route `/transport-requests`
+- Sidebar, Dashboard-KPI-Kachel, Seed-Daten
 
-### Sprint 7 — Serienfahrten & Stabilisierung
-- `RecurringRide`-Modell mit RRULE-Auflösung (`python-dateutil`)
-- Serienfahrt anlegen / pausieren / beenden
-- Frontend: Serienfahrt-Formular, Einzelfahrten-Übersicht
-- Fehlerbehandlung global (401 → Logout, 422 → Feldvalidierung)
-- Erstes Test-Protokoll für die 3 Kernflows
+### Sprint 7 — Manuelles Matching & Disposition
+- Anfrage → Fahrt (manuelle Zuweisung Fahrzeug + Fahrer durch Dispatcher)
+- `Ride`-Modell als Verbindung von `TransportRequest` zu Fahrzeug + Fahrer
+- Disponent-View: offene Anfragen sehen, Fahrzeug/Fahrer zuweisen
+- Fahrgast-Bestätigungs-Banner
+
+### Sprint 8 — Fahrtstart & Fahrerverwaltung
+- Fahrer-Dashboard, Tagesaufträge, Statuswechsel (unterwegs → abgeschlossen)
+- Schichtverwaltung (Online/Offline-Status)
 
 ### Sprint 8+ — Erweiterungen (Reihenfolge nach Priorität)
 - Verordnungs-Upload (Datei-Anhang an Fahrt, noch ohne KK-Prüfung)

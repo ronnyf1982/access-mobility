@@ -6,4 +6,4 @@ class Base(DeclarativeBase):
 
 
 # Alle SQLAlchemy-Modelle hier importieren, damit Alembic sie erkennt.
-from app.models import user, organization, membership, trusted_relationship, mobility_profile, vehicle, driver_profile  # noqa: F401, E402
+from app.models import user, organization, membership, trusted_relationship, mobility_profile, vehicle, driver_profile, transport_request  # noqa: F401, E402

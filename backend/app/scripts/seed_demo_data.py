@@ -11,12 +11,15 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+import datetime
+
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models.driver_profile import DriverProfile
 from app.models.membership import OrganizationMembership
 from app.models.mobility_profile import MobilityProfile, WheelchairType
 from app.models.organization import Organization, OrganizationType
+from app.models.transport_request import TransportRequest, TransportRequestStatus
 from app.models.trusted_relationship import TrustedRelationship, TrustStatus
 from app.models.user import User, UserRole
 from app.models.vehicle import Vehicle, VehicleType
@@ -365,6 +368,81 @@ def main() -> None:
                 print("  +drv  driver@access.test -> WB Fahrdienste GmbH")
             else:
                 print("  skip  DriverProfile driver@access.test (bereits vorhanden)")
+
+        # ── Transportanfragen (für passenger@access.test) ───────────────────
+        if passenger_user:
+            existing_requests = (
+                db.query(TransportRequest)
+                .filter(TransportRequest.passenger_user_id == passenger_user.id)
+                .count()
+            )
+            if existing_requests == 0:
+                # 1. Entwurf
+                db.add(TransportRequest(
+                    requester_user_id=passenger_user.id,
+                    passenger_user_id=passenger_user.id,
+                    transport_type_id="accessible_ride",
+                    status=TransportRequestStatus.draft,
+                    pickup_address="Musterstraße 12, 10115 Berlin",
+                    pickup_details="EG links, Klingel Muster",
+                    destination_address="Charité – Universitätsmedizin Berlin, Charitéplatz 1, 10117 Berlin",
+                    destination_details="Eingang Haus N, Anmeldung Erdgeschoss",
+                    pickup_date=datetime.date(2026, 7, 20),
+                    pickup_time=datetime.time(9, 0),
+                    arrival_time=datetime.time(9, 45),
+                    is_round_trip=True,
+                    return_time_known=False,
+                    requirement_snapshot={
+                        "transport_type_id": "accessible_ride",
+                        "selected_profile_fields": ["uses_wheelchair", "needs_ramp", "needs_entry_assistance"],
+                        "selected_field_values": {},
+                        "notes": "Rollstuhl manuell, Rampe erforderlich",
+                    },
+                    mobility_profile_snapshot={
+                        "uses_wheelchair": True,
+                        "wheelchair_type": "manual",
+                        "needs_ramp": True,
+                        "needs_entry_assistance": True,
+                        "requires_wheelchair_space": True,
+                    },
+                    notes="Termin beim Neurologen — bitte pünktlich",
+                ))
+                print("  +req  Entwurf accessible_ride für passenger@access.test")
+
+                # 2. Abgesendete Anfrage
+                req2 = TransportRequest(
+                    requester_user_id=passenger_user.id,
+                    passenger_user_id=passenger_user.id,
+                    transport_type_id="patient_ride_no_medical_care",
+                    status=TransportRequestStatus.requested,
+                    pickup_address="Berliner Str. 88, 10713 Berlin",
+                    pickup_details="2. OG, Aufzug vorhanden",
+                    destination_address="Reha-Zentrum am Park, Spandauer Damm 130, 14050 Berlin",
+                    destination_details="Haupteingang, Anmeldung am Empfang",
+                    pickup_date=datetime.date(2026, 7, 22),
+                    pickup_time=datetime.time(8, 30),
+                    is_round_trip=True,
+                    return_time_known=True,
+                    return_pickup_time=datetime.time(13, 0),
+                    requirement_snapshot={
+                        "transport_type_id": "patient_ride_no_medical_care",
+                        "selected_profile_fields": ["requires_wheelchair_space", "needs_entry_assistance", "requires_extra_time"],
+                        "selected_field_values": {},
+                        "notes": None,
+                    },
+                    mobility_profile_snapshot={
+                        "uses_wheelchair": True,
+                        "wheelchair_type": "manual",
+                        "needs_entry_assistance": True,
+                        "requires_wheelchair_space": True,
+                        "requires_extra_time": True,
+                    },
+                    submitted_at=datetime.datetime(2026, 7, 10, 14, 22, 0, tzinfo=datetime.timezone.utc),
+                )
+                db.add(req2)
+                print("  +req  requested patient_ride_no_medical_care für passenger@access.test")
+            else:
+                print(f"  skip  TransportRequests passenger@access.test ({existing_requests} vorhanden)")
 
         db.commit()
         print("\nDemo-Daten erfolgreich angelegt.")

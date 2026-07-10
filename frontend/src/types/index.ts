@@ -257,6 +257,105 @@ export const MOBILITY_NEED_KEYS: Array<keyof MobilityProfile> = [
   'needs_stretcher_transport',
 ]
 
+// ─── Transportanfragen ───────────────────────────────────────────────────────
+
+export type TransportRequestStatus = 'draft' | 'requested' | 'cancelled'
+
+export const TRANSPORT_REQUEST_STATUS_LABELS: Record<TransportRequestStatus, string> = {
+  draft: 'Entwurf',
+  requested: 'Anfrage gestellt',
+  cancelled: 'Storniert',
+}
+
+export interface RequirementSnapshot {
+  transport_type_id?: string
+  selected_profile_fields?: string[]
+  selected_field_values?: Record<string, unknown>
+  notes?: string | null
+}
+
+export interface MobilityProfileSnapshot {
+  uses_wheelchair?: boolean
+  wheelchair_type?: string | null
+  uses_rollator?: boolean
+  uses_crutches?: boolean
+  needs_ramp?: boolean
+  needs_lift?: boolean
+  needs_escort?: boolean
+  needs_entry_assistance?: boolean
+  needs_door_to_door_assistance?: boolean
+  needs_stretcher_transport?: boolean
+  requires_wheelchair_space?: boolean
+  requires_extra_time?: boolean
+  requires_transport_chair?: boolean
+  requires_two_person_assistance?: boolean
+  requires_medical_transport?: boolean
+  requires_medical_attendant?: boolean
+  attendant_type_required?: string
+  brings_oxygen?: boolean
+  requires_oxygen_mount?: boolean
+  brings_medical_device?: boolean
+  requires_medical_equipment_storage?: boolean
+  requires_infusion_mount?: boolean
+  requires_special_positioning?: boolean
+  infection_or_hygiene_note?: boolean
+}
+
+export interface TransportRequestRead {
+  id: string
+  requester_user_id: string
+  passenger_user_id: string
+  organization_id: string | null
+  transport_type_id: string | null
+  status: TransportRequestStatus
+  pickup_address: string | null
+  pickup_details: string | null
+  destination_address: string | null
+  destination_details: string | null
+  pickup_date: string | null
+  pickup_time: string | null
+  arrival_time: string | null
+  is_round_trip: boolean
+  return_time_known: boolean
+  return_pickup_time: string | null
+  requirement_snapshot: RequirementSnapshot | null
+  mobility_profile_snapshot: MobilityProfileSnapshot | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  submitted_at: string | null
+  cancelled_at: string | null
+}
+
+export type TransportRequestListItem = Pick<
+  TransportRequestRead,
+  | 'id' | 'requester_user_id' | 'passenger_user_id' | 'transport_type_id' | 'status'
+  | 'pickup_address' | 'destination_address' | 'pickup_date' | 'pickup_time'
+  | 'is_round_trip' | 'created_at' | 'submitted_at' | 'cancelled_at'
+>
+
+export interface TransportRequestCreate {
+  passenger_user_id?: string | null
+  organization_id?: string | null
+  transport_type_id?: string | null
+  status?: TransportRequestStatus
+  pickup_address?: string | null
+  pickup_details?: string | null
+  destination_address?: string | null
+  destination_details?: string | null
+  pickup_date?: string | null
+  pickup_time?: string | null
+  arrival_time?: string | null
+  is_round_trip?: boolean
+  return_time_known?: boolean
+  return_pickup_time?: string | null
+  requirement_snapshot?: RequirementSnapshot | null
+  mobility_profile_snapshot?: MobilityProfileSnapshot | null
+  notes?: string | null
+}
+
+export type TransportRequestUpdate = Omit<TransportRequestCreate, 'passenger_user_id' | 'organization_id' | 'status'>
+
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 
 export interface TransportType {
