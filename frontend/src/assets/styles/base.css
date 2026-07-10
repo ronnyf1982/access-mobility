@@ -1,0 +1,177 @@
+/* ── Reset ─────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--am-bg-base);
+  color: var(--am-text-primary);
+  font-family: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--am-text-primary);
+  line-height: 1.25;
+}
+
+a {
+  color: var(--am-accent);
+  text-decoration: none;
+  transition: color var(--am-transition);
+}
+
+a:hover {
+  color: var(--am-accent-dim);
+}
+
+/* ── Focus ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--am-accent);
+  outline-offset: 3px;
+  border-radius: var(--am-radius-s);
+}
+
+/* ── Utility Buttons ───────────────────────────────── */
+.am-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--am-radius-s);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--am-transition),
+    color            var(--am-transition),
+    border-color     var(--am-transition);
+  white-space: nowrap;
+  text-decoration: none;
+  font-family: inherit;
+  line-height: 1.4;
+  min-height: 44px;  /* WCAG touch target */
+}
+
+.am-btn-primary {
+  background: var(--am-accent);
+  color: var(--am-text-on-accent);
+  border-color: var(--am-accent);
+}
+.am-btn-primary:hover {
+  background: var(--am-accent-dim);
+  border-color: var(--am-accent-dim);
+  color: var(--am-text-on-accent);
+}
+
+.am-btn-secondary {
+  background: transparent;
+  color: var(--am-accent);
+  border-color: var(--am-accent);
+}
+.am-btn-secondary:hover {
+  background: var(--am-accent-bg);
+}
+
+.am-btn-ghost {
+  background: transparent;
+  color: var(--am-text-primary);
+  border-color: var(--am-border);
+}
+.am-btn-ghost:hover {
+  background: var(--am-bg-raised);
+}
+
+/* ── Utility Card ──────────────────────────────────── */
+.am-card {
+  background: var(--am-bg-surface);
+  border: 1px solid var(--am-border);
+  border-radius: var(--am-radius-m);
+  padding: var(--am-space-l);
+}
+
+/* ── Helpers ───────────────────────────────────────── */
+.am-accent-text {
+  color: var(--am-accent);
+}
+
+.am-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--am-space-l);
+}
+
+.am-section {
+  padding: var(--am-space-xl) 0;
+}
+
+/* ── Status Badges ─────────────────────────────────── */
+.am-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.am-badge-success {
+  background: var(--am-success-bg);
+  color: var(--am-success);
+}
+
+.am-badge-warning {
+  background: var(--am-warning-bg);
+  color: var(--am-warning);
+}
+
+.am-badge-danger {
+  background: var(--am-danger-bg);
+  color: var(--am-danger);
+}
+
+.am-badge-neutral {
+  background: var(--am-bg-raised);
+  color: var(--am-text-secondary);
+}
+
+/* ── Responsive helpers ────────────────────────────── */
+@media (max-width: 768px) {
+  .am-hide-mobile {
+    display: none !important;
+  }
+}

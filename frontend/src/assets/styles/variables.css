@@ -1,0 +1,49 @@
+:root {
+  /* Backgrounds */
+  --am-bg-base:    #111111;
+  --am-bg-surface: #1a1a1a;
+  --am-bg-raised:  #242424;
+  --am-bg-sidebar: #0d0d0d;
+
+  /* Akzent — Gelb */
+  --am-accent:     #FFD600;
+  --am-accent-dim: #C8A900;
+  --am-accent-bg:  rgba(255, 214, 0, 0.10);
+
+  /* Text */
+  --am-text-primary:   #F0F0F0;
+  --am-text-secondary: #8a8a8a;
+  --am-text-muted:     #555555;
+  --am-text-on-accent: #111111;
+
+  /* Border */
+  --am-border:       #2a2a2a;
+  --am-border-strong:#3a3a3a;
+
+  /* Status */
+  --am-success:    #22C55E;
+  --am-success-bg: rgba(34, 197, 94, 0.12);
+  --am-warning:    #FFD600;
+  --am-warning-bg: rgba(255, 214, 0, 0.12);
+  --am-danger:     #EF4444;
+  --am-danger-bg:  rgba(239, 68, 68, 0.12);
+
+  /* Radii */
+  --am-radius-s: 6px;
+  --am-radius-m: 10px;
+  --am-radius-l: 16px;
+
+  /* Spacing */
+  --am-space-xs: 4px;
+  --am-space-s:  8px;
+  --am-space-m:  16px;
+  --am-space-l:  24px;
+  --am-space-xl: 40px;
+
+  /* Layout */
+  --am-sidebar-width:  220px;
+  --am-topbar-height:  60px;
+
+  /* Transitions */
+  --am-transition: 150ms ease;
+}

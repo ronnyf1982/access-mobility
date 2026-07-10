@@ -4,6 +4,8 @@ import PrimeVue from 'primevue/config'
 import Aura from '@primevue/themes/aura'
 import ToastService from 'primevue/toastservice'
 import 'primeicons/primeicons.css'
+import '@/assets/styles/variables.css'
+import '@/assets/styles/base.css'
 
 import router from './router'
 import App from './App.vue'
