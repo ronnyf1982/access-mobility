@@ -31,6 +31,42 @@
         Fahrtplanung genutzt.
       </div>
 
+      <!-- ── Schnellauswahl Transporttyp ──────────────────────────────────── -->
+      <section class="mp-section am-card" aria-labelledby="s0-heading">
+        <h2 id="s0-heading" class="mp-section-title">
+          <i class="pi pi-bolt" aria-hidden="true"></i>
+          Schnellauswahl: Welche Art von Fahrt benötigen Sie?
+        </h2>
+        <p class="mp-section-desc">
+          Wählen Sie den passenden Transporttyp — passende Felder werden vorausgefüllt.
+          Sie können anschließend alles anpassen.
+        </p>
+        <div class="mp-transport-grid" role="group" aria-label="Transporttyp auswählen">
+          <button
+            v-for="tt in TRANSPORT_TYPES"
+            :key="tt.id"
+            type="button"
+            class="mp-transport-card"
+            :class="{ 'mp-transport-card--active': selectedTransportType === tt.id }"
+            :aria-pressed="selectedTransportType === tt.id"
+            :aria-label="tt.label + ': ' + tt.description"
+            @click="applyTransportType(tt)"
+          >
+            <span class="mp-transport-label">{{ tt.label }}</span>
+            <span class="mp-transport-desc">{{ tt.description }}</span>
+            <span v-if="tt.warning" class="mp-transport-warning">
+              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+              {{ tt.warning }}
+            </span>
+          </button>
+        </div>
+        <p v-if="selectedTransportType" class="mp-transport-hint">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          Felder wurden vorausgefüllt — bitte prüfen und bei Bedarf anpassen.
+          <button type="button" class="mp-link-btn" @click="selectedTransportType = null">Auswahl zurücksetzen</button>
+        </p>
+      </section>
+
       <!-- Erfolgsmeldung -->
       <div
         v-if="saveSuccess"
@@ -236,6 +272,92 @@
         </div>
       </section>
 
+      <!-- ── Abschnitt 3b: Medizinische Detailangaben ──────────────────── -->
+      <section class="mp-section am-card" aria-labelledby="s3b-heading">
+        <h2 id="s3b-heading" class="mp-section-title">
+          <i class="pi pi-heart" aria-hidden="true"></i>
+          Medizinische Detailangaben
+          <span class="mp-optional-badge">freiwillig</span>
+        </h2>
+        <p class="mp-section-desc">
+          Nur für qualifizierten Krankentransport relevant. Alle Angaben sind freiwillig
+          und werden vertraulich behandelt.
+        </p>
+
+        <div class="mp-need-grid" role="group" aria-label="Medizinische Detailangaben">
+          <button
+            v-for="opt in MEDICAL_DETAIL_OPTIONS"
+            :key="String(opt.key)"
+            type="button"
+            class="mp-need-card"
+            :class="{ 'mp-need-card--active': form[opt.key] as boolean }"
+            role="checkbox"
+            :aria-checked="!!(form[opt.key] as boolean)"
+            :aria-label="`${opt.label}: ${opt.description}`"
+            @click="toggleMedDetail(opt.key)"
+          >
+            <div class="mp-need-icon" aria-hidden="true">
+              <i :class="['pi', opt.icon]"></i>
+            </div>
+            <div class="mp-need-text">
+              <span class="mp-need-label">{{ opt.label }}</span>
+              <span class="mp-need-desc">{{ opt.description }}</span>
+            </div>
+            <div class="mp-need-check" aria-hidden="true">
+              <i class="pi pi-check"></i>
+            </div>
+          </button>
+        </div>
+
+        <!-- Begleitperson Typ (nur wenn medizinische Begleitung aktiv) -->
+        <div v-if="form.requires_medical_attendant" class="mp-wheelchair-type" role="group" aria-labelledby="att-heading">
+          <p id="att-heading" class="mp-label">Welche Art von Begleitperson wird benötigt?</p>
+          <div class="mp-radio-group">
+            <label v-for="opt in ATTENDANT_TYPE_OPTIONS" :key="opt.value" class="mp-radio-label">
+              <input
+                type="radio"
+                class="mp-radio"
+                :value="opt.value"
+                v-model="form.attendant_type_required"
+                name="attendant_type_required"
+              />
+              <span>{{ opt.label }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Freitextfelder für medizinische Details -->
+        <div class="mp-field">
+          <label for="med-device-notes" class="mp-label">
+            Hinweise zu mitgebrachten Medizingeräten
+            <span class="mp-optional-badge">freiwillig</span>
+          </label>
+          <p class="mp-field-hint">z. B. „Beatmungsgerät Typ X, benötigt 230V-Anschluss"</p>
+          <textarea
+            id="med-device-notes"
+            v-model="form.medical_device_notes"
+            class="mp-textarea"
+            rows="2"
+            aria-label="Hinweise zu Medizingeräten"
+          ></textarea>
+        </div>
+
+        <div class="mp-field">
+          <label for="med-transport-notes" class="mp-label">
+            Sonstige Transporthinweise (medizinisch)
+            <span class="mp-optional-badge">freiwillig</span>
+          </label>
+          <p class="mp-field-hint">Weitere Informationen für das Transportpersonal</p>
+          <textarea
+            id="med-transport-notes"
+            v-model="form.medical_transport_notes"
+            class="mp-textarea"
+            rows="2"
+            aria-label="Sonstige medizinische Transporthinweise"
+          ></textarea>
+        </div>
+      </section>
+
       <!-- ── Abschnitt 4: Hinweise ───────────────────────────────────────── -->
       <section class="mp-section am-card" aria-labelledby="s4-heading">
         <h2 id="s4-heading" class="mp-section-title">
@@ -312,7 +434,8 @@
 import { reactive, ref, watch, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useMobilityProfileStore } from '@/stores/mobilityProfile'
-import type { MobilityProfile, WheelchairType } from '@/types'
+import { getTransportOptions } from '@/api/transportOptions'
+import type { MobilityProfile, WheelchairType, AttendantType, TransportType } from '@/types'
 
 type NeedKey =
   | 'uses_wheelchair'
@@ -327,11 +450,26 @@ type NeedKey =
   | 'needs_lift'
   | 'needs_stretcher_transport'
 
+type MedDetailKey =
+  | 'requires_transport_chair'
+  | 'requires_two_person_assistance'
+  | 'requires_medical_transport'
+  | 'brings_oxygen'
+  | 'requires_oxygen_mount'
+  | 'brings_medical_device'
+  | 'requires_medical_equipment_storage'
+  | 'requires_infusion_mount'
+  | 'requires_special_positioning'
+  | 'infection_or_hygiene_note'
+  | 'requires_medical_attendant'
+
 const store = useMobilityProfileStore()
 const toast = useToast()
 
 const saveSuccess = ref(false)
 const saveError = ref('')
+const selectedTransportType = ref<string | null>(null)
+const TRANSPORT_TYPES = ref<TransportType[]>([])
 
 const wheelchairTypeOptions = [
   { value: 'manual' as WheelchairType, label: 'Manueller Rollstuhl' },
@@ -343,6 +481,29 @@ const tristateOptions: Array<{ value: boolean | null; label: string }> = [
   { value: true, label: 'Ja' },
   { value: false, label: 'Nein' },
   { value: null, label: 'Unbekannt' },
+]
+
+const MEDICAL_DETAIL_OPTIONS: Array<{ key: MedDetailKey; label: string; icon: string; description: string }> = [
+  { key: 'requires_transport_chair',          label: 'Tragestuhl erforderlich',         icon: 'pi-arrow-circle-up',    description: 'Ich benötige einen Tragestuhl für Zugänge ohne Aufzug.' },
+  { key: 'requires_two_person_assistance',    label: 'Zweimann-Begleitung',             icon: 'pi-users',              description: 'Für Transfer oder Transport sind zwei Personen erforderlich.' },
+  { key: 'requires_medical_transport',        label: 'Qual. Krankentransport',          icon: 'pi-shield',             description: 'Ich benötige qualifizierten Krankentransport (KTP) mit geschultem Personal.' },
+  { key: 'brings_oxygen',                     label: 'Eigenes Sauerstoffgerät',         icon: 'pi-circle',             description: 'Ich bringe ein mobiles Sauerstoffgerät mit.' },
+  { key: 'requires_oxygen_mount',             label: 'Sauerstoffhalterung benötigt',    icon: 'pi-sort-amount-up-alt', description: 'Das Fahrzeug muss eine Halterung für Sauerstoffgeräte haben.' },
+  { key: 'brings_medical_device',             label: 'Eigenes Medizingerät',            icon: 'pi-inbox',              description: 'Ich transportiere ein medizinisches Gerät (Pumpe, Monitor o. ä.).' },
+  { key: 'requires_medical_equipment_storage',label: 'Med. Stauraum benötigt',          icon: 'pi-inbox',              description: 'Das Fahrzeug muss Stauraum für medizinisches Equipment bieten.' },
+  { key: 'requires_infusion_mount',           label: 'Infusionsständer benötigt',       icon: 'pi-sort-amount-up-alt', description: 'Während der Fahrt läuft eine Infusion — Halterung erforderlich.' },
+  { key: 'requires_special_positioning',      label: 'Spezielle Lagerung',             icon: 'pi-minus',              description: 'Ich benötige eine besondere Lagerungsposition während der Fahrt.' },
+  { key: 'infection_or_hygiene_note',         label: 'Hygiene- / Infektionshinweis',   icon: 'pi-shield',             description: 'Es liegt ein Hygiene- oder Infektionsschutzhinweis vor.' },
+  { key: 'requires_medical_attendant',        label: 'Med. Begleitung erforderlich',   icon: 'pi-heart',              description: 'Eine medizinisch qualifizierte Begleitperson ist notwendig.' },
+]
+
+const ATTENDANT_TYPE_OPTIONS = [
+  { value: 'none' as AttendantType, label: 'Keine medizinische Begleitung' },
+  { value: 'escort_person' as AttendantType, label: 'Begleitperson (keine med. Qualifikation)' },
+  { value: 'second_assistant' as AttendantType, label: 'Zweite Hilfsperson (z. B. für Transfer)' },
+  { value: 'paramedic' as AttendantType, label: 'Rettungssanitäter / -helfer' },
+  { value: 'medical_professional' as AttendantType, label: 'Pflegefachkraft / Arzt' },
+  { value: 'unknown' as AttendantType, label: 'Unbekannt / bitte klären' },
 ]
 
 // Lokales Formular-State — wird beim Laden aus dem Store befüllt
@@ -365,6 +526,20 @@ const form = reactive<Partial<MobilityProfile>>({
   has_own_wheelchair: null,
   requires_wheelchair_space: false,
   requires_extra_time: false,
+  requires_transport_chair: false,
+  requires_two_person_assistance: false,
+  requires_medical_transport: false,
+  brings_oxygen: false,
+  requires_oxygen_mount: false,
+  brings_medical_device: false,
+  requires_medical_equipment_storage: false,
+  requires_infusion_mount: false,
+  requires_special_positioning: false,
+  infection_or_hygiene_note: false,
+  requires_medical_attendant: false,
+  attendant_type_required: 'none',
+  medical_device_notes: null,
+  medical_transport_notes: null,
   communication_notes: null,
   medical_notes: null,
   general_notes: null,
@@ -392,6 +567,20 @@ function syncFormFromStore() {
     has_own_wheelchair: p.has_own_wheelchair,
     requires_wheelchair_space: p.requires_wheelchair_space,
     requires_extra_time: p.requires_extra_time,
+    requires_transport_chair: p.requires_transport_chair,
+    requires_two_person_assistance: p.requires_two_person_assistance,
+    requires_medical_transport: p.requires_medical_transport,
+    brings_oxygen: p.brings_oxygen,
+    requires_oxygen_mount: p.requires_oxygen_mount,
+    brings_medical_device: p.brings_medical_device,
+    requires_medical_equipment_storage: p.requires_medical_equipment_storage,
+    requires_infusion_mount: p.requires_infusion_mount,
+    requires_special_positioning: p.requires_special_positioning,
+    infection_or_hygiene_note: p.infection_or_hygiene_note,
+    requires_medical_attendant: p.requires_medical_attendant,
+    attendant_type_required: p.attendant_type_required ?? 'none',
+    medical_device_notes: p.medical_device_notes,
+    medical_transport_notes: p.medical_transport_notes,
     communication_notes: p.communication_notes,
     medical_notes: p.medical_notes,
     general_notes: p.general_notes,
@@ -406,8 +595,73 @@ watch(
   },
 )
 
+// Wenn medizinische Begleitung deaktiviert wird, Typ zurücksetzen
+watch(
+  () => form.requires_medical_attendant,
+  (val) => {
+    if (!val) form.attendant_type_required = 'none'
+  },
+)
+
 function toggleNeed(key: NeedKey) {
   ;(form[key] as boolean) = !(form[key] as boolean)
+}
+
+function toggleMedDetail(key: MedDetailKey) {
+  ;(form[key] as boolean) = !(form[key] as boolean)
+}
+
+type PresetBoolField =
+  | 'needs_stretcher_transport'
+  | 'requires_transport_chair'
+  | 'requires_two_person_assistance'
+  | 'requires_medical_transport'
+  | 'brings_oxygen'
+  | 'requires_oxygen_mount'
+  | 'brings_medical_device'
+  | 'requires_medical_equipment_storage'
+  | 'requires_infusion_mount'
+  | 'requires_special_positioning'
+  | 'infection_or_hygiene_note'
+  | 'requires_medical_attendant'
+
+const PRESET_BOOL_FIELDS: PresetBoolField[] = [
+  'needs_stretcher_transport',
+  'requires_transport_chair',
+  'requires_two_person_assistance',
+  'requires_medical_transport',
+  'brings_oxygen',
+  'requires_oxygen_mount',
+  'brings_medical_device',
+  'requires_medical_equipment_storage',
+  'requires_infusion_mount',
+  'requires_special_positioning',
+  'infection_or_hygiene_note',
+  'requires_medical_attendant',
+]
+
+function resetPresetFields() {
+  for (const field of PRESET_BOOL_FIELDS) {
+    ;(form[field] as boolean) = false
+  }
+  form.attendant_type_required = 'none'
+}
+
+function applyTransportType(tt: TransportType) {
+  if (selectedTransportType.value === tt.id) {
+    // Same card clicked again: deselect and reset all preset-controlled fields
+    resetPresetFields()
+    selectedTransportType.value = null
+    return
+  }
+  // New selection: reset first, then apply the new preset
+  resetPresetFields()
+  selectedTransportType.value = tt.id
+  for (const field of tt.suggested_profile_fields) {
+    if (field in form) {
+      ;(form as Record<string, unknown>)[field] = true
+    }
+  }
 }
 
 async function handleSave() {
@@ -431,9 +685,11 @@ async function handleSave() {
 }
 
 onMounted(async () => {
-  if (!store.profile) {
-    await store.load()
-  }
+  const [, typesResult] = await Promise.allSettled([
+    store.profile ? Promise.resolve() : store.load(),
+    getTransportOptions(),
+  ])
+  TRANSPORT_TYPES.value = typesResult.status === 'fulfilled' ? typesResult.value : []
   syncFormFromStore()
 })
 
@@ -915,5 +1171,78 @@ watch(() => store.profile, syncFormFromStore)
 .mp-save-hint {
   font-size: 0.78rem;
   color: var(--am-text-secondary);
+}
+
+/* Transport-type Schnellauswahl */
+.mp-transport-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--am-space-s);
+}
+
+.mp-transport-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--am-space-m);
+  background: var(--am-bg-raised);
+  border: 2px solid var(--am-border);
+  border-radius: var(--am-radius-m);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--am-transition), background var(--am-transition);
+  min-height: 90px;
+}
+
+.mp-transport-card:hover {
+  border-color: var(--am-border-strong);
+}
+
+.mp-transport-card--active {
+  border-color: var(--am-accent);
+  background: var(--am-accent-bg);
+}
+
+.mp-transport-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--am-text-primary);
+}
+
+.mp-transport-desc {
+  font-size: 0.75rem;
+  color: var(--am-text-secondary);
+  line-height: 1.4;
+}
+
+.mp-transport-warning {
+  font-size: 0.7rem;
+  color: var(--am-danger);
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+.mp-transport-hint {
+  font-size: 0.82rem;
+  color: var(--am-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.mp-link-btn {
+  background: none;
+  border: none;
+  color: var(--am-accent);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  font-weight: 600;
 }
 </style>

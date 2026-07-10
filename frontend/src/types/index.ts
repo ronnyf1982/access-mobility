@@ -49,9 +49,146 @@ export const ROLE_CONTEXT: Record<UserRole, string> = {
   platform_admin: 'Als Plattform-Admin haben Sie Zugriff auf alle Bereiche der Plattform.',
 }
 
+// ─── Fahrzeuge ────────────────────────────────────────────────────────────────
+
+export type VehicleTypeName =
+  | 'standard_car'
+  | 'comfort_car'
+  | 'wheelchair_van'
+  | 'wheelchair_bus'
+  | 'multi_passenger_van'
+  | 'stretcher_vehicle'
+  | 'other'
+
+export const VEHICLE_TYPE_LABELS: Record<VehicleTypeName, string> = {
+  standard_car:       'Standard-PKW',
+  comfort_car:        'Kombi / Komfort-PKW',
+  wheelchair_van:     'Rollstuhl-Van',
+  wheelchair_bus:     'Rollstuhlbus',
+  multi_passenger_van:'Mehrsitzer-Van',
+  stretcher_vehicle:  'Liegendtransportfahrzeug',
+  other:              'Sonstiges',
+}
+
+export interface Vehicle {
+  id: string
+  organization_id: string
+  name: string
+  license_plate: string
+  vehicle_type: VehicleTypeName
+  is_active: boolean
+  seat_count: number
+  wheelchair_space_count: number
+  escort_seat_count: number | null
+  has_ramp: boolean
+  has_lift: boolean
+  has_wheelchair_restraint: boolean
+  supports_electric_wheelchair: boolean
+  supports_stretcher_transport: boolean
+  has_child_seat: boolean
+  has_low_entry: boolean
+  has_extra_wide_door: boolean
+  has_stretcher: boolean
+  has_stretcher_mount: boolean
+  has_medical_equipment_storage: boolean
+  has_oxygen_mount: boolean
+  has_first_aid_kit: boolean
+  has_hygiene_equipment: boolean
+  supports_non_emergency_medical_transport: boolean
+  has_transport_chair: boolean
+  has_infusion_mount: boolean
+  supports_two_person_crew: boolean
+  patient_compartment_notes: string | null
+  vehicle_length_cm: number | null
+  vehicle_width_cm: number | null
+  vehicle_width_with_mirrors_cm: number | null
+  vehicle_height_cm: number | null
+  wheelbase_cm: number | null
+  turning_circle_m: number | null
+  empty_weight_kg: number | null
+  gross_vehicle_weight_kg: number | null
+  payload_capacity_kg: number | null
+  requires_large_parking_space: boolean
+  suitable_for_narrow_streets: boolean
+  suitable_for_underground_parking: boolean
+  has_parking_assist: boolean
+  access_restriction_notes: string | null
+  home_base_address: string | null
+  current_location_notes: string | null
+  equipment_notes: string | null
+  general_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type VehicleUpdate = Partial<Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>>
+
+export interface VehicleCreate extends VehicleUpdate {
+  organization_id: string
+  name: string
+  license_plate: string
+  vehicle_type: VehicleTypeName
+}
+
+// ─── Fahrer ───────────────────────────────────────────────────────────────────
+
+export interface DriverProfile {
+  id: string
+  user_id: string
+  organization_id: string
+  display_name: string
+  phone: string | null
+  is_active: boolean
+  can_assist_wheelchair: boolean
+  can_secure_wheelchair: boolean
+  can_operate_lift: boolean
+  can_assist_blind_passengers: boolean
+  can_assist_deaf_passengers: boolean
+  can_handle_stretcher: boolean
+  has_first_aid_training: boolean
+  has_passenger_transport_license: boolean
+  can_support_medical_transport: boolean
+  has_sanitaetshelfer_training: boolean
+  has_rettungshelfer_qualification: boolean
+  has_rettungssanitaeter_qualification: boolean
+  has_rettungsassistent_qualification: boolean
+  has_notfallsanitaeter_qualification: boolean
+  has_nursing_qualification: boolean
+  has_medical_assistant_qualification: boolean
+  has_hygiene_training: boolean
+  has_infection_protection_training: boolean
+  has_wheelchair_restraint_training: boolean
+  has_lift_operation_training: boolean
+  has_stretcher_handling_training: boolean
+  has_transport_chair_training: boolean
+  has_oxygen_equipment_training: boolean
+  home_base_address: string | null
+  availability_notes: string | null
+  qualification_notes: string | null
+  general_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type DriverProfileUpdate = Partial<Omit<DriverProfile, 'id' | 'user_id' | 'organization_id' | 'created_at' | 'updated_at'>>
+
+export interface DriverProfileCreate extends DriverProfileUpdate {
+  user_id: string
+  organization_id: string
+  display_name: string
+}
+
 // ─── Mobilitätsprofil ────────────────────────────────────────────────────────
 
 export type WheelchairType = 'manual' | 'electric' | 'unknown'
+
+export type AttendantType =
+  | 'none'
+  | 'escort_person'
+  | 'second_assistant'
+  | 'paramedic'
+  | 'medical_professional'
+  | 'unknown'
 
 export interface MobilityProfile {
   id: string
@@ -76,6 +213,20 @@ export interface MobilityProfile {
   has_own_wheelchair: boolean | null
   requires_wheelchair_space: boolean
   requires_extra_time: boolean
+  requires_transport_chair: boolean
+  requires_two_person_assistance: boolean
+  requires_medical_transport: boolean
+  brings_oxygen: boolean
+  requires_oxygen_mount: boolean
+  brings_medical_device: boolean
+  requires_medical_equipment_storage: boolean
+  requires_infusion_mount: boolean
+  requires_special_positioning: boolean
+  infection_or_hygiene_note: boolean
+  requires_medical_attendant: boolean
+  attendant_type_required: AttendantType
+  medical_device_notes: string | null
+  medical_transport_notes: string | null
   communication_notes: string | null
   medical_notes: string | null
   general_notes: string | null
@@ -105,3 +256,16 @@ export const MOBILITY_NEED_KEYS: Array<keyof MobilityProfile> = [
   'needs_lift',
   'needs_stretcher_transport',
 ]
+
+// ─── Transporttypen ──────────────────────────────────────────────────────────
+
+export interface TransportType {
+  id: string
+  label: string
+  description: string
+  warning?: string
+  icon_key: string
+  suggested_profile_fields: string[]
+  suggested_vehicle_requirements: string[]
+  suggested_driver_requirements: string[]
+}

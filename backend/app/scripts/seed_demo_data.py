@@ -13,11 +13,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from app.core.security import hash_password
 from app.db.session import SessionLocal
+from app.models.driver_profile import DriverProfile
 from app.models.membership import OrganizationMembership
 from app.models.mobility_profile import MobilityProfile, WheelchairType
 from app.models.organization import Organization, OrganizationType
 from app.models.trusted_relationship import TrustedRelationship, TrustStatus
 from app.models.user import User, UserRole
+from app.models.vehicle import Vehicle, VehicleType
 
 DEMO_PASSWORD = "Access123!"
 
@@ -224,6 +226,145 @@ def main() -> None:
                 print("  +prof passenger@access.test (Rollstuhl manuell, Rampe, Einstiegshilfe)")
             else:
                 print("  skip  MobilityProfile passenger@access.test (bereits vorhanden)")
+
+        # ── Fahrzeuge (für WB Fahrdienste GmbH) ────────────────────────────────
+        if wb:
+            demo_vehicles = [
+                {
+                    "name": "Rollstuhlbus 1",
+                    "license_plate": "AM-BUS-1",
+                    "vehicle_type": VehicleType.wheelchair_bus,
+                    "seat_count": 4,
+                    "wheelchair_space_count": 2,
+                    "escort_seat_count": 2,
+                    "has_ramp": True,
+                    "has_lift": True,
+                    "has_wheelchair_restraint": True,
+                    "supports_electric_wheelchair": True,
+                    "has_low_entry": True,
+                    "has_extra_wide_door": True,
+                    "has_first_aid_kit": True,
+                    # Maße & Gewicht — Mercedes Sprinter 519 CDI Hochdach
+                    "vehicle_length_cm": 699,
+                    "vehicle_width_cm": 198,
+                    "vehicle_width_with_mirrors_cm": 224,
+                    "vehicle_height_cm": 270,
+                    "wheelbase_cm": 391,
+                    "turning_circle_m": 13.4,
+                    "empty_weight_kg": 2480,
+                    "gross_vehicle_weight_kg": 5000,
+                    "payload_capacity_kg": 2520,
+                    "requires_large_parking_space": True,
+                    "suitable_for_narrow_streets": False,
+                    "suitable_for_underground_parking": False,
+                    "has_parking_assist": True,
+                },
+                {
+                    "name": "Rollstuhl-Van 1",
+                    "license_plate": "AM-VAN-1",
+                    "vehicle_type": VehicleType.wheelchair_van,
+                    "seat_count": 3,
+                    "wheelchair_space_count": 1,
+                    "escort_seat_count": 1,
+                    "has_ramp": True,
+                    "has_lift": False,
+                    "has_wheelchair_restraint": True,
+                    "supports_electric_wheelchair": False,
+                    "has_low_entry": False,
+                    "has_first_aid_kit": True,
+                    "has_hygiene_equipment": True,
+                    # Maße & Gewicht — VW Caddy Maxi
+                    "vehicle_length_cm": 484,
+                    "vehicle_width_cm": 183,
+                    "vehicle_width_with_mirrors_cm": 202,
+                    "vehicle_height_cm": 185,
+                    "wheelbase_cm": 302,
+                    "turning_circle_m": 11.2,
+                    "empty_weight_kg": 1620,
+                    "gross_vehicle_weight_kg": 2130,
+                    "payload_capacity_kg": 510,
+                    "requires_large_parking_space": False,
+                    "suitable_for_narrow_streets": True,
+                    "suitable_for_underground_parking": True,
+                    "has_parking_assist": True,
+                },
+                {
+                    "name": "Standard-PKW 1",
+                    "license_plate": "AM-CAR-1",
+                    "vehicle_type": VehicleType.standard_car,
+                    "seat_count": 4,
+                    "wheelchair_space_count": 0,
+                    "escort_seat_count": 0,
+                    "has_ramp": False,
+                    "has_lift": False,
+                    "has_wheelchair_restraint": False,
+                    "supports_electric_wheelchair": False,
+                    # Maße & Gewicht — VW Passat Variant
+                    "vehicle_length_cm": 476,
+                    "vehicle_width_cm": 183,
+                    "vehicle_width_with_mirrors_cm": 200,
+                    "vehicle_height_cm": 148,
+                    "wheelbase_cm": 272,
+                    "turning_circle_m": 10.9,
+                    "empty_weight_kg": 1485,
+                    "gross_vehicle_weight_kg": 2100,
+                    "payload_capacity_kg": 615,
+                    "requires_large_parking_space": False,
+                    "suitable_for_narrow_streets": True,
+                    "suitable_for_underground_parking": True,
+                    "has_parking_assist": False,
+                },
+            ]
+            _DIM_FIELDS = [
+                "vehicle_length_cm", "vehicle_width_cm", "vehicle_width_with_mirrors_cm",
+                "vehicle_height_cm", "wheelbase_cm", "turning_circle_m",
+                "empty_weight_kg", "gross_vehicle_weight_kg", "payload_capacity_kg",
+                "requires_large_parking_space", "suitable_for_narrow_streets",
+                "suitable_for_underground_parking", "has_parking_assist",
+            ]
+            for v_data in demo_vehicles:
+                exists = (
+                    db.query(Vehicle)
+                    .filter(Vehicle.license_plate == v_data["license_plate"])
+                    .first()
+                )
+                if not exists:
+                    db.add(Vehicle(organization_id=wb.id, **v_data))
+                    print(f"  +veh  {v_data['license_plate']} ({v_data['name']})")
+                elif exists.vehicle_length_cm is None:
+                    # Dimensions added by migration — backfill for pre-existing records
+                    for field in _DIM_FIELDS:
+                        if field in v_data:
+                            setattr(exists, field, v_data[field])
+                    print(f"  upd   Fahrzeug {v_data['license_plate']} — Maße/Gewicht/Zufahrt ergänzt")
+                else:
+                    print(f"  skip  Fahrzeug {v_data['license_plate']} (bereits vorhanden)")
+
+        # ── Fahrerprofil (für driver@access.test) ───────────────────────────
+        driver_user = created_users.get("driver@access.test")
+        if driver_user and wb:
+            existing_dp = (
+                db.query(DriverProfile)
+                .filter(DriverProfile.user_id == driver_user.id)
+                .first()
+            )
+            if not existing_dp:
+                db.add(
+                    DriverProfile(
+                        user_id=driver_user.id,
+                        organization_id=wb.id,
+                        display_name="Demo Fahrer",
+                        phone="+49 30 1234566",
+                        can_assist_wheelchair=True,
+                        can_secure_wheelchair=True,
+                        can_operate_lift=True,
+                        has_first_aid_training=True,
+                        has_passenger_transport_license=True,
+                    )
+                )
+                print("  +drv  driver@access.test -> WB Fahrdienste GmbH")
+            else:
+                print("  skip  DriverProfile driver@access.test (bereits vorhanden)")
 
         db.commit()
         print("\nDemo-Daten erfolgreich angelegt.")

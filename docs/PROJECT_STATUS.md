@@ -177,9 +177,62 @@
 
 ---
 
-## Nächster Sprint: Sprint 5 — Fahrtenbuchung
+---
 
-- Modell: `Ride` mit Statusmaschine
+## Sprint 5 — Fahrdienst, Fahrzeuge und Fahrerprofile ✅
+
+**Abgeschlossen:** 2026-07-10
+
+### Backend
+
+- [x] `app/models/organization.py` — 8 optionale Felder ergänzt: `address_line`, `postal_code`, `city`, `country`, `dispatch_phone`, `dispatch_email`, `operating_area_notes`, `notes`
+- [x] `app/models/vehicle.py` — `VehicleType`-Enum (7 Typen), `Vehicle`-Modell (24 Felder: Kapazität, 8 Ausstattungsmerkmale, Betrieb)
+- [x] `app/models/driver_profile.py` — `DriverProfile`-Modell (20 Felder: 8 Qualifikationsflags, Betrieb)
+- [x] `app/db/base.py` — `vehicle` + `driver_profile` Imports ergänzt
+- [x] `app/schemas/vehicle.py` — `VehicleBase`, `VehicleCreate`, `VehicleUpdate`, `VehiclePublic`
+- [x] `app/schemas/driver_profile.py` — `DriverProfileBase`, `DriverProfileCreate`, `DriverProfileUpdate`, `DriverProfilePublic`
+- [x] `app/crud/crud_vehicle.py` — `get_all`, `get_by_org`, `get_by_id`, `create`, `update`, `soft_delete`
+- [x] `app/crud/crud_driver_profile.py` — `get_all`, `get_by_org`, `get_by_id`, `get_by_user_id`, `create`, `update`, `soft_delete`
+- [x] `app/crud/__init__.py` — alle CRUDs importiert
+- [x] `app/api/v1/endpoints/vehicles.py` — 5 Endpunkte + GET /options (Typen + Ausstattungsoptionen)
+- [x] `app/api/v1/endpoints/drivers.py` — 5 Endpunkte + GET /options (Qualifikationsliste)
+- [x] `app/api/v1/router.py` — `vehicles`- und `drivers`-Router eingebunden
+- [x] Alembic-Migration `20260710_0002-c3d4e5f6a1b2_sprint5_vehicle_driver.py`
+- [x] `app/scripts/seed_demo_data.py` — 3 Demo-Fahrzeuge + 1 Fahrerprofil für WB Fahrdienste GmbH
+
+### Frontend
+
+- [x] `src/types/index.ts` — `VehicleTypeName`, `VEHICLE_TYPE_LABELS`, `Vehicle`, `VehicleUpdate`, `VehicleCreate`, `DriverProfile`, `DriverProfileUpdate`, `DriverProfileCreate` ergänzt
+- [x] `src/api/vehicle.ts` — `getVehicles`, `getVehicle`, `createVehicle`, `updateVehicle`, `deactivateVehicle`, `getVehicleOptions`
+- [x] `src/api/driverProfile.ts` — `getDrivers`, `getDriver`, `createDriver`, `updateDriver`, `deactivateDriver`, `getDriverOptions`
+- [x] `src/stores/vehicle.ts` — Pinia Store (`vehicles`, `loading`, `saving`, `activeCount`, `totalCount`, `load`, `create`, `update`, `deactivate`)
+- [x] `src/stores/driverProfile.ts` — Pinia Store analog
+- [x] `src/views/VehiclesView.vue` — Accessibility-first (Liste + Formular inline), Ausstattungs-Toggle-Karten, Soft-Delete, ARIA-Rollen
+- [x] `src/views/DriversView.vue` — Accessibility-first, Qualifikations-Toggle-Karten, Avatar-Initialen, Qualifikations-Badges
+- [x] `src/router/index.ts` — `/vehicles` und `/drivers` unter PortalLayout ergänzt
+- [x] `src/components/layout/AppSidebar.vue` — „Fahrzeuge" und „Fahrer" als aktive Routen (kein „bald"-Chip mehr)
+- [x] `src/views/dashboard/DashboardView.vue` — „Flotte & Fahrer"-Karte mit Zählern + Links
+
+### Docs
+
+- [x] `docs/PROJECT_STATUS.md` — Sprint 5 dokumentiert
+- [x] `docs/ROADMAP.md` — Sprint 5 als abgeschlossen, Sprints 6+7 umnummeriert
+- [x] `docs/DECISIONS.md` — Fahrzeugausstattung als Matching-Grundlage, Qualifikationen, Soft-Delete dokumentiert
+
+### Bewusst nicht umgesetzt (Sprint 5)
+
+- Kein Fahrtenbuchungs-Modell (`Ride`)
+- Kein echtes Matching
+- Keine Tourenoptimierung
+- Keine GPS-Position oder Live-Verfügbarkeit
+- Vollständige Mandantentrennung (RBAC) folgt Sprint 7
+- Kein Dokumentenupload (Führerschein, Zertifikate)
+
+---
+
+## Nächster Sprint: Sprint 6 — Fahrtenbuchung
+
+- Modell: `Ride` mit Statusmaschine (`pending → confirmed → in_progress → completed → cancelled`)
 - Buchungs-Wizard für Fahrgäste
 - Disponenten-Zuteilung (Fahrzeug + Fahrer)
 - Fahrtenliste (reale Daten statt Dummy)

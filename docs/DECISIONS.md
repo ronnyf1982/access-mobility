@@ -250,6 +250,86 @@ Im MVP: Rolle wird im Dashboard angezeigt — Zugriffsbeschränkungen kommen sch
 
 ---
 
+## Fahrzeuge und Fahrerprofile (Sprint 5)
+
+### Soft-Delete vs. endgültiges Löschen
+
+`DELETE /vehicles/{id}` und `DELETE /drivers/{id}` setzen `is_active=False` (Soft-Delete).
+`DELETE /vehicles/{id}/permanent` und `DELETE /drivers/{id}/permanent` löschen den Datensatz endgültig.
+
+**Soft-Delete (Standard):** Fahrzeuge und Fahrer sind historisch relevante Entitäten. Wenn eine Fahrt bereits einem Fahrzeug zugewiesen war, darf das Fahrzeug nicht verschwinden. Soft-Delete erhält die Referenzintegrität für künftige Fahrtenhistorie.
+
+**Permanentes Löschen (Ausnahme):** Nur für Datensätze ohne Fahrtenreferenz sinnvoll. Sobald `Ride`-Modell (Sprint 6) existiert, muss vor hartem Löschen geprüft werden, ob noch Fahrten auf das Fahrzeug/Fahrerprofil verweisen. Bis Sprint 6: kein automatischer Block — der Dispatcher ist verantwortlich.
+
+**Reaktivierung:** `PUT /vehicles/{id}` mit `{ is_active: true }` reaktiviert ein deaktiviertes Fahrzeug. Ebenso für Fahrer. Im UI per "Wieder aktivieren"-Button.
+
+### Fahrzeugausstattung als Matching-Grundlage
+
+25 boolesche Ausstattungsmerkmale (8 allgemein + 11 medizinisch) spiegeln Mobilitätsbedarfe aus Sprint 4 und 5 wider.
+
+**Allgemein:** Rampe, Lift, Rollstuhl-Sicherung, E-Rollstuhl, Liegendtransport-Basis, Kindersitz, Niedriger Einstieg, Breite Tür.
+
+**Medizinisch (Sprint 5):** Transportliege, Liegenaufnahme, med. Stauraum, Sauerstoffhalterung, Erste-Hilfe-Ausstattung, Hygienebedarf, qualifizierter Krankentransport (KTP), Tragestuhl, Infusionshalterung, Zweimann-Besatzung.
+
+**Maße, Gewicht & Zufahrt (Sprint 5):** Länge/Breite/Höhe (cm), Breite mit Spiegeln, Radstand, Wendekreis (m), Leergewicht, zul. Gesamtgewicht, Nutzlast (kg) — alle nullable. Außerdem 4 boolesche Zufahrtsmerkmale: großer Stellplatz nötig, enge Straßen geeignet, Tiefgarage geeignet, Einparkhilfe. Diese Werte fließen als Zukunftsoptimierung in Routenplanung und Dispositionshilfen ein.
+
+**Kein Rettungsdienst / Notfallmedizin:** Access Mobility ist kein Rettungsdienstportal. Alle medizinischen Felder beziehen sich auf qualifizierten Krankentransport (KTP) ohne Notfallindikation. Kein Notruf, keine Patientenüberwachung, keine Abrechnung mit Kostenträgern.
+
+**Begründung:** Späteres Matching vergleicht `MobilityProfile`-Felder gegen `Vehicle`-Felder. Das Datenmodell ist so gebaut, dass Matching ohne Umstrukturierung möglich ist (vgl. `ACCESSIBILITY_AND_MATCHING_REQUIREMENTS.md`).
+
+### Fahrerqualifikationen als Pflichtprüfung bei Zuweisung
+
+23 Qualifikationsflags in 3 Kategorien:
+- **Grundqualifikationen (9):** Rollstuhl begleiten/sichern, Lift bedienen, blinde/gehörlose Fahrgäste unterstützen, Liegendtransport, Erste Hilfe, P-Schein, med. Krankentransport (KTP).
+- **Medizinische Qualifikationen (7, Sprint 5):** Sanitätshelfer, Rettungshelfer, Rettungssanitäter, Rettungsassistent, Notfallsanitäter, Pflegefachkraft, Med. Fachangestellte/r.
+- **Technische Zusatzausbildungen (7, Sprint 5):** Hygiene, Infektionsschutz (IfSG), Rollstuhlsicherung (zertifiziert), Liftsystem, Liegendtransport (Trage), Tragestuhl, Sauerstoffgeräte.
+
+`can_support_medical_transport` kennzeichnet Fahrer, die für qualifizierten Krankentransport (KTP) ausgebildet sind — kein Rettungssanitäter, kein Notfalleinsatz.
+
+**Begründung:** Eine Fahrt darf nur einem Fahrer zugewiesen werden, der alle für den Fahrgastbedarf notwendigen Qualifikationen hat. Dispatcher kann im Sprint 6 manuell prüfen — automatische Validierung folgt.
+
+### Transporttypen-Endpunkt (Sprint 5)
+
+`GET /api/v1/transport-options` (ohne Auth) liefert 5 vordefinierte Transportprofile mit:
+- `id`, `label`, `description`, `warning` (optional), `icon_key`
+- `suggested_profile_fields`: welche `MobilityProfile`-Felder für diesen Typ typischerweise relevant sind
+- `suggested_vehicle_requirements`: passende `Vehicle`-Ausstattungsmerkmale
+- `suggested_driver_requirements`: erwartete Fahrerqualifikationen
+
+Frontend: „Schnellauswahl"-Sektion im Mobilitätsprofil. Klick auf einen Transporttyp aktiviert alle `suggested_profile_fields` im Formular — Nutzer kann anschließend anpassen. Kein Auto-Commit, keine Festschreibung.
+
+**Kein direktes Matching:** Die `suggested_*`-Listen dienen als Orientierung für den Fahrgast, nicht als Matching-Regel. Die Matching-Logik wird separat im Backend implementiert.
+
+### Mobilitätsprofil — medizinische Detailfelder (Sprint 5)
+
+14 neue Felder auf `MobilityProfile` für qualifizierten Krankentransport:
+- 11 boolesche Flags (z. B. `requires_medical_transport`, `brings_oxygen`, `requires_infusion_mount`)
+- Neues Enum `AttendantType` mit 6 Werten (`none`, `escort_person`, `second_assistant`, `paramedic`, `medical_professional`, `unknown`)
+- 2 Freitextfelder: `medical_device_notes`, `medical_transport_notes`
+
+Alle Felder sind freiwillig. `attendant_type_required` erscheint in der UI nur, wenn `requires_medical_attendant = true`.
+
+**Abgrenzung:** Diese Felder beschreiben den Transportbedarf des Fahrgastes, nicht eine medizinische Diagnose. Sie enthalten keine Gesundheitsdaten i. S. d. Art. 9 DSGVO — der Fahrgast gibt nur an, was für die Fahrt relevant ist (z. B. ob eine Halterung für sein Sauerstoffgerät gebraucht wird).
+
+### Fahrzeug Maße, Gewicht & Zufahrt — spätere Verwendung
+
+Die Dimensionsfelder sind jetzt erfassbar, werden aber noch nicht für Matching oder Routenoptimierung genutzt. Geplante Verwendung in späteren Sprints:
+- Prüfung Tiefgarageneinfahrt bei Zieladresse
+- Anzeige passender Stellplätze in der Disposition
+- Optimierung Wendekreis bei engen Zuwegungen (KTP zu Wohngebäuden)
+
+### Keine separate Provider-Tabelle
+
+`Organization` mit `type=transport_provider` wird als Fahrdienst verwendet.  
+**Begründung:** Eine eigene `Provider`-Tabelle wäre strukturelle Redundanz. Die optionalen Felder `dispatch_phone`, `dispatch_email`, `operating_area_notes` decken Fahrdienst-spezifische Daten ab.
+
+### Vereinfachte Mandantentrennung in Sprint 5
+
+Alle Fahrzeuge / Fahrer sind für jeden eingeloggten Nutzer einsehbar und bearbeitbar.  
+**Begründung:** Vollständiges RBAC und Mandantentrennung (nur eigene Orgs sehen) folgen Sprint 7. Im MVP-Scope mit einem Testfahrdienst ist das unkritisch.
+
+---
+
 ## Mobilitätsprofil (Sprint 4)
 
 ### Auto-Create bei GET

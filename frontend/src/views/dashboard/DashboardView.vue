@@ -188,6 +188,31 @@
           </div>
         </section>
 
+        <!-- Fahrzeuge & Fahrer -->
+        <section class="am-card fleet-stat-card" aria-labelledby="fleet-heading">
+          <h3 id="fleet-heading" class="widget-title">Flotte &amp; Fahrer</h3>
+          <div class="fleet-stats">
+            <RouterLink to="/vehicles" class="fleet-stat-item">
+              <div class="fleet-stat-icon" aria-hidden="true">
+                <i class="pi pi-truck"></i>
+              </div>
+              <div class="fleet-stat-data">
+                <span class="fleet-stat-value">{{ vehicleStore.activeCount }}</span>
+                <span class="fleet-stat-label">Fahrzeuge aktiv</span>
+              </div>
+            </RouterLink>
+            <RouterLink to="/drivers" class="fleet-stat-item">
+              <div class="fleet-stat-icon" aria-hidden="true">
+                <i class="pi pi-id-card"></i>
+              </div>
+              <div class="fleet-stat-data">
+                <span class="fleet-stat-value">{{ driverStore.activeCount }}</span>
+                <span class="fleet-stat-label">Fahrer aktiv</span>
+              </div>
+            </RouterLink>
+          </div>
+        </section>
+
         <!-- Schnellaktionen -->
         <section class="am-card" aria-labelledby="quick-actions-heading">
           <h3 id="quick-actions-heading" class="widget-title">Schnellaktionen</h3>
@@ -214,16 +239,22 @@
 import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMobilityProfileStore } from '@/stores/mobilityProfile'
+import { useVehicleStore } from '@/stores/vehicle'
+import { useDriverProfileStore } from '@/stores/driverProfile'
 import { ROLE_LABELS, ROLE_CONTEXT } from '@/types'
 
 const authStore = useAuthStore()
 const profileStore = useMobilityProfileStore()
+const vehicleStore = useVehicleStore()
+const driverStore = useDriverProfileStore()
 
 onMounted(async () => {
   const role = authStore.role
   if ((role === 'passenger' || role === 'trusted_person') && !profileStore.profile) {
     await profileStore.load()
   }
+  if (!vehicleStore.vehicles.length) vehicleStore.load()
+  if (!driverStore.drivers.length) driverStore.load()
 })
 const currentRoleLabel = computed(() =>
   authStore.role ? ROLE_LABELS[authStore.role] : 'Unbekannte Rolle',
@@ -906,5 +937,64 @@ const quickActions = [
   align-items: center;
   justify-content: center;
   gap: var(--am-space-s);
+}
+
+/* Fleet stat card */
+.fleet-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+}
+
+.fleet-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+}
+
+.fleet-stat-item {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-m);
+  padding: var(--am-space-s) var(--am-space-s);
+  border-radius: var(--am-radius-s);
+  text-decoration: none;
+  transition: background var(--am-transition);
+  min-height: 44px;
+}
+
+.fleet-stat-item:hover {
+  background: var(--am-bg-raised);
+}
+
+.fleet-stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--am-radius-s);
+  background: var(--am-accent-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--am-accent);
+  font-size: 0.9rem;
+}
+
+.fleet-stat-data {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fleet-stat-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--am-text-primary);
+  line-height: 1;
+}
+
+.fleet-stat-label {
+  font-size: 0.72rem;
+  color: var(--am-text-secondary);
 }
 </style>

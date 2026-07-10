@@ -16,7 +16,11 @@ Auth-Pinia-Store, 8 Demo-Nutzer + 2 Demo-Orgs.
 MobilityProfile-Modell (22 Felder, 11 Bedarfstypen), GET/PUT-Endpunkte (Auto-Create, Partial-Update),
 MobilityProfileView (Accessibility-first, 5 Sektionen), Pinia Store, Sidebar-Eintrag, Dashboard-Profilkarte.
 
-## Sprint 5 — Fahrtenbuchung
+## Sprint 5 — Fahrdienst, Fahrzeuge und Fahrerprofile ✅
+Vehicle-Modell (7 Typen, 8 Ausstattungsmerkmale), DriverProfile-Modell (8 Qualifikationsflags),
+CRUD-Endpoints, Fahrzeug- und Fahrerverwaltung im Portal, Dashboard-Flottenkachel.
+
+## Sprint 6 — Fahrtenbuchung
 Einzelne Fahrt buchen, disponieren, ausführen.
 
 - Backend: `Ride`-Modell, Statusmaschine, Zuteilungs-Endpoint

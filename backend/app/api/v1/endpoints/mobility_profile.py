@@ -87,6 +87,84 @@ _MOBILITY_NEED_OPTIONS = [
     },
 ]
 
+_MEDICAL_DETAIL_OPTIONS = [
+    {
+        "key": "requires_transport_chair",
+        "label": "Tragestuhl erforderlich",
+        "icon": "pi-arrow-circle-up",
+        "description": "Ich benötige einen Tragestuhl (z. B. für Treppenhäuser ohne Aufzug).",
+    },
+    {
+        "key": "requires_two_person_assistance",
+        "label": "Zweimann-Begleitung",
+        "icon": "pi-users",
+        "description": "Für den Transfer oder Transport sind zwei Personen erforderlich.",
+    },
+    {
+        "key": "requires_medical_transport",
+        "label": "Qualifizierter Krankentransport",
+        "icon": "pi-shield",
+        "description": "Ich benötige einen qualifizierten Krankentransport (KTP) mit medizinisch geschultem Personal.",
+    },
+    {
+        "key": "brings_oxygen",
+        "label": "Eigenes Sauerstoffgerät",
+        "icon": "pi-circle",
+        "description": "Ich bringe ein mobiles Sauerstoffgerät mit.",
+    },
+    {
+        "key": "requires_oxygen_mount",
+        "label": "Sauerstoffhalterung benötigt",
+        "icon": "pi-sort-amount-up-alt",
+        "description": "Das Fahrzeug muss über eine Halterung für Sauerstoffgeräte verfügen.",
+    },
+    {
+        "key": "brings_medical_device",
+        "label": "Eigenes Medizingerät",
+        "icon": "pi-inbox",
+        "description": "Ich transportiere ein medizinisches Gerät (Pumpe, Monitor o. ä.).",
+    },
+    {
+        "key": "requires_medical_equipment_storage",
+        "label": "Med. Stauraum benötigt",
+        "icon": "pi-inbox",
+        "description": "Das Fahrzeug muss Stauraum für medizinisches Equipment bieten.",
+    },
+    {
+        "key": "requires_infusion_mount",
+        "label": "Infusionsständer benötigt",
+        "icon": "pi-sort-amount-up-alt",
+        "description": "Während der Fahrt läuft eine Infusion — Halterung im Fahrzeug erforderlich.",
+    },
+    {
+        "key": "requires_special_positioning",
+        "label": "Spezielle Lagerung",
+        "icon": "pi-minus",
+        "description": "Ich benötige eine besondere Lagerungsposition während der Fahrt.",
+    },
+    {
+        "key": "infection_or_hygiene_note",
+        "label": "Hygiene- / Infektionshinweis",
+        "icon": "pi-shield",
+        "description": "Es liegt ein Hygiene- oder Infektionsschutzhinweis vor (z. B. Isolierpflicht).",
+    },
+    {
+        "key": "requires_medical_attendant",
+        "label": "Med. Begleitung erforderlich",
+        "icon": "pi-heart",
+        "description": "Für die Fahrt ist eine medizinisch qualifizierte Begleitperson notwendig.",
+    },
+]
+
+_ATTENDANT_TYPE_OPTIONS = [
+    {"value": "none", "label": "Keine medizinische Begleitung"},
+    {"value": "escort_person", "label": "Begleitperson (keine med. Qualifikation)"},
+    {"value": "second_assistant", "label": "Zweite Hilfsperson (z. B. für Transfer)"},
+    {"value": "paramedic", "label": "Rettungssanitäter / -helfer"},
+    {"value": "medical_professional", "label": "Pflegefachkraft / Arzt"},
+    {"value": "unknown", "label": "Unbekannt / bitte klären"},
+]
+
 
 @router.get("/options")
 def get_options() -> dict:
@@ -94,6 +172,8 @@ def get_options() -> dict:
     return {
         "wheelchair_types": _WHEELCHAIR_TYPE_OPTIONS,
         "mobility_needs": _MOBILITY_NEED_OPTIONS,
+        "medical_detail_options": _MEDICAL_DETAIL_OPTIONS,
+        "attendant_type_options": _ATTENDANT_TYPE_OPTIONS,
     }
 
 

@@ -14,6 +14,15 @@ class WheelchairType(str, Enum):
     unknown = "unknown"
 
 
+class AttendantType(str, Enum):
+    none = "none"
+    escort_person = "escort_person"
+    second_assistant = "second_assistant"
+    paramedic = "paramedic"
+    medical_professional = "medical_professional"
+    unknown = "unknown"
+
+
 class MobilityProfile(Base):
     __tablename__ = "mobility_profiles"
 
@@ -59,6 +68,24 @@ class MobilityProfile(Base):
     has_own_wheelchair: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     requires_wheelchair_space: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     requires_extra_time: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Medizinische Detailangaben (qualifizierter Krankentransport)
+    requires_transport_chair: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_two_person_assistance: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_medical_transport: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    brings_oxygen: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_oxygen_mount: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    brings_medical_device: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_medical_equipment_storage: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_infusion_mount: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_special_positioning: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    infection_or_hygiene_note: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_medical_attendant: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    attendant_type_required: Mapped[AttendantType] = mapped_column(
+        SAEnum(AttendantType, name="attendanttype"), default=AttendantType.none, nullable=False
+    )
+    medical_device_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    medical_transport_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Freitextfelder — alle freiwillig
     communication_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
