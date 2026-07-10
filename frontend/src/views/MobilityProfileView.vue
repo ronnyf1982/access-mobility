@@ -630,18 +630,29 @@ const PRESET_RESET: Partial<MobilityProfile> = {
 
 function applyTransportType(tt: TransportType) {
   if (selectedTransportType.value === tt.id) {
-    // Same card clicked again: deselect and clear all preset-controlled fields.
     Object.assign(form, PRESET_RESET)
     selectedTransportType.value = null
     return
   }
-  // Build new preset values from suggested_profile_fields (all boolean = true).
-  const presetValues: Record<string, boolean> = {}
-  for (const field of tt.suggested_profile_fields) {
-    if (field in form) presetValues[field] = true
+  // Reset: use backend's controlled-field list; fall back to local PRESET_RESET keys.
+  const boolFieldsToReset = tt.preset_controlled_profile_fields.length > 0
+    ? tt.preset_controlled_profile_fields
+    : (Object.keys(PRESET_RESET) as string[]).filter(k => k !== 'attendant_type_required')
+  const resetPatch: Record<string, unknown> = { attendant_type_required: 'none' as AttendantType }
+  for (const f of boolFieldsToReset) {
+    if (f in form) resetPatch[f] = false
   }
-  // Single Object.assign: reset first, then apply preset (last key wins).
-  Object.assign(form, PRESET_RESET, presetValues)
+  // Preset: suggested boolean fields → true, then non-boolean value overrides.
+  const presetPatch: Record<string, unknown> = {}
+  for (const f of tt.suggested_profile_fields) {
+    if (f in form) presetPatch[f] = true
+  }
+  if (tt.suggested_field_values) {
+    for (const [k, v] of Object.entries(tt.suggested_field_values)) {
+      if (k in form) presetPatch[k] = v
+    }
+  }
+  Object.assign(form, resetPatch, presetPatch)
   selectedTransportType.value = tt.id
 }
 

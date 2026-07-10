@@ -288,15 +288,28 @@ Im MVP: Rolle wird im Dashboard angezeigt — Zugriffsbeschränkungen kommen sch
 
 **Begründung:** Eine Fahrt darf nur einem Fahrer zugewiesen werden, der alle für den Fahrgastbedarf notwendigen Qualifikationen hat. Dispatcher kann im Sprint 6 manuell prüfen — automatische Validierung folgt.
 
-### Transporttypen-Endpunkt (Sprint 5)
+### Transporttypen-Endpunkt (Sprint 5 / Sprint 5B)
 
-`GET /api/v1/transport-options` (ohne Auth) liefert 5 vordefinierte Transportprofile mit:
+`GET /api/v1/transport-options` (ohne Auth) liefert 5 vordefinierte Transportprofile.
+
+**Zentrale Konfiguration:** Alle Preset-Definitionen liegen in `backend/app/core/transport_presets.py` — ein einziger Import in `transport_options.py`. Späterer Ausbau (admin-konfigurierbar, DB-basiert) ist damit isoliert möglich.
+
+Felder je Transporttyp:
 - `id`, `label`, `description`, `warning` (optional), `icon_key`
-- `suggested_profile_fields`: welche `MobilityProfile`-Felder für diesen Typ typischerweise relevant sind
-- `suggested_vehicle_requirements`: passende `Vehicle`-Ausstattungsmerkmale
-- `suggested_driver_requirements`: erwartete Fahrerqualifikationen
+- `suggested_profile_fields`: welche `MobilityProfile`-Felder für diesen Typ typischerweise gesetzt werden (alle boolean)
+- `suggested_field_values`: nicht-boolesche Feld-Überschreibungen, z. B. `attendant_type_required: "unknown"` für KTP
+- `suggested_vehicle_requirements`: passende `Vehicle`-Ausstattungsmerkmale (Orientierung)
+- `suggested_driver_requirements`: erwartete Fahrerqualifikationen (Orientierung)
+- `preset_controlled_profile_fields`: alle Felder, die beim Wechsel der Schnellauswahl zurückgesetzt werden (12 boolesche Felder — Frontend-Reset-Grundlage)
 
-Frontend: „Schnellauswahl"-Sektion im Mobilitätsprofil. Klick auf einen Transporttyp aktiviert alle `suggested_profile_fields` im Formular — Nutzer kann anschließend anpassen. Kein Auto-Commit, keine Festschreibung.
+**Fachliche Preset-Grenzen (Sprint 5B):**
+- `accessible_ride` / `patient_ride_no_medical_care` / `recurring_school_work_facility_route`: Null medizinische Detailfelder — Liegendtransport, Sauerstoff, Begleitung werden nicht vorausgewählt
+- `patient_ride_no_medical_care`: enthält ausdrücklich **nicht** `needs_stretcher_transport`
+- `stretcher_ride`: nur `needs_stretcher_transport` + `requires_special_positioning`
+- `qualified_medical_transport` (KTP): nur `requires_medical_transport` + `requires_medical_attendant`; `attendant_type_required` wird auf `"unknown"` gesetzt (via `suggested_field_values`). Sauerstoff, Geräte, Hygiene, Zweimann — hängen vom konkreten Fahrgast ab und werden **nicht** auto-gesetzt.
+
+**Frontend-Reset-Mechanismus (Sprint 5B):**
+`applyTransportType` in `MobilityProfileView.vue` baut den Reset-Patch dynamisch aus `tt.preset_controlled_profile_fields` auf (anstatt einer lokal hart kodierten Feldliste). `attendant_type_required` wird immer auf `"none"` zurückgesetzt, bevor `suggested_field_values` angewendet werden. Fallback auf lokales `PRESET_RESET`, falls `preset_controlled_profile_fields` leer.
 
 **Kein direktes Matching:** Die `suggested_*`-Listen dienen als Orientierung für den Fahrgast, nicht als Matching-Regel. Die Matching-Logik wird separat im Backend implementiert.
 

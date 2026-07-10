@@ -271,19 +271,29 @@ Ergänzende Felder für qualifizierten Krankentransport auf `MobilityProfile`:
 | `has_transport_chair_training` | Tragestuhl-Einsatz in Treppenhäusern |
 | `has_oxygen_equipment_training` | Mobiles Sauerstoffgerät |
 
-## Transporttypen (Sprint 5)
+## Transporttypen (Sprint 5 / Sprint 5B)
 
-5 vordefinierte Transportprofile über `GET /api/v1/transport-options` (ohne Auth):
+5 vordefinierte Transportprofile über `GET /api/v1/transport-options` (ohne Auth).
+Zentrale Konfiguration: `backend/app/core/transport_presets.py`.
 
-| ID | Bezeichnung |
-|---|---|
-| `accessible_ride` | Barrierefreie Fahrt |
-| `patient_ride_no_medical_care` | Patientenfahrt ohne Betreuung |
-| `stretcher_ride` | Liegendtransport |
-| `qualified_medical_transport` | Qualifizierter Krankentransport (KTP) |
-| `recurring_school_work_facility_route` | Wiederkehrende Schul-/Arbeits-/Einrichtungsfahrt |
+| ID | Bezeichnung | Auto-gesetzte Profilfelder | Nicht auto-gesetzt |
+|---|---|---|---|
+| `accessible_ride` | Barrierefreie Fahrt | Allgemeine Mobilitätsfelder | Alle med. Detailfelder |
+| `patient_ride_no_medical_care` | Patientenfahrt ohne Betreuung | Rollstuhlplatz, Einstiegshilfe, Zusatzzeit | `needs_stretcher_transport`, alle med. Felder |
+| `stretcher_ride` | Liegendtransport | `needs_stretcher_transport`, `requires_special_positioning` | Med. Begleitung, Sauerstoff, Geräte |
+| `qualified_medical_transport` | Qualifizierter Krankentransport (KTP) | `requires_medical_transport`, `requires_medical_attendant` (Typ: "unknown") | Sauerstoff, Geräte, Hygiene, Zweimann-Begleitung |
+| `recurring_school_work_facility_route` | Wiederkehrende Schul-/Arbeits-/Einrichtungsfahrt | Allgemeine Mobilitätsfelder | Alle med. Detailfelder |
 
-Jeder Typ enthält `suggested_profile_fields`, `suggested_vehicle_requirements`, `suggested_driver_requirements` als Orientierungshilfe — keine bindenden Matching-Regeln.
+**Fachliche Begründung für konservative Presets (Sprint 5B):**
+- Presets sind Vorschläge für Laien — sie beantworten „Welche Art von Fahrt brauche ich?", nicht „Was genau brauche ich medizinisch?"
+- Medizinische Detailfelder (Sauerstoff, Infusion, Hygiene, Zweimann-Besatzung) sind fahrgastspezifisch — kein Preset kann sie stellvertretend für alle Fahrgäste eines Typs setzen
+- Der qualifizierte Krankentransport (KTP) setzt nur das Minimum: KTP-Bedarf + Begleitungsbedarf. Alle weiteren Details füllt der Fahrgast individuell aus
+
+Zusätzliche Felder je Transporttyp (ab Sprint 5B):
+- `preset_controlled_profile_fields`: die 12 booleschen Felder, die beim Wechsel der Schnellauswahl zurückgesetzt werden
+- `suggested_field_values`: nicht-boolesche Feld-Überschreibungen (z. B. `attendant_type_required: "unknown"`)
+
+Alle `suggested_*`-Listen sind Orientierungshilfen für den Fahrgast, keine bindenden Matching-Regeln.
 
 ## Abgrenzung — noch keine technische Umsetzung in diesem Schritt
 

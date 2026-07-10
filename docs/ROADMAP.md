@@ -20,6 +20,12 @@ MobilityProfileView (Accessibility-first, 5 Sektionen), Pinia Store, Sidebar-Ein
 Vehicle-Modell (7 Typen, 8 Ausstattungsmerkmale), DriverProfile-Modell (8 Qualifikationsflags),
 CRUD-Endpoints, Fahrzeug- und Fahrerverwaltung im Portal, Dashboard-Flottenkachel.
 
+## Sprint 5B — Konfigurierbare Schnellauswahl-Vorlagen ✅
+Zentrale Preset-Konfiguration (`backend/app/core/transport_presets.py`), fachlich konservative
+Presets (kein Auto-Setzen med. Felder außer was eindeutig zutrifft), Backend liefert
+`preset_controlled_profile_fields` + `suggested_field_values`, Frontend-Reset dynamisch
+aus Backend-Daten statt lokal hart kodiert.
+
 ## Sprint 6 — Fahrtenbuchung
 Einzelne Fahrt buchen, disponieren, ausführen.
 

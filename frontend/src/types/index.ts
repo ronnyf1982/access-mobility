@@ -266,6 +266,8 @@ export interface TransportType {
   warning?: string
   icon_key: string
   suggested_profile_fields: string[]
+  suggested_field_values?: Record<string, unknown>
   suggested_vehicle_requirements: string[]
   suggested_driver_requirements: string[]
+  preset_controlled_profile_fields: string[]
 }
