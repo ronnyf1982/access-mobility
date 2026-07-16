@@ -71,14 +71,23 @@ Onboarding-Fundament und Sprachassistenz-Wahl nach erstem Login implementiert.
 
 Referenz: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`, `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md`
 
-## Sprint 9 — Sprachgeführter Mobilitätscheck (offline-fähig)
+## Sprint 9 — Sprachgeführter Mobilitätscheck (offline-fähig) ✅
 
-Vollständiger sprachgeführter Durchlauf durch alle Mobilitätsprofil-Felder ohne Cloud-Abhängigkeit.
+Geführter Mobilitätscheck als offline-fähiges Dialogfundament implementiert.
 
-- Alle 11 Basisbedarfe + 14 med. Detailfelder per Sprache setzbar
-- Lokale Regelauswertung: kontextsensitive Folgefragen (z. B. Rollstuhltyp nur wenn Rollstuhl = Ja)
-- Draft lokal speicherbar, Sync beim nächsten Online-Gang
-- Zusammenfassung vorlesen lassen vor Speichern
+- **Route:** `/mobility-profile/assistant` (unter PortalLayout, requiresAuth)
+- **Fragenkatalog:** `frontend/src/data/mobilityAssistantQuestions.ts` — 10 Fragen, zentral konfiguriert
+- **Feldmapping:** 10 vorhandene MobilityProfile-Felder + `voice_mode_enabled` (User) — nur tatsächlich vorhandene Felder
+- **Keine Speicherung** bis zur expliziten Bestätigung — lokales Draft-Objekt
+- **Zusammenfassung** zeigt alle Antworten mit gesetzten Feldern und ggf. fehlenden Feldhinweisen
+- **Text-to-Speech (Browser Web Speech API):** optional, Fallback auf visuelle UI wenn nicht verfügbar. Auto-Vorlesen wenn `voice_mode_enabled = true`.
+- **Onboarding-Verknüpfung:** Sprachführung Ja → Fahrgäste landen auf `/mobility-profile/assistant`
+- **MobilityProfileView:** CTA-Karte „Geführten Check starten" sichtbar für alle Fahrgäste
+- **Fehlende Felder (keine Migration):** `may_not_wait_alone`, `needs_screen_reader_optimized_ui`, `prefers_voice_guidance` → Roadmap Sprint 10+
+- **Backend-Änderung:** `GET /assistant/capabilities` — `mobility_profile`-Capability um `guided_check: true`, `guided_check_route`, `offline_supported: true`, `online_ai_supported: false` erweitert
+- Tests: 26 Pytest-Tests ✅, TypeScript-Check ✅, Vite-Build ✅
+
+Referenz: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`, `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md`
 
 ## Sprint 10 — Fahrer-Schichtstart & Fahrzeugwahl
 

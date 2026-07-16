@@ -11,6 +11,28 @@
       </div>
     </div>
 
+    <!-- Geführter Check CTA -->
+    <div class="mp-assistant-cta am-card" role="region" aria-labelledby="assistant-cta-heading">
+      <div class="mp-assistant-cta-icon" aria-hidden="true">
+        <i class="pi pi-comments"></i>
+      </div>
+      <div class="mp-assistant-cta-text">
+        <h2 id="assistant-cta-heading" class="mp-assistant-cta-title">Geführten Mobilitätscheck starten</h2>
+        <p class="mp-assistant-cta-desc">
+          Die App führt Sie Schritt für Schritt durch die wichtigsten Fragen.
+          Sie können alles vor dem Speichern prüfen.
+        </p>
+      </div>
+      <RouterLink
+        to="/mobility-profile/assistant"
+        class="am-btn am-btn-primary mp-assistant-cta-btn"
+        aria-label="Geführten Mobilitätscheck starten"
+      >
+        <i class="pi pi-arrow-right" aria-hidden="true"></i>
+        Geführten Check starten
+      </RouterLink>
+    </div>
+
     <div
       v-if="store.loading"
       class="mp-loading"
@@ -1236,5 +1258,54 @@ watch(() => store.profile, syncFormFromStore)
   padding: 0;
   text-decoration: underline;
   font-weight: 600;
+}
+
+/* ── Guided Check CTA ─────────────────────────────────────────────────── */
+.mp-assistant-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-l);
+  flex-wrap: wrap;
+}
+
+.mp-assistant-cta-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--am-radius-m);
+  background: color-mix(in srgb, var(--am-accent) 15%, var(--am-bg-raised));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  color: var(--am-accent);
+}
+
+.mp-assistant-cta-text {
+  flex: 1;
+  min-width: 200px;
+}
+
+.mp-assistant-cta-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--am-text-primary);
+  margin: 0 0 4px;
+}
+
+.mp-assistant-cta-desc {
+  font-size: 0.85rem;
+  color: var(--am-text-secondary);
+  margin: 0;
+}
+
+.mp-assistant-cta-btn {
+  text-decoration: none;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>

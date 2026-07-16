@@ -7,7 +7,15 @@ router = APIRouter(prefix="/assistant", tags=["assistant"])
 
 _PASSENGER_CAPABILITIES = [
     {"id": "onboarding", "label": "Ersteinrichtung", "available": True},
-    {"id": "mobility_profile", "label": "Mobilitätsprofil", "available": True},
+    {
+        "id": "mobility_profile",
+        "label": "Mobilitätsprofil",
+        "available": True,
+        "guided_check": True,
+        "guided_check_route": "/mobility-profile/assistant",
+        "offline_supported": True,
+        "online_ai_supported": False,
+    },
     {"id": "book_ride", "label": "Fahrt anfragen", "available": False, "planned_sprint": 14},
     {"id": "ride_status", "label": "Fahrtstatus abfragen", "available": False, "planned_sprint": 12},
     {"id": "share_location", "label": "Fahrt teilen", "available": False, "planned_sprint": 12},

@@ -7,6 +7,7 @@ import LoginView from '@/views/auth/LoginView.vue'
 import OnboardingView from '@/views/OnboardingView.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
 import MobilityProfileView from '@/views/MobilityProfileView.vue'
+import MobilityAssistantView from '@/views/MobilityAssistantView.vue'
 import VehiclesView from '@/views/VehiclesView.vue'
 import DriversView from '@/views/DriversView.vue'
 import TransportRequestView from '@/views/TransportRequestView.vue'
@@ -40,6 +41,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'dashboard', component: DashboardView },
         { path: '/mobility-profile', name: 'mobility-profile', component: MobilityProfileView },
+        { path: '/mobility-profile/assistant', name: 'mobility-profile-assistant', component: MobilityAssistantView },
         { path: '/vehicles', name: 'vehicles', component: VehiclesView },
         { path: '/drivers', name: 'drivers', component: DriversView },
         { path: '/transport-requests', name: 'transport-requests', component: TransportRequestView },

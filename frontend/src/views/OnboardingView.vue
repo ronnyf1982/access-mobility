@@ -127,7 +127,11 @@ async function confirm() {
     const updated = await saveOnboardingPreferences(selected.value === 'voice')
     authStore.user = updated
     const role = updated.role
-    if (role === 'passenger' || role === 'trusted_person' || role === 'organization_coordinator') {
+    const isPassengerRole = role === 'passenger' || role === 'trusted_person' || role === 'organization_coordinator'
+    if (isPassengerRole && selected.value === 'voice') {
+      // Voice mode: geführten Mobilitätscheck starten
+      await router.push('/mobility-profile/assistant')
+    } else if (isPassengerRole) {
       await router.push('/mobility-profile')
     } else {
       await router.push('/dashboard')

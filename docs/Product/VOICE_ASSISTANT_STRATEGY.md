@@ -158,17 +158,19 @@ Assistent: "Möchten Sie noch etwas hinzufügen, zum Beispiel Rampe oder Hebebü
 
 ### Phasen
 
-**Phase 1 — Assistant Core (Sprint 8):**
-- Onboarding-Dialog-Framework
-- Offline-Fragenkatalog für Mobilitätsprofil
-- TTS-Integration (Browser Web Speech API oder native)
-- STT-Integration (Browser Web Speech API, Mikrofon-Permission-Flow)
-- Assistenten-Aktivierungsbutton (persistent, barrierefrei)
+**Phase 1 — Assistant Core (Sprint 8) ✅:**
+- Onboarding-Dialog: Sprachführungs-Wahl beim ersten Login
+- `voice_mode_enabled` auf User-Modell
+- `/assistant/capabilities` Endpunkt (rollenbasiert)
+- Kein STT in diesem Sprint
 
-**Phase 2 — Offline-Mobilitätscheck (Sprint 9):**
-- Vollständiger sprachgeführter Mobilitätscheck
-- Alle Profilfelder per Sprache setzbar
-- Lokale Regelauswertung für Feldgruppen
+**Phase 2 — Offline-Mobilitätscheck (Sprint 9) ✅:**
+- Route `/mobility-profile/assistant` — geführter Fragenflow
+- 10 Fragen, zentraler Fragenkatalog (`mobilityAssistantQuestions.ts`)
+- Button-Antworten: Ja / Nein / Weiß ich nicht / Überspringen
+- TTS: Browser Web Speech API (optional, Fallback visuell), kein STT
+- Speicherung erst nach Bestätigung der Zusammenfassung
+- Fehlende Felder dokumentiert, keine unautorisierten Migrationen
 
 **Phase 3 — Online-KI (Sprint 11):**
 - Backend-Endpoint `/api/v1/assistant/interpret`
