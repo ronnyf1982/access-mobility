@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import assistant, auth, driver, drivers, health, mobility_profile, onboarding, platform_admin, public_gate, transport_options, transport_requests, vehicles
+from app.api.v1.endpoints import assistant, auth, driver, drivers, health, mobility_profile, onboarding, platform_admin, preview_access_admin, public_gate, transport_options, transport_requests, vehicles
 
 router = APIRouter()
 router.include_router(health.router, tags=["health"])
@@ -14,4 +14,5 @@ router.include_router(driver.router)
 router.include_router(transport_options.router)
 router.include_router(transport_requests.router)
 router.include_router(platform_admin.router)
+router.include_router(preview_access_admin.router)
 router.include_router(public_gate.router)

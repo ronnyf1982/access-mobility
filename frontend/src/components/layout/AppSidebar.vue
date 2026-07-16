@@ -46,6 +46,15 @@
         <i class="pi pi-users" aria-hidden="true"></i>
         <span>Benutzerverwaltung</span>
       </RouterLink>
+      <RouterLink
+        to="/platform-admin/test-access"
+        class="sidebar-nav-item"
+        :class="{ active: isActive('/platform-admin/test-access') }"
+        :aria-current="isActive('/platform-admin/test-access') ? 'page' : undefined"
+      >
+        <i class="pi pi-shield" aria-hidden="true"></i>
+        <span>Website-Testzugänge</span>
+      </RouterLink>
     </nav>
 
     <!-- Support + Abmelden -->

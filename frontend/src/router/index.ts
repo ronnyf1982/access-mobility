@@ -14,6 +14,7 @@ import DriversView from '@/views/DriversView.vue'
 import TransportRequestView from '@/views/TransportRequestView.vue'
 import DriverDashboardView from '@/views/DriverDashboardView.vue'
 import PlatformAdminUsersView from '@/views/platform_admin/PlatformAdminUsersView.vue'
+import PlatformAdminTestAccessView from '@/views/platform_admin/PlatformAdminTestAccessView.vue'
 import ImpressumView from '@/views/ImpressumView.vue'
 import DatenschutzView from '@/views/DatenschutzView.vue'
 
@@ -89,6 +90,11 @@ const router = createRouter({
           path: 'users',
           name: 'platform-admin-users',
           component: PlatformAdminUsersView,
+        },
+        {
+          path: 'test-access',
+          name: 'platform-admin-test-access',
+          component: PlatformAdminTestAccessView,
         },
       ],
     },
