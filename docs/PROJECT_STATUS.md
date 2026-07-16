@@ -380,9 +380,9 @@
 
 - [x] `frontend/src/api/previewAccess.ts` — `listPreviewUsers`, `createPreviewUser`, `getPreviewUser`, `updatePreviewUser`, `activatePreviewUser`, `deactivatePreviewUser`, `resetPreviewUserPassword`
 - [x] `frontend/src/views/platform_admin/PlatformAdminTestAccessView.vue` — CRUD-Tabelle mit Suche/Aktivfilter, 3 Modals (Anlegen, Bearbeiten, Passwort-Reset), Toast-Benachrichtigungen, Hinweis: „kein App-Benutzerkonto"
-- [x] `frontend/src/views/GateView.vue` — Neubau: Zwei-Spalten-Layout (schwarz/gelb), Fahrando-Logo, H1 „Hier entsteht etwas Großes.", 3 horizontale Nutzen-Punkte, Hinweis-Box, Login-Card (Shield-Icon, E-Mail/Passwort, Passwort-Sichtbarkeit-Toggle, gelber Button), dekorative SVG-Ellipsen. Unlock per `sessionStorage.setItem('fahrando_unlocked', '1')`.
+- [x] `frontend/src/views/GateView.vue` — Neubau: Zwei-Spalten-Layout (schwarz/gelb), Fahrando-Logo, H1 „Hier entsteht etwas Großes.", 3 horizontale Nutzen-Punkte, Hinweis-Box, Login-Card (Shield-Icon, E-Mail/Passwort, Passwort-Sichtbarkeit-Toggle, gelber Button), dekorative SVG-Ellipsen. Unlock per `sessionStorage.setItem('fahrando_preview_unlocked', '1')`.
 - [x] `frontend/public/Logo1.png` — Fahrando-Marken-Logo (RGBA-PNG, transparent) als statisches Asset
-- [x] `frontend/src/router/index.ts` — `/gate` öffentlich (`meta: { public: true }`), `/` erfordert `fahrando_unlocked` in sessionStorage (Gate-Guard), `/login` → LoginView (App-Login, unverändert)
+- [x] `frontend/src/router/index.ts` — `/gate` öffentlich (`meta: { public: true }`), `/` erfordert `fahrando_preview_unlocked` in sessionStorage (Gate-Guard), `/login` → LoginView (App-Login, unverändert)
 - [x] `frontend/src/components/layout/AppSidebar.vue` — „Website-Testzugänge" unter Plattform-Admin-Sektion ergänzt
 - [x] `frontend/vite.config.ts` — **Proxy-Eintrag** `/api` → `http://localhost:8010` (behebt fehlende API-Erreichbarkeit im Vite Dev-Server für `fetch`-basierte API-Module)
 - [x] `.env.example` — `TEST_ACCESS_CODE`-Variable entfernt, Hinweis auf DB-basierten Ansatz
@@ -399,7 +399,7 @@
 - `PreviewAccessUser` ist vollständig getrennt von der `User`-Tabelle — kein JWT, kein App-Login
 - `password_hash` nie in API-Responses
 - Login-Fehler geben immer dieselbe 401-Meldung zurück (kein Enumeration-Angriff)
-- Gate-Unlock nur per `sessionStorage` (`fahrando_unlocked=1`) — kein Token, kein Cookie
+- Gate-Unlock nur per `sessionStorage` (`fahrando_preview_unlocked=1`) — kein Token, kein Cookie
 - Kein Passwort in Dateien, Logs, Tests, Doku oder Abschlussbericht
 
 ### Bewusst nicht umgesetzt (Sprint FAHRANDO-2)
@@ -408,6 +408,46 @@
 - Kein Ablaufdatum / zeitlich begrenzte Testzugänge (folgt bei Bedarf)
 - Kein Audit-Log für Gate-Logins (last_used_at reicht für MVP)
 - Keine Rate-Limiting auf dem Gate-Endpoint (folgt vor Produktivbetrieb)
+
+---
+
+## Sprint FAHRANDO-PREVIEW-GATE-DIREKTLINK-SCHUTZ-1 — Gate-Direktlink-Schutz ✅
+
+**Abgeschlossen:** 2026-07-16
+
+### Problem
+
+Der Gate-Guard prüfte ausschließlich `to.path === '/'`. Direktlinks zu beliebigen öffentlichen Website-Routen umgingen das Gate vollständig.
+
+### Umgesetzt
+
+- [x] `frontend/src/router/index.ts`:
+  - `/`-Route: `meta: { requiresPreviewAccess: true }` ergänzt
+  - Gate-Guard: Prüft `to.matched.some(r => r.meta.requiresPreviewAccess)` statt `to.path === '/'`
+  - Redirect zu `/gate?redirect={to.fullPath}` bei nicht freigeschalteten Gate-Routen
+  - Bereits freigeschaltet + auf `/gate`: validierter Redirect zum `?redirect`-Parameter (Open-Redirect-Schutz: nur interne `/`-Pfade erlaubt)
+  - sessionStorage-Key: `fahrando_unlocked` → `fahrando_preview_unlocked`
+- [x] `frontend/src/views/GateView.vue`:
+  - `useRoute` importiert
+  - Nach erfolgreichem Login: liest `route.query.redirect`, validiert (muss mit `/` beginnen, kein `//`), leitet dorthin weiter (Fallback: `/`)
+  - sessionStorage-Key: `fahrando_unlocked` → `fahrando_preview_unlocked`
+- [x] `docs/DEPLOYMENT_FAHRANDO_TEST.md` — Abschnitt 17 und 18 auf neuen Key + Direktlink-Verhalten aktualisiert
+
+### Sicherheitsregeln
+
+- Open-Redirect-Schutz: Redirect-Parameter wird validiert (`startsWith('/') && !startsWith('//')`)
+- `/impressum` und `/datenschutz` bleiben ohne Gate-Freigabe zugänglich
+- App-Routen (`/dashboard`, `/login` usw.) unterliegen ausschließlich dem App-Auth-Guard, nie dem Gate
+
+### Checks
+
+- [x] TypeScript-Check (`vue-tsc --noEmit`): keine Fehler
+- [x] Vite-Build: ✅ erfolgreich
+
+### Bewusst nicht umgesetzt
+
+- Kein serverseitiger Redirect-State — ausschließlich Query-Parameter (stateless, kein Session-Overhead)
+- Kein Ablaufdatum für den Gate-Unlock (sessionStorage endet beim Tab-Schließen)
 
 ---
 

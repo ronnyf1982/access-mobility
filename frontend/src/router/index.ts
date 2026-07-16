@@ -34,6 +34,7 @@ const router = createRouter({
     {
       path: '/',
       component: PublicLayout,
+      meta: { requiresPreviewAccess: true },
       children: [
         { path: '', name: 'home', component: LandingView },
       ],
@@ -105,20 +106,22 @@ const router = createRouter({
 
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
-  const unlocked = !!sessionStorage.getItem('fahrando_unlocked')
+  const unlocked = !!sessionStorage.getItem('fahrando_preview_unlocked')
 
-  // Gate-Guard: / und seine Kinder erfordern Gate-Freigabe
-  if (to.path === '/' && !unlocked) {
-    return next('/gate')
+  // Preview-Gate: alle Routen mit requiresPreviewAccess benötigen Gate-Freischaltung
+  if (to.matched.some(r => r.meta.requiresPreviewAccess) && !unlocked) {
+    return next({ path: '/gate', query: { redirect: to.fullPath } })
   }
 
-  // Bereits freigeschaltet: /gate → /
+  // Bereits freigeschaltet und auf /gate → Ziel oder / weiterleiten
   if (to.path === '/gate' && unlocked) {
-    return next('/')
+    const raw = to.query.redirect as string | undefined
+    const target = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+    return next(target)
   }
 
-  // Öffentliche Routen (inkl. /gate, /login, /impressum, /datenschutz)
-  if (to.meta.public || to.path === '/') {
+  // Öffentliche Routen (inkl. /gate, /login, /impressum, /datenschutz) und freigegebene Website-Routen
+  if (to.meta.public || to.matched.some(r => r.meta.requiresPreviewAccess)) {
     if (to.path === '/login' && auth.isAuthenticated) {
       return next('/dashboard')
     }

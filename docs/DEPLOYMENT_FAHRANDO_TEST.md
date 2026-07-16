@@ -242,7 +242,7 @@ Das Passwort wird nur im Arbeitsspeicher verarbeitet — nie in Dateien gespeich
 **Sicherheitsregeln:**
 - `password_hash` nie in API-Responses
 - Gleiche 401-Antwort für alle Fehler (kein Enumeration-Angriff)
-- Unlock per `sessionStorage.fahrando_unlocked = '1'` — kein Token, kein Cookie
+- Unlock per `sessionStorage.fahrando_preview_unlocked = '1'` — kein Token, kein Cookie
 
 ---
 
@@ -278,11 +278,12 @@ Für Produktivbetrieb: nginx/Caddy übernimmt das Forwarding — kein Proxy im B
 
 ## 18. Gate-Login-Flow
 
-1. `http://localhost:5180` öffnen → Weiterleitung zu `/gate` (Schutzseite)
+1. Beliebige öffentliche Website-Route direkt aufrufen (z. B. `http://localhost:5180/`) → automatische Weiterleitung zu `/gate?redirect=<Ziel>` (Schutzseite)
 2. Benutzername + Passwort eingeben → „Einloggen"
-3. Bei Erfolg: `sessionStorage.fahrando_unlocked = '1'` gesetzt → Weiterleitung zu `/`
-4. `/` zeigt die öffentliche Fahrando-Website (Landing Page)
-5. App-Login weiterhin über `/login` (separates System, JWT-basiert)
+3. Bei Erfolg: `sessionStorage.fahrando_preview_unlocked = '1'` gesetzt → Weiterleitung zur ursprünglich angefragten Route (oder `/` als Fallback)
+4. Direktlinks zu beliebigen öffentlichen Website-Routen ebenfalls durch Gate geschützt (Direktlink-Schutz)
+5. `/impressum` und `/datenschutz` sind ohne Gate-Freigabe zugänglich
+6. App-Login weiterhin über `/login` (separates System, JWT-basiert)
 
 ---
 

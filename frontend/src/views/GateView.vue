@@ -194,10 +194,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import FahrandoLogo from '@/components/branding/FahrandoLogo.vue'
 
 const router = useRouter()
+const route = useRoute()
 const year = new Date().getFullYear()
 
 const emailOrUsername = ref('')
@@ -220,8 +221,10 @@ async function handleSubmit() {
       body: JSON.stringify({ email_or_username: emailOrUsername.value, password: password.value }),
     })
     if (res.ok) {
-      sessionStorage.setItem('fahrando_unlocked', '1')
-      await router.push('/')
+      sessionStorage.setItem('fahrando_preview_unlocked', '1')
+      const raw = route.query.redirect as string | undefined
+      const target = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+      await router.push(target)
     } else if (res.status === 401) {
       errorMsg.value = 'Zugangsdaten nicht korrekt.'
       password.value = ''
