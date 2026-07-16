@@ -6,6 +6,29 @@ Letzte Aktualisierung: 2026-07-16
 
 ---
 
+## Plattform-Zuordnung der Module
+
+Module gehören zu einer der drei Nutzungswelten (Details: `docs/Product/APP_CONCEPT.md`):
+
+| Modul | Welt | Sprachassistenz-Priorität |
+|---|---|---|
+| Auth / Login | Alle | Niedrig |
+| Onboarding | Fahrgast | **Hoch** |
+| Mobilitätsprofil | Fahrgast | **Hoch** |
+| Transporttypen / Presets | Fahrgast | **Hoch** |
+| Transportanfragen | Fahrgast | **Hoch** |
+| Benachrichtigungseinstellungen | Fahrgast | **Hoch** |
+| Live-Standort & Statusfreigabe | Fahrgast | **Hoch** |
+| Fahrzeugprofile | Dispo/Admin | Niedrig |
+| Fahrerprofile | Dispo/Admin | Niedrig |
+| Matching / Disposition | Dispo/Admin | Niedrig |
+| Dashboard | Alle (rollenabhängig) | Niedrig |
+| Schichtstart & Fahrzeugwahl | Fahrer | Mittel |
+| Fahrtstatus / Statuswechsel | Fahrer | **Hoch** |
+| Tourenliste | Fahrer | Mittel |
+
+---
+
 ## Zweck dieses Dokuments
 
 Für jedes Modul wird hier festgehalten:

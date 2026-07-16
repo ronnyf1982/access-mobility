@@ -68,6 +68,33 @@ Korrekter Wert: `VITE_API_BASE_URL=http://localhost:8010/api/v1`
 
 ---
 
+## 4a. Plattform-Architektur-Grundsatz (verbindlich)
+
+Access Mobility ist **eine Plattform** — kein Verbund aus drei getrennten Systemen.
+
+**Ein gemeinsames Backend · Eine API · Eine Datenbank · Ein Rollen-/Rechtesystem**
+
+Fachlich gibt es jedoch drei klar getrennte Nutzungswelten mit unterschiedlichen
+Oberflächen-Anforderungen:
+
+| Welt | Zielgruppe | Oberfläche | Priorität |
+|---|---|---|---|
+| **Fahrgast-/Vertrauenspersonen-App** | Fahrgäste, Angehörige, Betreuer, Org-Koordinatoren | Extrem einfach, barrierefrei, Sprachassistenz, mobile-first | Hoch |
+| **Fahrer-App** | Fahrer | Mobile, robust, große Buttons, wenig Ablenkung, offline-fähig | Mittel |
+| **Dispositions-/Admin-Webapp** | Disponenten, Provider-Admins, Platform-Admins | Desktop-orientiert, tabellarisch, filterbar, funktionsreich | Mittel |
+
+**Technische Strategie:**
+- **MVP:** Eine Web-App mit rollenabhängigen Bereichen (aktuelle Umsetzung).
+- **Später:** Fahrgast-App und Fahrer-App als eigene mobile / PWA / native Hüllen.
+- **Langfristig:** Disposition bleibt primär Desktop-Webanwendung.
+- Alle Welten teilen Backend, API, Auth und Datenmodell.
+- Rollen bestimmen Navigation, Oberfläche und Berechtigungen vollständig.
+
+Details: `docs/DECISIONS.md` (Abschnitt Plattform-Architektur)
+Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
+
+---
+
 ## 5. Aktueller Sprintstand (Juli 2026)
 
 | Sprint | Inhalt | Status |

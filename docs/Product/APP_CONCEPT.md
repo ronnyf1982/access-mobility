@@ -251,18 +251,90 @@ Organization ─── Vehicle (Flotte)
 
 ---
 
-## Zwei UI-Welten
+## Plattform-Architektur
 
-Das Portal rendert unterschiedliche Ansichten je nach Rolle:
+Access Mobility ist **eine Plattform** — kein Verbund aus drei getrennten Systemen.
 
-**Fahrgast-Welt** (`passenger`, `trusted_person`, `organization_coordinator`, ...):
-- Vereinfachte Oberfläche
-- Wizard-Prinzip
-- Sprachassistenz-fähig
-- Keine Dispo-Funktionen sichtbar
+```
+┌─────────────────────────────────────────────────────────┐
+│              Gemeinsames Backend (FastAPI)               │
+│         Gemeinsame API  ·  Gemeinsame Datenbank         │
+│      Gemeinsames Auth  ·  Gemeinsames Datenmodell       │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+   Fahrgast-App      Fahrer-App      Dispo-Webapp
+  (barrierefrei,   (mobil, robust,  (Desktop, Tabellen,
+   Sprache, MVP)    offline-fähig)   Matching, Admin)
+```
 
-**Dispo-Welt** (`provider_admin`, `dispatcher`, `platform_admin`):
-- Funktionale, übersichtliche Verwaltungsoberfläche
-- Fahrgastdaten + Matching-Übersicht
-- Zuweisungsfunktionen
-- Kein Buchungs-Wizard
+**Rollen bestimmen Navigation, Oberfläche und Berechtigungen.**
+
+Im MVP: Eine Web-App mit rollenabhängigen Bereichen.
+Später: Fahrgast-App und Fahrer-App als eigene mobile / PWA / native Hüllen.
+
+---
+
+## Drei Nutzungswelten
+
+### 1. Fahrgast-/Vertrauenspersonen-App
+
+**Rollen:** `passenger`, `trusted_person`, `organization_coordinator`
+
+Anforderungen an die Oberfläche:
+- Extrem einfach, klar, überforderungsfrei
+- Accessibility-first (Screenreader, Tastatur, Sprachassistenz)
+- Mobile-first
+- Wizard-Prinzip: eine Entscheidung pro Schritt
+- Einfache Sprache, keine Fachbegriffe
+- Große Bedienelemente (min. 44 × 44 px)
+- Keine Verwaltungsfunktionen sichtbar
+
+Kernfunktionen:
+- Mobilitätsprofil pflegen
+- Fahrt anfragen (Wizard)
+- Fahrtstatus und Live-Standort einsehen
+- Vertrauenspersonen und Benachrichtigungen konfigurieren
+- Sprachassistenz für alle Kernfunktionen
+
+### 2. Fahrer-App
+
+**Rollen:** `driver`
+
+Anforderungen an die Oberfläche:
+- Mobile, robust, ablenkungsarm
+- Wenige, große Buttons
+- Keine Ablenkung durch Verwaltungsfunktionen
+- Offline-fähige Kernfunktionen (Statuswechsel queuen)
+- Sprachassistenz für häufige Aktionen (Sprint 11)
+
+Kernfunktionen:
+- Schicht beginnen / beenden
+- Fahrzeug wählen (primär per Kennzeichen)
+- Tourenliste / Tagesaufträge
+- Fahrgast zugestiegen / ausgestiegen
+- Pause starten / beenden
+- Problem melden
+
+### 3. Dispositions-/Admin-Webapp
+
+**Rollen:** `provider_admin`, `dispatcher`, `platform_admin`, `organization_admin`
+
+Anforderungen an die Oberfläche:
+- Desktop-orientiert, informationsdicht
+- Tabellarisch, filterbar, sortierbar
+- Mehrere Aktionen gleichzeitig sichtbar
+- Keine Vereinfachungs-Kompromisse zu Lasten der Funktionalität
+
+Kernfunktionen:
+- Eingehende Anfragen verwalten
+- Matching und Disposition (Fahrzeug + Fahrer zuweisen)
+- Tourenplanung und -optimierung (später)
+- Live-Status der aktiven Fahrten überwachen
+- Fahrzeuge, Fahrer, Organisationen verwalten
+- Ausfallmanagement (später)
+
+---
+
+## Wichtigste Datenmodell-Beziehungen

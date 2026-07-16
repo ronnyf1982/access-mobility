@@ -7,6 +7,30 @@ Letzte Aktualisierung: 2026-07-16
 
 ---
 
+## Plattform-Architektur: Drei Oberflächen-Welten
+
+Access Mobility ist eine Plattform mit drei klar getrennten Nutzungswelten.
+Jede Welt hat eigene Design-Prioritäten — alle teilen dieselbe Designsprache
+(dunkel, Gelb-Akzent, klar, barrierefrei).
+
+| Welt | Design-Priorität | Kompromisse |
+|---|---|---|
+| **Fahrgast-App** | Einfachheit, Barrierefreiheit, Sprachassistenz | Informationsdichte bewusst reduziert |
+| **Fahrer-App** | Mobile Robustheit, große Buttons, Ablenkungsarmut | Keine komplexen Tabellen oder Filter |
+| **Dispo-/Admin-Web** | Funktionsreichtum, Effizienz, Informationsdichte | Komplexität ist hier akzeptiert |
+
+**Gemeinsame Designbasis für alle drei Welten:**
+- Farbpalette: Schwarz/Anthrazit + Gelb (`#FFD600`)
+- Typografie: Inter → Segoe UI → sans-serif
+- Barrierefreiheit: WCAG AA minimum für alle, AAA für Fahrgast-Kernbereiche
+- Fokus-Style: gelber Outline-Ring überall
+
+**Trennlinie:** Dieselbe Designsprache — aber unterschiedliche Komplexitätsstufen.
+Ein Disponent darf eine komplexe Tabellenansicht bekommen.
+Ein Fahrgast oder Fahrer nie.
+
+---
+
 ## Verbindlicher Grundsatz
 
 **Access Mobility wird accessibility-first entwickelt.**

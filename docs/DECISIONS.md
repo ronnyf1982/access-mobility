@@ -63,6 +63,67 @@ Verhindert versehentliche Cross-Origin-Zugriffe aus anderen laufenden Projekten.
 
 ---
 
+## Plattform-Architektur-Entscheidung
+
+**Eine Plattform — drei Nutzungswelten.**
+
+Access Mobility wird nicht als drei getrennte Systeme gebaut, sondern als eine Plattform
+mit einem gemeinsamen Backend, einer gemeinsamen Datenbank, einer API und einem
+gemeinsamen Rollen-/Rechtesystem.
+
+### Architektur-Grundsatz
+
+```
+Gemeinsames Backend (FastAPI) · Gemeinsame API (/api/v1/)
+Gemeinsame Datenbank (PostgreSQL) · Gemeinsames Auth (JWT / später Keycloak)
+Gemeinsames Datenmodell (SQLAlchemy + Alembic)
+
+→ Fahrgast-App      (barrierefrei, Sprache, mobile-first)
+→ Fahrer-App        (mobil, robust, offline-fähig)
+→ Dispo-/Admin-Web  (Desktop, Tabellen, Matching, Admin)
+```
+
+### Warum eine Plattform statt drei Systeme?
+
+- **Datenintegrität:** Fahrgast, Fahrer und Disponent arbeiten auf denselben Datensätzen —
+  kein Synchronisierungsbedarf, kein Konflikt-Handling zwischen Systemen.
+- **Rollen-Konsistenz:** JWT enthält die Rolle — das Backend entscheidet über Berechtigungen,
+  nicht das Frontend. Ein Nutzer kann mehrere Rollen haben.
+- **Wartbarkeit:** Ein Backend, eine Migration, ein Deployment.
+- **Skalierbarkeit:** Separate Frontends (PWA, native App) können später einzeln ausgetauscht
+  werden, ohne das Backend zu verändern.
+
+### Drei Nutzungswelten (fachliche Trennung)
+
+| Welt | Zielgruppe | Oberfläche | MVP-Status |
+|---|---|---|---|
+| **Fahrgast-/Vertrauenspersonen-App** | `passenger`, `trusted_person`, `organization_coordinator` | Extrem einfach, barrierefrei, Sprachassistenz, mobile-first | Als rollenabhängiger Bereich im MVP ✅ |
+| **Fahrer-App** | `driver` | Mobil, robust, große Buttons, offline-fähig | Als rollenabhängiger Bereich ab Sprint 10 |
+| **Dispositions-/Admin-Webapp** | `provider_admin`, `dispatcher`, `platform_admin`, `organization_admin` | Desktop, tabellarisch, filterbar, funktionsreich | Als rollenabhängiger Bereich im MVP ✅ |
+
+### Technische Strategie (phasenweise)
+
+**MVP (aktuell):**
+Eine Vue-3-Web-App. Rolle bestimmt Navigation, Oberfläche und Berechtigungen.
+Fahrgast- und Fahrer-Bereiche sind rollenabhängige Ansichten innerhalb derselben App.
+
+**Phase 2 (nach MVP):**
+Fahrgast-App und Fahrer-App als eigenständige mobile App-Hüllen (PWA oder native),
+die dieselbe API nutzen. Design und UX stärker auf mobile Nutzung optimiert.
+
+**Phase 3:**
+Disposition bleibt Desktop-Webanwendung. Fahrgast-App und Fahrer-App als
+native iOS/Android-Apps, ggf. mit Keycloak/Auth0 als Auth-Provider.
+
+### Was niemals geteilt werden darf
+
+- **Fahrgäste dürfen Dispatching-Daten nicht sehen** (Matching-Scores, Fahrernamen anderer Fahrgäste).
+- **Fahrer dürfen nur ihre eigenen zugewiesenen Aufträge sehen**, keine anderen Touren.
+- **Disponenten sehen Fahrgastkontakte und Bedarfsfelder**, aber keine medizinischen Diagnosen.
+- **Medizinische Details** (Art. 9 DSGVO) sind niemals für Fahrer oder Disponenten sichtbar — nur transportrelevante Bedarfsfelder.
+
+---
+
 ## Design & Plattformstrategie
 
 **Plattformtyp:** Responsive Webplattform — keine native App (bewusste MVP-Entscheidung).
