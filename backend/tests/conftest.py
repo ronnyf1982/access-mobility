@@ -47,3 +47,23 @@ def dispatcher_token(client: TestClient) -> str:
 @pytest.fixture(scope="session")
 def dispatcher_headers(dispatcher_token: str) -> dict:
     return {"Authorization": f"Bearer {dispatcher_token}"}
+
+
+@pytest.fixture(scope="session")
+def admin_token(client: TestClient) -> str:
+    return _login(client, "admin@access.test")
+
+
+@pytest.fixture(scope="session")
+def admin_headers(admin_token: str) -> dict:
+    return {"Authorization": f"Bearer {admin_token}"}
+
+
+@pytest.fixture(scope="session")
+def driver_token(client: TestClient) -> str:
+    return _login(client, "driver@access.test")
+
+
+@pytest.fixture(scope="session")
+def driver_headers(driver_token: str) -> dict:
+    return {"Authorization": f"Bearer {driver_token}"}

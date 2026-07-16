@@ -117,6 +117,23 @@ Fahrer startet Schicht, wählt Fahrzeug (Standardfahrzeug oder per Kennzeichen),
 - **Tests:** 20/20 passed, TypeScript-Check ✅, Vite-Build ✅
 - **Noch nicht:** STT/Spracheingabe, Live-GPS, Push-Notifications, Statusbuttons zugestiegen/ausgestiegen
 
+## Sprint FAHRANDO-1 — Fahrando Coming-Soon, Testzugang & Platform-Admin-Benutzerverwaltung ✅
+
+Plattform-Marke sichtbar machen, Testzugang absichern, Platform-Admin kann Nutzer vollständig verwalten.
+
+- **`/` (LandingView):** Fahrando Coming-Soon-Seite (standalone, kein PublicLayout), Zwei-Spalten-Layout (Desktop), FahrandoLogo-Komponente, Login-Formular mit echtem JWT-Auth — kein zweites Auth-System
+- **`/login`:** Dauerhafter Redirect zu `/`, Logout kehrt zu `/` zurück
+- **`/impressum`, `/datenschutz`:** Placeholder-Seiten (Inhalt folgt vor Launch)
+- **FahrandoLogo.vue:** SVG-Komponente, Rollstuhl-Symbol + Bewegungslinien, Gelb, drei Varianten
+- **`ensure_platform_admin.py`:** Idempotentes Bootstrap-Script — liest nur aus Env-Vars, setzt `onboarding_completed_at`, gibt niemals Passwort aus
+- **Platform-Admin API:** 7 Endpoints `GET|POST /platform-admin/users`, `GET|PATCH /platform-admin/users/{id}`, `POST /reset-password|activate|deactivate`
+- **`require_platform_admin`-Dependency:** 403 für alle Nicht-Platform-Admins
+- **`PlatformAdminUsersView.vue`:** Liste + Suche/Filter, 4 Modals (Anlegen/Bearbeiten/Passwort-Reset/Aktivierung), Toast-Feedback
+- **Router-Guard:** `/platform-admin/*` → 403 ohne `platform_admin`-Rolle → Redirect `/dashboard`
+- **Sidebar:** Eigene „Plattform-Admin"-Sektion (gelber Label), getrennt von DISPO_ROLES
+- **Sicherheit:** Passwort-Hash nie in API-Response, kein Passwort in Logs/Tests/Doku
+- **Tests:** 54 neue Pytest-Tests (alle bestanden), TypeScript-Check ✅, Build ✅
+
 ## Sprint 11 — Fahrtstatus & Benachrichtigungseinstellungen
 
 Fahrtstatus-Grundlage und Benachrichtigungseinstellungen — Voraussetzung für Live-Tracking.

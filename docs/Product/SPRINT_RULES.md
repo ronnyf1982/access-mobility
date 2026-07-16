@@ -166,6 +166,8 @@ Folgende Prüfungen sind **Pflicht** bevor ein neues Modul als fertig gilt:
 - Den Sprachassistenten als „kann man später machen" einordnen
 - **Einen Browser-Test oder Login-Test durchführen oder behaupten, ohne vorher alle 5 Umgebungs-Checks bestätigt zu haben**
 - **Einen Sprint als abgeschlossen melden, wenn die lokale Umgebung beim Browser-Test nicht vollständig lief**
+- **Passwörter in Dateien, Logs, Tests, Seed-Daten, Migrationen, Dokumentation oder API-Responses schreiben — auch nicht das Platform-Admin-Bootstrap-Passwort**
+- **Ein zweites Auth-System, eine zweite JWT-Implementierung oder einen separaten Tester-Login einführen — es gibt nur ein Auth-System**
 
 ---
 

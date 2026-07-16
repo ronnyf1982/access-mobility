@@ -661,6 +661,26 @@ oder ob `RideStatusEvent` direkt an `TransportRequest` hängt.
 
 ---
 
+## Fahrando-Marke & Testzugang (Sprint FAHRANDO-1)
+
+### Entscheidung: Kein zweites Auth-System
+
+Das Login-Formular auf `/` nutzt **dasselbe** Backend (User-Tabelle, JWT, `get_current_user`, AuthStore) wie das restliche Portal. Es gibt nur einen Auth-Pfad. `/login` leitet dauerhaft auf `/` um. Logout kehrt zu `/` zurück. Begründung: Zwei parallele Auth-Systeme würden Sicherheit und Konsistenz untergraben.
+
+### Entscheidung: `/` ist standalone (kein PublicLayout)
+
+`PublicLayout` enthält `PublicHeader` mit Navigation zu nicht existierenden Abschnitten (Sprint 2-Überbleibsel). Für die Coming-Soon-Seite wäre das unpassend. `/` ist daher eine eigenständige Route ohne Layout-Wrapper — analog zu `/onboarding`.
+
+### Entscheidung: Platform-Admin-Bootstrap via Env-Vars
+
+Das Bootstrap-Script (`ensure_platform_admin.py`) liest alle Parameter aus 4 Env-Vars. Das Passwort darf niemals in Dateien, Logs, Tests, Seed-Daten, Migrationen, Doku oder API-Responses erscheinen. Nur der bcrypt-Hash wird in der DB gespeichert. Das Script ist idempotent — bestehende Passwörter werden nie überschrieben.
+
+### Entscheidung: platform_admin getrennt von DISPO_ROLES in Sidebar
+
+`platform_admin` hatte keine sinnvolle Überschneidung mit `dispatcher`/`provider_admin` in der Sidebar. Eigener Abschnitt „Plattform-Admin" mit gelbem Label macht die Rolle explizit sichtbar und verhindert, dass Nicht-Platform-Admins versehentlich Admin-Einträge sehen.
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
 - Auth/JWT: Sprint 3 ✅

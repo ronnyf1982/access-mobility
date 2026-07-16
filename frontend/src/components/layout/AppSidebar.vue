@@ -34,6 +34,20 @@
       </template>
     </nav>
 
+    <!-- Plattform-Admin-Bereich -->
+    <nav v-if="isPlatformAdmin" class="sidebar-nav sidebar-admin-section" aria-label="Plattform-Admin">
+      <div class="sidebar-section-label">Plattform-Admin</div>
+      <RouterLink
+        to="/platform-admin/users"
+        class="sidebar-nav-item"
+        :class="{ active: isActive('/platform-admin/users') }"
+        :aria-current="isActive('/platform-admin/users') ? 'page' : undefined"
+      >
+        <i class="pi pi-users" aria-hidden="true"></i>
+        <span>Benutzerverwaltung</span>
+      </RouterLink>
+    </nav>
+
     <!-- Support + Abmelden -->
     <div class="sidebar-support">
       <div class="support-label">Support</div>
@@ -65,7 +79,7 @@ interface NavItem {
 }
 
 const PASSENGER_ROLES = new Set(['passenger', 'trusted_person', 'organization_coordinator'])
-const DISPO_ROLES = new Set(['provider_admin', 'dispatcher', 'platform_admin', 'organization_admin'])
+const DISPO_ROLES = new Set(['provider_admin', 'dispatcher', 'organization_admin'])
 
 const navItems = computed<NavItem[]>(() => {
   const role = authStore.role ?? ''
@@ -103,13 +117,15 @@ const navItems = computed<NavItem[]>(() => {
   ]
 })
 
+const isPlatformAdmin = computed(() => authStore.role === 'platform_admin')
+
 function isActive(to: string): boolean {
   return route.path === to || route.path.startsWith(to + '/')
 }
 
 async function handleLogout() {
   await authStore.logout()
-  await router.push('/login')
+  await router.push('/')
 }
 </script>
 
@@ -246,6 +262,21 @@ async function handleLogout() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.sidebar-admin-section {
+  border-top: 1px solid var(--am-border);
+  padding-top: var(--am-space-m);
+}
+
+.sidebar-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--am-accent);
+  padding: 0 var(--am-space-m);
+  margin-bottom: var(--am-space-xs);
 }
 
 .support-label {

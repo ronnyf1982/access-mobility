@@ -290,6 +290,67 @@
 
 ---
 
+## Sprint FAHRANDO-1 — Fahrando Coming-Soon, Testzugang & Platform-Admin-Benutzerverwaltung ✅
+
+**Abgeschlossen:** 2026-07-16
+
+### Backend
+
+- [x] `backend/app/scripts/ensure_platform_admin.py` — Idempotentes Bootstrap-Script via 4 Env-Vars; Passwort nie in Ausgabe, nie in Dateien
+- [x] `backend/app/schemas/platform_admin.py` — `PlatformAdminUserPublic`, `PlatformAdminUserCreate`, `PlatformAdminUserUpdate`, `PlatformAdminPasswordReset`
+- [x] `backend/app/crud/crud_platform_admin.py` — `list_users` (ilike-Suche), `create_user`, `update_user` (Self-Protect), `reset_password`, `set_active`, `_to_public` (inkl. Org-Name), `_upsert_membership`
+- [x] `backend/app/api/deps.py` — `require_platform_admin`-Dependency (403 für alle anderen Rollen)
+- [x] `backend/app/api/v1/endpoints/platform_admin.py` — 7 Endpoints (GET/POST users, GET/PATCH user, reset-password, activate, deactivate)
+- [x] `backend/app/api/v1/router.py` — `platform_admin.router` registriert
+
+### Tests
+
+- [x] `backend/tests/api/test_platform_admin.py` — **54 Tests, alle passed**:
+  - TestBootstrapScript (6), TestAccessControl (20, parametriert), TestUnauthenticated (2)
+  - TestListUsers (5), TestCreateUser (6), TestUpdateUser (4)
+  - TestActivation (4), TestPasswordReset (5), TestRegressionAuth (2)
+- [x] `backend/tests/conftest.py` — `admin_token`, `admin_headers`, `driver_token`, `driver_headers` ergänzt
+
+### Frontend
+
+- [x] `frontend/src/components/branding/FahrandoLogo.vue` — SVG-Komponente, Rollstuhl + Bewegungslinien, Gelb, Varianten small/default/large, aria-hidden auf SVG
+- [x] `frontend/src/views/LandingView.vue` — **Fahrando Coming-Soon-Seite** (standalone, kein PublicLayout): Zwei-Spalten-Layout Desktop, Einspaltung Mobile; Login-Formular mit echtem JWT-Auth, eingeloggt: Dashboard-Button + Logout; Footer mit Impressum/Datenschutz
+- [x] `frontend/src/views/platform_admin/PlatformAdminUsersView.vue` — Benutzerverwaltung für Platform-Admin: Tabelle mit Avatar/Rolle/Status, Suche/Filter (Rolle/Aktivstatus), 4 Modals (Anlegen, Bearbeiten, Passwort-Reset, Deaktivierung via Tabellen-Button), Toast-Benachrichtigungen
+- [x] `frontend/src/views/ImpressumView.vue` — Placeholder mit "Diese Seite wird derzeit vorbereitet."
+- [x] `frontend/src/views/DatenschutzView.vue` — Placeholder analog
+- [x] `frontend/src/api/platformAdmin.ts` — API-Client: `listUsers`, `getUser`, `createUser`, `updateUser`, `resetPassword`, `activateUser`, `deactivateUser`
+- [x] `frontend/src/router/index.ts` — `/` standalone, `/login` → redirect `/`, `/impressum`, `/datenschutz`, `/platform-admin/users` (requiresPlatformAdmin), Logout → `/`, 404 → `/`
+- [x] `frontend/src/components/layout/AppSidebar.vue` — `platform_admin` aus DISPO_ROLES entfernt; eigene "Plattform-Admin"-Sektion (gelber Label); Logout → `/`
+
+### Docs
+
+- [x] `docs/SOURCE_OF_TRUTH.md` — Sprint-Stand, Fahrando-Brand-Entscheidungen, Passwort-Sicherheitsregel, DEPLOYMENT_FAHRANDO_TEST.md als Referenz
+- [x] `docs/ROADMAP.md` — Sprint FAHRANDO-1 als abgeschlossen, Sprint 11 vorbereitet
+- [x] `docs/PROJECT_STATUS.md` — dieser Abschnitt
+- [x] `docs/DEPLOYMENT_FAHRANDO_TEST.md` — Deployment-Anleitung für Fahrando-Testzugang (neu)
+
+### Checks
+
+- [x] TypeScript-Check (`vue-tsc --noEmit`): keine Fehler
+- [x] Vite-Build: ✅ erfolgreich
+- [x] Backend pytest: 54/54 neue Tests passed (alle 100+ Gesamttests passed)
+
+### Sicherheitsregeln (unverhandelbar)
+
+- Kein Bootstrap-Passwort in Dateien, Logs, Tests, Seed-Daten, Migrationen, Doku oder API-Responses
+- Nur der bcrypt-Hash wird in der DB gespeichert
+- Kein zweites JWT-System, kein zweites Auth-System — Login auf `/` nutzt dasselbe System wie das Portal
+- Platform-Admin-Seiten: 403 für alle Nicht-Platform-Admins, 401 ohne Token
+
+### Bewusst nicht umgesetzt (Sprint FAHRANDO-1)
+
+- Keine Impressum/Datenschutz-Inhalte (folgen vor Launch)
+- Keine Organisations-Dropdown im Create-Modal (Org-IDs noch manuell via API/Bootstrap)
+- Kein E-Mail-Versand (Willkommens-Mail, Passwort-Reset-Mail)
+- Kein Audit-Log für Admin-Aktionen
+
+---
+
 ## Nächster Sprint: Sprint 11 — Fahrtstatus & Fahrer-App
 
 - Backend: `RideStatusEvent`-Protokoll (driver_on_way / arrived_pickup / passenger_picked_up / arrived_destination / completed / delayed)

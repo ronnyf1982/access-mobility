@@ -1,6 +1,7 @@
-# access-mobility
+# Fahrando — access-mobility
 
-Barrierefreie Mobilitätsplattform — lokales MVP-Grundgerüst
+Barrierefreie Mobilitätsplattform. Öffentlich erreichbar als **Fahrando** — Coming-Soon-Phase.
+Testzugang unter `http://localhost:5180` (Startseite mit Login-Formular).
 
 ## Ports
 
@@ -110,6 +111,9 @@ nach jedem Systemneustart neu gestartet werden.
 | dispatcher@access.test    | Disponent:in            |
 | driver@access.test        | Fahrer:in               |
 | admin@access.test         | Plattform-Admin         |
+
+**Platform-Admin-Zugänge** werden via `backend/app/scripts/ensure_platform_admin.py` angelegt.
+Passwort nur per Env-Var — niemals in Dateien. Siehe `docs/DEPLOYMENT_FAHRANDO_TEST.md`.
 
 ---
 

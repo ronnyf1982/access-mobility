@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-16 · Sprint 10 abgeschlossen · Sprint 11 geplant
+Letzte Aktualisierung: 2026-07-16 · Sprint FAHRANDO-COMING-SOON-TESTZUGANG-PLATTFORMADMIN-1 abgeschlossen · Sprint 11 geplant
 
 ---
 
@@ -111,6 +111,7 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint 9** | **Sprachgeführter Mobilitätscheck (offline-fähig)** | ✅ abgeschlossen |
 | **Sprint 9B** | **Verbesserter Sprachassistent: TTS-Flow, STT, Tastaturkürzel** | ✅ abgeschlossen |
 | **Sprint 10** | **Fahrer-Schichtstart & Fahrzeugwahl (mobile-first, Standardfahrzeug, Auftragsstruktur)** | ✅ abgeschlossen |
+| **Sprint FAHRANDO-1** | **Fahrando Coming-Soon + Testzugang + Platform-Admin-Benutzerverwaltung** | ✅ abgeschlossen |
 
 ---
 
@@ -310,7 +311,10 @@ Matching-Details: `docs/Product/ACCESSIBILITY_AND_MATCHING_REQUIREMENTS.md`
 
 - JWT wird im MVP in `localStorage` gespeichert (Schlüssel: `am_token`) — bekanntes Risiko, MVP-akzeptiert.
 - Produktivbetrieb: Keycloak/Auth0 mit httpOnly-Cookies oder Auth-Code-Flow mit PKCE.
-- CORS: Nur `http://localhost:5180` als erlaubter Origin — kein Wildcard `*`.
+- CORS: Nur `http://localhost:5180` als erlaubter Origin — kein Wildcard `*`. (`ALLOWED_ORIGINS` per Env für Fahrando-Domains erweiterbar.)
+- **Fahrando-Marke:** Die `/`-Route zeigt die Fahrando-Coming-Soon-Seite. Das Login-Formular auf `/` nutzt **dasselbe** JWT/User-System wie das Portal — kein zweites Auth-System, keine zweite Datenbank.
+- **Platform-Admin-Bootstrap-Passwort:** Nur über `backend/app/scripts/ensure_platform_admin.py` per Umgebungsvariablen. Das Passwort darf **niemals** in Dateien, Logs, Tests, Seed-Daten, Migrationen, Dokumentation oder API-Responses erscheinen. Nur der Hash wird in der DB gespeichert.
+- `/login` leitet dauerhaft auf `/` um. Logout kehrt zu `/` zurück.
 - Medizinische Daten sind freiwillig. Keine Pflichtfelder für Gesundheitsangaben.
 - Medizinische Detailangaben (Art. 9 DSGVO): beschreiben Transportbedarf, nicht Gesundheitszustand.
 - Disponenten sehen Kontaktdaten und Bedarfsfelder — keine medizinischen Diagnosen.
@@ -390,3 +394,4 @@ Claude muss vor und während jedem Sprint folgende Prüfliste durchgehen:
 | `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md` | Assistent-Anforderungen je Modul |
 | `docs/Product/SPRINT_RULES.md` | Verbindliche Sprint-Regeln |
 | `docs/Design/DESIGN_GUIDE.md` | CSS-Tokens, Farbpalette, Typografie, Layouts |
+| `docs/DEPLOYMENT_FAHRANDO_TEST.md` | Deployment-Anleitung für Fahrando-Testzugang |
