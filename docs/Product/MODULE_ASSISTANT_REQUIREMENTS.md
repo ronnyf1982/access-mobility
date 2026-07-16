@@ -53,7 +53,7 @@ Für jedes Modul wird hier festgehalten:
 
 ---
 
-## Aktuelle Module (Sprint 7-Stand)
+## Aktuelle Module (Sprint 9B-Stand)
 
 ### Auth / Login
 
@@ -104,18 +104,28 @@ Für jedes Modul wird hier festgehalten:
 | **Bestätigung erforderlich?** | ✅ vor Speichern des Profils |
 | **Datenschutz** | Medizinische Felder sind freiwillig (nie Pflichtfeld); Art. 9 DSGVO beachten bei KI-Weitergabe |
 
-**Assistenten-Dialogschritte (Offline-Grundkatalog):**
-1. „Nutzen Sie einen Rollstuhl?" → uses_wheelchair
-2. „Welche Art von Rollstuhl?" (nur wenn Ja) → wheelchair_type
-3. „Benötigen Sie eine Rampe?" → needs_ramp
-4. „Benötigen Sie eine Hebebühne?" → needs_lift
-5. „Sind Sie blind oder sehbehindert?" → is_blind_or_visually_impaired
-6. „Sind Sie gehörlos oder hörbehindert?" → is_deaf_or_hard_of_hearing
-7. „Fährt eine Begleitperson mit?" → needs_escort
-8. „Benötigen Sie Hilfe beim Ein- und Aussteigen?" → needs_boarding_aid
-9. „Müssen Sie liegend transportiert werden?" → needs_stretcher_transport
-10. „Haben Sie weitere besondere Anforderungen?" → Überleitung zu med. Detailfeldern (optional)
-11. „Wer ist Ihr Notfallkontakt?" → emergency_contact_name, emergency_contact_phone
+**Assistenten-Dialogschritte — implementierter Offline-Katalog (Sprint 9):**
+Fragenkatalog: `frontend/src/data/mobilityAssistantQuestions.ts`
+
+| # | Frage (Kurzform) | Felder bei Ja |
+|---|---|---|
+| 1 | Sprachführung aktivieren? | `voice_mode_enabled` (User) |
+| 2 | Blind oder sehbehindert? | `is_blind_or_visually_impaired` |
+| 3 | Einstiegshilfe benötigt? | `needs_entry_assistance` |
+| 4 | Tür-zu-Tür-Begleitung? | `needs_door_to_door_assistance` |
+| 5 | Darf nicht allein warten? | *(Feld fehlt: `may_not_wait_alone` — Roadmap Sprint 10)* |
+| 6 | Rollstuhlnutzer? | `uses_wheelchair` + `requires_wheelchair_space` |
+| 7 | Rollator? | `uses_rollator` |
+| 8 | Liegendtransport? | `needs_stretcher_transport` |
+| 9 | Sauerstoff / med. Gerät? | `brings_oxygen` + `brings_medical_device` |
+| 10 | Begleitperson? | `needs_escort` |
+
+**Sprint 9B — Spracheingabe im geführten Check:**
+- TTS-Flow: Frage vorlesen → fragen ob Optionen vorgelesen werden sollen → nur auf Anfrage vorlesen
+- STT: Nur auf expliziten Nutzerwunsch (Button); kein dauerhaftes Mithören
+- Bestätigungs-Dialog vor Übernahme jeder gesprochenen Antwort
+- Tastaturkürzel: J / N / W / S / H / R / ← / Esc
+- Utility: `frontend/src/utils/speech.ts`
 
 ---
 

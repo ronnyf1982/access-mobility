@@ -21,7 +21,14 @@
     </div>
 
     <!-- Progress -->
-    <div class="progress-bar-wrap" role="progressbar" :aria-valuenow="progressPercent" aria-valuemin="0" aria-valuemax="100" :aria-label="`Schritt ${currentIndex + 1} von ${total}`">
+    <div
+      class="progress-bar-wrap"
+      role="progressbar"
+      :aria-valuenow="progressPercent"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      :aria-label="`Schritt ${currentIndex + 1} von ${total}`"
+    >
       <div class="progress-bar-track">
         <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
@@ -29,7 +36,12 @@
     </div>
 
     <!-- ── Zusammenfassung ── -->
-    <div v-if="showSummary" class="summary-card am-card" role="region" aria-labelledby="summary-heading">
+    <div
+      v-if="showSummary"
+      class="summary-card am-card"
+      role="region"
+      aria-labelledby="summary-heading"
+    >
       <h2 id="summary-heading" class="summary-title">
         <i class="pi pi-list-check" aria-hidden="true"></i>
         Zusammenfassung Ihrer Angaben
@@ -46,7 +58,10 @@
         aria-live="assertive"
         aria-atomic="true"
       >
-        <i :class="['pi', statusMsg.type === 'error' ? 'pi-exclamation-circle' : 'pi-check-circle']" aria-hidden="true"></i>
+        <i
+          :class="['pi', statusMsg.type === 'error' ? 'pi-exclamation-circle' : 'pi-check-circle']"
+          aria-hidden="true"
+        ></i>
         {{ statusMsg.text }}
       </div>
 
@@ -58,7 +73,12 @@
           :class="`summary-item--${item.type}`"
         >
           <span class="summary-item-icon" aria-hidden="true">
-            <i :class="['pi', item.type === 'yes' ? 'pi-check' : item.type === 'no' ? 'pi-minus' : 'pi-question']"></i>
+            <i
+              :class="[
+                'pi',
+                item.type === 'yes' ? 'pi-check' : item.type === 'no' ? 'pi-minus' : 'pi-question',
+              ]"
+            ></i>
           </span>
           <div class="summary-item-content">
             <span class="summary-question">{{ item.questionText }}</span>
@@ -75,11 +95,7 @@
       </ul>
 
       <div class="summary-actions">
-        <button
-          type="button"
-          class="am-btn am-btn-ghost"
-          @click="showSummary = false"
-        >
+        <button type="button" class="am-btn am-btn-ghost" @click="showSummary = false">
           <i class="pi pi-arrow-left" aria-hidden="true"></i>
           Zurück zu den Fragen
         </button>
@@ -98,29 +114,82 @@
     </div>
 
     <!-- ── Fragenbereich ── -->
-    <div v-else class="question-card am-card" role="region" :aria-labelledby="`q-heading-${currentQuestion.id}`">
-
+    <div
+      v-else
+      class="question-card am-card"
+      role="region"
+      :aria-labelledby="`q-heading-${currentQuestion.id}`"
+    >
       <!-- TTS-Leiste -->
-      <div v-if="ttsAvailable" class="tts-bar">
-        <button
-          type="button"
-          class="tts-btn"
-          :aria-label="speaking ? 'Vorlesen stoppen' : 'Frage vorlesen'"
-          @click="toggleSpeak"
-        >
-          <i :class="['pi', speaking ? 'pi-volume-off' : 'pi-volume-up']" aria-hidden="true"></i>
-          {{ speaking ? 'Stopp' : 'Vorlesen' }}
-        </button>
+      <div v-if="ttsSupported" class="tts-bar" role="group" aria-label="Sprachsteuerung">
+        <div class="tts-actions">
+          <button
+            type="button"
+            class="tts-btn"
+            :aria-label="speaking ? 'Vorlesen stoppen' : 'Frage vorlesen'"
+            @click="toggleSpeak"
+          >
+            <i :class="['pi', speaking ? 'pi-volume-off' : 'pi-volume-up']" aria-hidden="true"></i>
+            {{ speaking ? 'Stopp' : 'Vorlesen' }}
+          </button>
+          <button
+            type="button"
+            class="tts-btn"
+            :disabled="speaking"
+            aria-label="Frage wiederholen (Taste R)"
+            @click="repeatQuestion"
+          >
+            <i class="pi pi-refresh" aria-hidden="true"></i>
+            Wiederholen
+          </button>
+          <button
+            type="button"
+            class="tts-btn"
+            :disabled="speaking"
+            aria-label="Antwortmöglichkeiten vorlesen (Taste H)"
+            @click="readAnswerOptions"
+          >
+            <i class="pi pi-list" aria-hidden="true"></i>
+            Antwortmöglichkeiten
+          </button>
+        </div>
         <button
           v-if="authStore.user?.voice_mode_enabled"
           type="button"
           class="tts-toggle"
           :aria-pressed="autoSpeak"
+          :aria-label="`Auto-Vorlesen ${autoSpeak ? 'deaktivieren' : 'aktivieren'}`"
           @click="autoSpeak = !autoSpeak"
         >
           <i class="pi pi-microphone" aria-hidden="true"></i>
           Auto {{ autoSpeak ? 'An' : 'Aus' }}
         </button>
+      </div>
+
+      <!-- "Antworten vorlesen?" Banner -->
+      <div
+        v-if="ttsSupported && askOptionsPrompt"
+        class="options-prompt"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="options-prompt-inner">
+          <i class="pi pi-volume-up options-prompt-icon" aria-hidden="true"></i>
+          <span class="options-prompt-text">Soll ich Ihnen die möglichen Antworten vorlesen?</span>
+          <div class="options-prompt-actions">
+            <button
+              type="button"
+              class="options-prompt-btn options-prompt-btn--yes"
+              @click="readAnswerOptions"
+            >
+              <i class="pi pi-check" aria-hidden="true"></i>
+              Ja, vorlesen
+            </button>
+            <button type="button" class="options-prompt-btn" @click="askOptionsPrompt = false">
+              Nein, danke
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Frage -->
@@ -133,6 +202,30 @@
           <i class="pi pi-info-circle" aria-hidden="true"></i>
           {{ currentQuestion.hint }}
         </p>
+      </div>
+
+      <!-- STT Bestätigungs-Dialog -->
+      <div v-if="sttConfirm" class="stt-confirm" aria-live="polite" aria-atomic="true">
+        <div class="stt-confirm-inner">
+          <i class="pi pi-microphone stt-confirm-icon" aria-hidden="true"></i>
+          <p class="stt-confirm-text">
+            Ich habe <strong>{{ sttConfirm.label }}</strong> verstanden. Soll ich diese Antwort
+            übernehmen?
+          </p>
+          <div class="stt-confirm-actions">
+            <button type="button" class="am-btn am-btn-primary" @click="confirmSpeechAnswer">
+              <i class="pi pi-check" aria-hidden="true"></i>
+              Übernehmen
+            </button>
+            <button type="button" class="am-btn am-btn-ghost" @click="retrySTT">
+              <i class="pi pi-microphone" aria-hidden="true"></i>
+              Erneut sprechen
+            </button>
+            <button type="button" class="am-btn am-btn-ghost" @click="cancelSpeechAnswer">
+              Abbrechen
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Antwort-Buttons -->
@@ -150,7 +243,50 @@
             <i :class="['pi', opt.icon]"></i>
           </span>
           <span class="answer-btn-label">{{ opt.label }}</span>
+          <span class="answer-btn-kbd" aria-hidden="true"
+            ><kbd>{{ opt.key }}</kbd></span
+          >
         </button>
+      </div>
+
+      <!-- STT-Leiste -->
+      <div v-if="sttSupported" class="stt-bar">
+        <button
+          v-if="!sttListening"
+          type="button"
+          class="stt-btn"
+          :disabled="!!sttConfirm"
+          aria-label="Antwort per Sprache eingeben"
+          @click="startSpeakAnswer"
+        >
+          <i class="pi pi-microphone" aria-hidden="true"></i>
+          Antwort sprechen
+        </button>
+        <div v-else class="stt-listening" aria-live="polite" aria-atomic="true">
+          <span class="stt-dot" aria-hidden="true"></span>
+          <span>Ich höre zu …</span>
+          <button type="button" class="stt-cancel" @click="cancelSTT">Abbrechen</button>
+        </div>
+        <p v-if="sttError" class="stt-error" role="alert" aria-live="assertive">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          {{ sttError }}
+        </p>
+      </div>
+
+      <!-- Tastatur-Hinweise -->
+      <div class="kbd-hints" aria-label="Tastaturkürzel">
+        <span class="kbd-hint"><kbd>J</kbd> Ja</span>
+        <span class="kbd-hint"><kbd>N</kbd> Nein</span>
+        <span class="kbd-hint"><kbd>W</kbd> Weiß nicht</span>
+        <span class="kbd-hint"><kbd>S</kbd> Überspringen</span>
+        <template v-if="ttsSupported">
+          <span class="kbd-sep" aria-hidden="true">·</span>
+          <span class="kbd-hint"><kbd>H</kbd> Optionen vorlesen</span>
+          <span class="kbd-hint"><kbd>R</kbd> Frage wiederholen</span>
+        </template>
+        <span class="kbd-sep" aria-hidden="true">·</span>
+        <span class="kbd-hint"><kbd>←</kbd> Zurück</span>
+        <span class="kbd-hint"><kbd>Esc</kbd> Abbrechen</span>
       </div>
 
       <!-- Navigation -->
@@ -207,6 +343,16 @@ import {
   FIELD_LABELS,
   type AnswerValue,
 } from '@/data/mobilityAssistantQuestions'
+import {
+  isTTSSupported,
+  speak,
+  stopSpeaking,
+  isSTTSupported,
+  startRecognition,
+  stopRecognition,
+  normalizeSpokenInput,
+  ANSWER_SPOKEN_LABELS,
+} from '@/utils/speech'
 import type { MobilityProfileUpdate } from '@/types'
 
 const router = useRouter()
@@ -223,9 +369,19 @@ const saving = ref(false)
 const statusMsg = ref<{ type: 'error' | 'success'; text: string } | null>(null)
 
 // TTS
-const ttsAvailable = ref(typeof window !== 'undefined' && 'speechSynthesis' in window)
+const ttsSupported = ref(isTTSSupported())
 const speaking = ref(false)
 const autoSpeak = ref(authStore.user?.voice_mode_enabled === true)
+const askOptionsPrompt = ref(false)
+
+// STT
+const sttSupported = ref(isSTTSupported())
+const sttListening = ref(false)
+const sttError = ref<string | null>(null)
+const sttConfirm = ref<{ value: AnswerValue; label: string } | null>(null)
+
+// Generation counter to invalidate stale TTS callbacks after stop/navigation
+let _ttsGen = 0
 
 // ── Computed ───────────────────────────────────────────────────────────
 const currentQuestion = computed(() => questions[currentIndex.value])
@@ -236,10 +392,10 @@ const progressPercent = computed(() =>
 )
 
 const answerOptions = [
-  { value: 'yes' as AnswerValue, label: 'Ja', icon: 'pi-check' },
-  { value: 'no' as AnswerValue, label: 'Nein', icon: 'pi-times' },
-  { value: 'unknown' as AnswerValue, label: 'Weiß ich nicht', icon: 'pi-question' },
-  { value: 'skip' as AnswerValue, label: 'Überspringen', icon: 'pi-forward' },
+  { value: 'yes' as AnswerValue, label: 'Ja', icon: 'pi-check', key: 'J' },
+  { value: 'no' as AnswerValue, label: 'Nein', icon: 'pi-times', key: 'N' },
+  { value: 'unknown' as AnswerValue, label: 'Weiß ich nicht', icon: 'pi-question', key: 'W' },
+  { value: 'skip' as AnswerValue, label: 'Überspringen', icon: 'pi-forward', key: 'S' },
 ]
 
 const ANSWER_LABELS: Record<AnswerValue, string> = {
@@ -254,9 +410,7 @@ const summaryItems = computed(() =>
     const answer = answers.value[q.id] ?? 'skip'
     const fields =
       answer === 'yes'
-        ? q.yesFields
-            .map((f) => FIELD_LABELS[f.field] ?? f.field)
-            .filter(Boolean) as string[]
+        ? (q.yesFields.map((f) => FIELD_LABELS[f.field] ?? f.field).filter(Boolean) as string[])
         : []
     return {
       questionId: q.id,
@@ -271,51 +425,218 @@ const summaryItems = computed(() =>
 )
 
 // ── TTS ────────────────────────────────────────────────────────────────
-function speak(text: string) {
-  if (!ttsAvailable.value) return
-  window.speechSynthesis.cancel()
+function speakQuestion(withFollowup = true) {
+  const gen = ++_ttsGen
+  askOptionsPrompt.value = false
   speaking.value = true
-  const utter = new SpeechSynthesisUtterance(text)
-  utter.lang = 'de-DE'
-  utter.onend = () => { speaking.value = false }
-  utter.onerror = () => { speaking.value = false }
-  window.speechSynthesis.speak(utter)
+  const q = currentQuestion.value
+  const text = `Frage ${currentIndex.value + 1} von ${total}. ${q.text}${q.hint ? '. Hinweis: ' + q.hint : ''}`
+  speak(text, () => {
+    if (gen !== _ttsGen) return
+    speaking.value = false
+    if (withFollowup && autoSpeak.value) {
+      askOptionsPrompt.value = true
+      speak('Soll ich Ihnen die möglichen Antworten vorlesen?')
+    }
+  })
 }
 
 function stopSpeak() {
-  if (!ttsAvailable.value) return
-  window.speechSynthesis.cancel()
+  _ttsGen++
+  stopSpeaking()
   speaking.value = false
+  askOptionsPrompt.value = false
 }
 
 function toggleSpeak() {
   if (speaking.value) {
     stopSpeak()
   } else {
-    const q = currentQuestion.value
-    speak(q.text + (q.hint ? '. Hinweis: ' + q.hint : ''))
+    speakQuestion()
   }
 }
 
-// Auto-speak when question changes
+function repeatQuestion() {
+  const gen = ++_ttsGen
+  speaking.value = true
+  askOptionsPrompt.value = false
+  const q = currentQuestion.value
+  const text = `Frage ${currentIndex.value + 1} von ${total}. ${q.text}${q.hint ? '. Hinweis: ' + q.hint : ''}`
+  speak(text, () => {
+    if (gen !== _ttsGen) return
+    speaking.value = false
+  })
+}
+
+function readAnswerOptions() {
+  const gen = ++_ttsGen
+  askOptionsPrompt.value = false
+  speaking.value = true
+  speak(
+    'Sie können antworten mit: Ja, Nein, Weiß ich nicht oder Überspringen.' +
+      ' Auf der Tastatur: J für Ja, N für Nein, W für Weiß ich nicht, S für Überspringen.',
+    () => {
+      if (gen !== _ttsGen) return
+      speaking.value = false
+    },
+  )
+}
+
 watch(currentIndex, () => {
   stopSpeak()
-  if (autoSpeak.value && ttsAvailable.value) {
-    // Small delay to let Vue render the new question text
-    setTimeout(() => speak(currentQuestion.value.text), 150)
+  sttConfirm.value = null
+  sttError.value = null
+  if (autoSpeak.value && ttsSupported.value) {
+    setTimeout(() => speakQuestion(), 150)
   }
 })
 
-onMounted(() => {
-  profileStore.load().catch(() => {})
-  if (autoSpeak.value && ttsAvailable.value) {
-    setTimeout(() => speak(currentQuestion.value.text), 300)
-  }
-})
+// ── STT ────────────────────────────────────────────────────────────────
+function startSpeakAnswer() {
+  sttError.value = null
+  sttConfirm.value = null
+  stopSpeaking()
+  startRecognition(
+    (transcript) => {
+      sttListening.value = false
+      handleSpeechResult(transcript)
+    },
+    (errorType) => {
+      sttListening.value = false
+      if (errorType === 'no-speech') {
+        sttError.value = 'Es wurde keine Sprache erkannt. Bitte versuchen Sie es erneut.'
+      } else if (errorType !== 'aborted') {
+        sttError.value = 'Spracheingabe fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      }
+    },
+    () => {
+      sttListening.value = true
+    },
+  )
+}
 
-onUnmounted(() => {
-  stopSpeak()
-})
+function handleSpeechResult(raw: string) {
+  const cmd = normalizeSpokenInput(raw)
+  if (!cmd) {
+    sttError.value =
+      'Ich konnte Ihre Antwort nicht eindeutig verstehen. Bitte sagen Sie Ja, Nein, Weiß ich nicht oder Überspringen.'
+    return
+  }
+  switch (cmd.type) {
+    case 'answer':
+      sttConfirm.value = { value: cmd.value, label: ANSWER_SPOKEN_LABELS[cmd.value] }
+      if (ttsSupported.value) {
+        speak(
+          `Ich habe ${ANSWER_SPOKEN_LABELS[cmd.value]} verstanden. Soll ich diese Antwort übernehmen?`,
+        )
+      }
+      break
+    case 'read_options':
+      readAnswerOptions()
+      break
+    case 'repeat_question':
+      repeatQuestion()
+      break
+    case 'go_back':
+      goBack()
+      break
+    case 'cancel':
+      handleCancel()
+      break
+  }
+}
+
+function confirmSpeechAnswer() {
+  if (!sttConfirm.value) return
+  setAnswer(sttConfirm.value.value)
+  sttConfirm.value = null
+  sttError.value = null
+}
+
+function retrySTT() {
+  sttConfirm.value = null
+  sttError.value = null
+  stopSpeaking()
+  startSpeakAnswer()
+}
+
+function cancelSpeechAnswer() {
+  sttConfirm.value = null
+  stopSpeaking()
+}
+
+function cancelSTT() {
+  stopRecognition()
+  sttListening.value = false
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────────────────
+function handleKeydown(e: KeyboardEvent) {
+  if (showSummary.value) return
+  const target = e.target as HTMLElement
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
+
+  if (sttConfirm.value !== null) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelSpeechAnswer()
+    }
+    return
+  }
+
+  if (sttListening.value) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelSTT()
+    }
+    return
+  }
+
+  switch (e.key) {
+    case 'j':
+    case 'J':
+      e.preventDefault()
+      setAnswer('yes')
+      break
+    case 'n':
+    case 'N':
+      e.preventDefault()
+      setAnswer('no')
+      break
+    case 'w':
+    case 'W':
+      e.preventDefault()
+      setAnswer('unknown')
+      break
+    case 's':
+    case 'S':
+      e.preventDefault()
+      setAnswer('skip')
+      break
+    case 'r':
+    case 'R':
+      if (ttsSupported.value) {
+        e.preventDefault()
+        repeatQuestion()
+      }
+      break
+    case 'h':
+    case 'H':
+      if (ttsSupported.value) {
+        e.preventDefault()
+        readAnswerOptions()
+      }
+      break
+    case 'ArrowLeft':
+      e.preventDefault()
+      goBack()
+      break
+    case 'Escape':
+      e.preventDefault()
+      handleCancel()
+      break
+  }
+}
 
 // ── Navigation ─────────────────────────────────────────────────────────
 function setAnswer(value: AnswerValue) {
@@ -346,6 +667,7 @@ function finishQuestions() {
 
 function handleCancel() {
   stopSpeak()
+  stopRecognition()
   router.push('/mobility-profile')
 }
 
@@ -354,18 +676,18 @@ async function handleSave() {
   saving.value = true
   statusMsg.value = null
   try {
-    // 1. Collect User-model changes (voice_mode_enabled)
-    const voiceQuestion = answers.value['voice_mode_mode']
     const voiceAnswer = answers.value['voice_mode']
     const newVoiceMode = voiceAnswer === 'yes'
-    const voiceChanged = authStore.user?.voice_mode_enabled !== newVoiceMode && voiceAnswer !== 'skip' && voiceAnswer !== 'unknown'
+    const voiceChanged =
+      authStore.user?.voice_mode_enabled !== newVoiceMode &&
+      voiceAnswer !== 'skip' &&
+      voiceAnswer !== 'unknown'
 
     if (voiceChanged) {
       const updatedUser = await saveOnboardingPreferences(newVoiceMode)
       authStore.user = updatedUser
     }
 
-    // 2. Collect MobilityProfile changes
     const profilePatch: MobilityProfileUpdate = {}
     for (const q of questions) {
       const answer = answers.value[q.id]
@@ -377,19 +699,36 @@ async function handleSave() {
       }
     }
 
-    const hasProfileChanges = Object.keys(profilePatch).length > 0
-    if (hasProfileChanges) {
+    if (Object.keys(profilePatch).length > 0) {
       await profileStore.save(profilePatch)
     }
 
     statusMsg.value = { type: 'success', text: 'Ihr Mobilitätsprofil wurde gespeichert.' }
     setTimeout(() => router.push('/mobility-profile'), 1800)
   } catch {
-    statusMsg.value = { type: 'error', text: 'Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.' }
+    statusMsg.value = {
+      type: 'error',
+      text: 'Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.',
+    }
   } finally {
     saving.value = false
   }
 }
+
+// ── Lifecycle ──────────────────────────────────────────────────────────
+onMounted(() => {
+  profileStore.load().catch(() => {})
+  document.addEventListener('keydown', handleKeydown)
+  if (autoSpeak.value && ttsSupported.value) {
+    setTimeout(() => speakQuestion(), 300)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  stopSpeak()
+  stopRecognition()
+})
 </script>
 
 <style scoped>
@@ -489,10 +828,19 @@ async function handleSave() {
 .tts-bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--am-space-s);
   padding-bottom: var(--am-space-m);
   border-bottom: 1px solid var(--am-border);
   margin-bottom: var(--am-space-m);
+  flex-wrap: wrap;
+}
+
+.tts-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  flex-wrap: wrap;
 }
 
 .tts-btn,
@@ -517,10 +865,78 @@ async function handleSave() {
   color: var(--am-text-primary);
 }
 
+.tts-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .tts-toggle[aria-pressed='true'] {
   background: color-mix(in srgb, var(--am-accent) 15%, var(--am-bg-raised));
   border-color: var(--am-accent);
   color: var(--am-accent);
+}
+
+/* Ask options prompt */
+.options-prompt {
+  margin-bottom: var(--am-space-m);
+  border-radius: var(--am-radius-s);
+  border: 1px solid color-mix(in srgb, var(--am-accent) 30%, var(--am-border));
+  background: color-mix(in srgb, var(--am-accent) 6%, var(--am-bg-raised));
+}
+
+.options-prompt-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-m);
+  padding: var(--am-space-s) var(--am-space-m);
+  flex-wrap: wrap;
+}
+
+.options-prompt-icon {
+  color: var(--am-accent);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.options-prompt-text {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--am-text-primary);
+  font-weight: 500;
+}
+
+.options-prompt-actions {
+  display: flex;
+  gap: var(--am-space-s);
+}
+
+.options-prompt-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px var(--am-space-m);
+  border-radius: var(--am-radius-s);
+  border: 1px solid var(--am-border);
+  background: var(--am-bg-raised);
+  color: var(--am-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  min-height: 32px;
+  transition: background var(--am-transition);
+}
+
+.options-prompt-btn:hover {
+  background: var(--am-bg-surface);
+}
+
+.options-prompt-btn--yes {
+  border-color: var(--am-accent);
+  color: var(--am-accent);
+  background: color-mix(in srgb, var(--am-accent) 10%, var(--am-bg-raised));
+}
+
+.options-prompt-btn--yes:hover {
+  background: color-mix(in srgb, var(--am-accent) 18%, var(--am-bg-raised));
 }
 
 /* Question */
@@ -561,12 +977,50 @@ async function handleSave() {
   line-height: 1.5;
 }
 
+/* STT confirm dialog */
+.stt-confirm {
+  margin-bottom: var(--am-space-m);
+  border-radius: var(--am-radius-m);
+  border: 2px solid var(--am-accent);
+  background: color-mix(in srgb, var(--am-accent) 6%, var(--am-bg-raised));
+}
+
+.stt-confirm-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--am-space-m);
+  padding: var(--am-space-m);
+}
+
+.stt-confirm-icon {
+  color: var(--am-accent);
+  font-size: 1.2rem;
+}
+
+.stt-confirm-text {
+  font-size: 0.95rem;
+  color: var(--am-text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.stt-confirm-actions {
+  display: flex;
+  gap: var(--am-space-s);
+  flex-wrap: wrap;
+}
+
+.stt-confirm-actions .am-btn {
+  min-height: 40px;
+}
+
 /* Answer buttons */
 .answer-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--am-space-m);
-  margin-bottom: var(--am-space-l);
+  margin-bottom: var(--am-space-m);
 }
 
 @media (max-width: 480px) {
@@ -576,6 +1030,7 @@ async function handleSave() {
 }
 
 .answer-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -618,6 +1073,143 @@ async function handleSave() {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--am-text-primary);
+}
+
+.answer-btn-kbd {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  opacity: 0.35;
+}
+
+.answer-btn-kbd kbd {
+  font-family: inherit;
+  font-size: 0.65rem;
+  background: var(--am-bg-surface);
+  border: 1px solid var(--am-border);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* STT bar */
+.stt-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+  padding: var(--am-space-m) 0;
+  border-top: 1px solid var(--am-border);
+  margin-bottom: var(--am-space-s);
+}
+
+.stt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--am-space-m);
+  background: var(--am-bg-raised);
+  border: 1px solid var(--am-border);
+  border-radius: var(--am-radius-s);
+  color: var(--am-text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  min-height: 40px;
+  transition: background var(--am-transition), color var(--am-transition),
+    border-color var(--am-transition);
+  align-self: flex-start;
+}
+
+.stt-btn:hover:not(:disabled) {
+  background: var(--am-bg-surface);
+  color: var(--am-text-primary);
+  border-color: var(--am-border-strong);
+}
+
+.stt-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stt-listening {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-m);
+  font-size: 0.875rem;
+  color: var(--am-text-primary);
+}
+
+.stt-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: stt-pulse 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes stt-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.stt-cancel {
+  padding: 4px var(--am-space-m);
+  border-radius: var(--am-radius-s);
+  border: 1px solid var(--am-border);
+  background: var(--am-bg-raised);
+  color: var(--am-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  min-height: 30px;
+}
+
+.stt-cancel:hover {
+  background: var(--am-bg-surface);
+}
+
+.stt-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--am-danger);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Keyboard hints */
+.kbd-hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--am-space-s);
+  padding: var(--am-space-s) 0;
+  border-top: 1px solid var(--am-border);
+  margin-bottom: var(--am-space-s);
+}
+
+.kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--am-text-muted);
+}
+
+.kbd-hint kbd {
+  font-family: inherit;
+  font-size: 0.65rem;
+  background: var(--am-bg-surface);
+  border: 1px solid var(--am-border);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--am-text-secondary);
+}
+
+.kbd-sep {
+  color: var(--am-border-strong);
+  font-size: 0.75rem;
+  user-select: none;
 }
 
 /* Navigation */

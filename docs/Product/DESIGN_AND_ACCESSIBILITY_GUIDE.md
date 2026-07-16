@@ -265,3 +265,17 @@ Modul-Anforderungen: `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md`
 - Der Assistent schlägt vor — der Nutzer bestätigt.
 - Offline-Grundfunktion ohne Cloud: feste Fragen, lokale Regeln.
 - Online-Erweiterung: natürliche Sprache über Backend-KI.
+
+**TTS-Designregeln (Sprint 9B):**
+- Fragen vorlesen: ja, automatisch wenn `voice_mode_enabled`.
+- Antwortoptionen vorlesen: **nur auf explizite Nachfrage** — nie automatisch ungefragt.
+- Nach dem Vorlesen einer Frage: aktiv fragen „Soll ich die Antwortmöglichkeiten vorlesen?".
+- STT: nur aktiv wenn Nutzer Button „Antwort sprechen" drückt — kein dauerhaftes Mithören.
+- Gesprochene Antworten: immer mit Bestätigungsdialog vor Übernahme.
+- TTS-Utility: `frontend/src/utils/speech.ts` (Browser-only, kein Cloud-API).
+
+**Tastaturkürzel-Designregeln (Sprint 9B):**
+- Tastaturkürzel-Leiste ist immer sichtbar (nicht nur on hover).
+- Shortcuts nur aktiv wenn kein Formularfeld fokussiert ist.
+- Escape schließt aktive Zustände der Reihe nach: STT-Hören → Bestätigungsdialog → Abbrechen.
+- Shortcuts mit sichtbaren `<kbd>`-Elementen kennzeichnen (nicht nur `aria-label`).

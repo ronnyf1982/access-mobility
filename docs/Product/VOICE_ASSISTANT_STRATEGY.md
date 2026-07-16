@@ -172,6 +172,23 @@ Assistent: "Möchten Sie noch etwas hinzufügen, zum Beispiel Rampe oder Hebebü
 - Speicherung erst nach Bestätigung der Zusammenfassung
 - Fehlende Felder dokumentiert, keine unautorisierten Migrationen
 
+**Phase 2B — Sprachgeführte Antwortauswahl (Sprint 9B) ✅:**
+- TTS-Flow: Frage vorlesen → dann aktiv fragen „Soll ich die Antwortmöglichkeiten vorlesen?"
+- Antwortoptionen werden nur auf explizite Nachfrage vorgelesen (kein automatisches Vorlesen)
+- Neue Buttons: „Antwortmöglichkeiten vorlesen", „Frage wiederholen"
+- Optionaler STT: `window.SpeechRecognition` / `window.webkitSpeechRecognition`
+  - Nur aktiv auf Nutzerwunsch (Button „Antwort sprechen") — kein dauerhaftes Mithören
+  - Bestätigungs-Dialog vor Übernahme jeder gesprochenen Antwort
+  - Sprachbefehle: Ja/Nein/Weiß ich nicht/Überspringen + Vorlesen/Wiederholen/Zurück/Abbrechen
+  - Fallback-Meldung wenn Browser STT nicht unterstützt
+- Tastaturkürzel: J / N / W / S / R / H / ArrowLeft / Escape
+  - Hinweisleiste mit sichtbaren Kürzeln im UI
+  - Kein Konflikt mit Formularelementen
+- Speech-Hilfsfunktionen: `frontend/src/utils/speech.ts`
+  - TTS: `isTTSSupported()`, `speak()`, `stopSpeaking()`
+  - STT: `isSTTSupported()`, `startRecognition()`, `stopRecognition()`, `normalizeSpokenInput()`
+- Kein Cloud-Speech — ausschließlich Browser-API
+
 **Phase 3 — Online-KI (Sprint 11):**
 - Backend-Endpoint `/api/v1/assistant/interpret`
 - Natürlichsprachige Eingabe → strukturierte Felder
