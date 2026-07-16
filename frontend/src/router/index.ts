@@ -4,6 +4,7 @@ import PublicLayout from '@/layouts/PublicLayout.vue'
 import PortalLayout from '@/layouts/PortalLayout.vue'
 import LandingView from '@/views/LandingView.vue'
 import LoginView from '@/views/auth/LoginView.vue'
+import OnboardingView from '@/views/OnboardingView.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
 import MobilityProfileView from '@/views/MobilityProfileView.vue'
 import VehiclesView from '@/views/VehiclesView.vue'
@@ -27,6 +28,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: OnboardingView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/dashboard',
       component: PortalLayout,
       meta: { requiresAuth: true },
@@ -41,6 +48,8 @@ const router = createRouter({
     { path: '/:pathMatch(.*)*', redirect: '/login' },
   ],
 })
+
+const ONBOARDING_BYPASS = new Set(['/onboarding', '/login', '/'])
 
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
@@ -63,6 +72,11 @@ router.beforeEach(async (to, _from, next) => {
       auth.logout()
       return next('/login')
     }
+  }
+
+  // Redirect to onboarding if first login and not already there
+  if (auth.user?.needs_onboarding && !ONBOARDING_BYPASS.has(to.path)) {
+    return next('/onboarding')
   }
 
   next()

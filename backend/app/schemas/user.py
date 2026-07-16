@@ -1,6 +1,8 @@
 import uuid
+from datetime import datetime
+from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, computed_field
 
 from app.models.user import UserRole
 
@@ -14,6 +16,15 @@ class UserPublic(BaseModel):
     last_name: str
     role: UserRole
     is_active: bool
+    voice_mode_enabled: bool
+    onboarding_completed_at: Optional[datetime] = None
+    first_login_at: Optional[datetime] = None
+    last_login_at: Optional[datetime] = None
+
+    @computed_field
+    @property
+    def needs_onboarding(self) -> bool:
+        return self.onboarding_completed_at is None
 
     @property
     def full_name(self) -> str:

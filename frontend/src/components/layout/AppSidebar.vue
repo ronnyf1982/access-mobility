@@ -64,24 +64,43 @@ interface NavItem {
   to?: string
 }
 
-const _DISPO_ROLES = ['provider_admin', 'dispatcher', 'platform_admin']
+const PASSENGER_ROLES = new Set(['passenger', 'trusted_person', 'organization_coordinator'])
+const DISPO_ROLES = new Set(['provider_admin', 'dispatcher', 'platform_admin', 'organization_admin'])
 
-const navItems = computed<NavItem[]>(() => [
-  { label: 'Dashboard',        icon: 'pi-th-large',       to: '/dashboard' },
-  { label: 'Mobilitätsprofil', icon: 'pi-heart',          to: '/mobility-profile' },
-  {
-    label: _DISPO_ROLES.includes(authStore.role ?? '') ? 'Disposition' : 'Fahrten anfragen',
-    icon: 'pi-car',
-    to: '/transport-requests',
-  },
-  { label: 'Buchen',           icon: 'pi-plus-circle' },
-  { label: 'Fahrgäste',        icon: 'pi-users' },
-  { label: 'Fahrzeuge',        icon: 'pi-truck',   to: '/vehicles' },
-  { label: 'Fahrer',           icon: 'pi-id-card', to: '/drivers' },
-  { label: 'Organisationen',   icon: 'pi-building' },
-  { label: 'Abrechnung',       icon: 'pi-file' },
-  { label: 'Einstellungen',    icon: 'pi-cog' },
-])
+const navItems = computed<NavItem[]>(() => {
+  const role = authStore.role ?? ''
+
+  if (PASSENGER_ROLES.has(role)) {
+    return [
+      { label: 'Dashboard',        icon: 'pi-th-large', to: '/dashboard' },
+      { label: 'Fahrten anfragen', icon: 'pi-car',      to: '/transport-requests' },
+      { label: 'Mobilitätsprofil', icon: 'pi-heart',    to: '/mobility-profile' },
+    ]
+  }
+
+  if (role === 'driver') {
+    return [
+      { label: 'Dashboard',     icon: 'pi-th-large',    to: '/dashboard' },
+      { label: 'Meine Aufträge', icon: 'pi-list',       to: '/transport-requests' },
+    ]
+  }
+
+  if (DISPO_ROLES.has(role)) {
+    return [
+      { label: 'Dashboard',     icon: 'pi-th-large',  to: '/dashboard' },
+      { label: 'Disposition',   icon: 'pi-car',       to: '/transport-requests' },
+      { label: 'Fahrzeuge',     icon: 'pi-truck',     to: '/vehicles' },
+      { label: 'Fahrer',        icon: 'pi-id-card',   to: '/drivers' },
+      { label: 'Fahrgäste',     icon: 'pi-users' },
+      { label: 'Organisationen', icon: 'pi-building' },
+      { label: 'Abrechnung',    icon: 'pi-file' },
+    ]
+  }
+
+  return [
+    { label: 'Dashboard', icon: 'pi-th-large', to: '/dashboard' },
+  ]
+})
 
 function isActive(to: string): boolean {
   return route.path === to || route.path.startsWith(to + '/')

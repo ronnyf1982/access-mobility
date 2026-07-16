@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-16 · Sprint 7 abgeschlossen · Sprint 8 geplant
+Letzte Aktualisierung: 2026-07-16 · Sprint 8 abgeschlossen · Sprint 9 geplant
 
 ---
 
@@ -107,7 +107,8 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | Sprint 5B | Zentrale Transport-Presets (backend/app/core/transport_presets.py) | ✅ abgeschlossen |
 | Sprint 6 | Transportanfragen (TransportRequest, Snapshots) | ✅ abgeschlossen |
 | Sprint 7 | Manuelles Matching & Disposition | ✅ abgeschlossen |
-| **Sprint 8** | **Assistant Core & barrierefreies Onboarding-Fundament** | **geplant** |
+| **Sprint 8** | **Assistant Core & barrierefreies Onboarding-Fundament** | ✅ abgeschlossen |
+| **Sprint 9** | **Sprachgeführter Mobilitätscheck (offline-fähig)** | **geplant** |
 
 ---
 

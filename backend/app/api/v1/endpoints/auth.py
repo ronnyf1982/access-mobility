@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -25,6 +27,12 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> Token:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Konto ist deaktiviert",
         )
+    now = datetime.now(timezone.utc)
+    if user.first_login_at is None:
+        user.first_login_at = now
+    user.last_login_at = now
+    db.commit()
+    db.refresh(user)
     token = create_access_token(str(user.id), user.role.value)
     return Token(access_token=token, user=UserPublic.model_validate(user))
 

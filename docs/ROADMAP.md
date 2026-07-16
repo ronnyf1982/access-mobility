@@ -52,16 +52,22 @@ Anfrage-Snapshot → Matching-Bewertung → manuelle Zuweisung durch Disponenten
 - Seed: 2 neue Demo-Anfragen (gute Übereinstimmung + Warnungsfall), Fahrer-Qualifikation aktualisiert
 - Tests: 26 Pytest-Tests (alle bestanden), TypeScript-Check ✅, Build ✅
 
-## Sprint 8 — Assistant Core & barrierefreies Onboarding-Fundament
+## Sprint 8 — Assistant Core & barrierefreies Onboarding-Fundament ✅
 
-Sprachassistenz-Fundament aufbauen und barrierefreies Erst-Onboarding implementieren.
+Onboarding-Fundament und Sprachassistenz-Wahl nach erstem Login implementiert.
 
-- Assistant-Core-Komponente (`VoiceAssistantPanel`): Aktivierungsbutton, TTS (Text-to-Speech), STT (Speech-to-Text), Dialogprotokoll
-- Frage beim ersten Start: „Möchten Sie die sprachgeführte Bedienung aktivieren?" (nicht stigmatisierend)
-- Offline-Fragenkatalog für Mobilitätsprofil (alle 11 Basisbedarfe per Sprache setzbar)
-- Fallback: strukturierte Buttons wenn kein Mikrofon verfügbar
-- ARIA-Verbesserungen: aria-live für Assistenten-Status, vollständige Screenreader-Tauglichkeit
-- Kontaktdaten-Verbesserung: Telefon, Abholkontakt, Notfallkontakt sichtbarer
+- **User-Modell erweitert:** `voice_mode_enabled`, `onboarding_completed_at`, `first_login_at`, `last_login_at` (Alembic-Migration `b3c4d5e6f7a8`)
+- **Login-Verhalten:** `first_login_at` und `last_login_at` werden beim Login gesetzt
+- **UserPublic-Schema:** `needs_onboarding` (computed: true wenn `onboarding_completed_at is None`), neue Felder in `/auth/login` + `/auth/me`
+- **Neue Backend-Endpunkte:**
+  - `GET /onboarding/status` — Onboarding-Status + Profil-Füllstand
+  - `POST /onboarding/preferences` — Wahl speichern, `onboarding_completed_at` setzen
+  - `GET /assistant/capabilities` — rollenbasierte Sprachassistenz-Fähigkeitenliste
+- **OnboardingView** (`/onboarding`): Zwei große Kacheln „Ja, Sprachführung aktivieren" / „Nein, normale Einrichtung". ARIA, Tastatur, WCAG AA.
+- **Router-Guard:** Automatische Weiterleitung nach `/onboarding` wenn `needs_onboarding === true`. Nach Abschluss: Fahrgäste → `/mobility-profile`, alle anderen → `/dashboard`.
+- **Rollenbasierte Sidebar:** Fahrgäste sehen nur Dashboard/Fahrten/Mobilitätsprofil. Fahrer sehen Dashboard/Aufträge. Dispo/Provider/Admin sehen Disposition/Fahrzeuge/Fahrer/...
+- **Frontend-API:** `api/onboarding.ts`, `api/assistant.ts` (Typen, API-Calls)
+- Tests: 26 Pytest-Tests ✅, TypeScript-Check ✅, Vite-Build ✅
 
 Referenz: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`, `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md`
 

@@ -15,6 +15,11 @@ export interface UserPublic {
   last_name: string
   role: UserRole
   is_active: boolean
+  voice_mode_enabled: boolean
+  needs_onboarding: boolean
+  onboarding_completed_at: string | null
+  first_login_at: string | null
+  last_login_at: string | null
 }
 
 export interface TokenResponse {

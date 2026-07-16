@@ -95,7 +95,7 @@ Erhalten ihre Tagesaufträge digital:
 | **Transportanfragen** | Draft → Requested → Assigned / Cancelled, Snapshot-Strategie | ✅ Sprint 6+7 |
 | **Matching / Disposition** | Snapshot-basiertes Matching, 3 Levels, manuelle Zuweisung | ✅ Sprint 7 |
 | **Dashboard** | KPI-Kacheln, Fahrtliste, rollenbasierte Ansichten | ✅ Sprint 2+7 |
-| **Assistant Core** | Sprachassistenz-Fundament, barrierefreies Onboarding | **Sprint 8** |
+| **Assistant Core** | Sprachassistenz-Fundament, barrierefreies Onboarding | ✅ Sprint 8 |
 | **Fahrer-Schichtstart** | Tagesaufträge, Statuswechsel, Schichtverwaltung | Sprint 10 |
 | **Fahrtstatus / Fahrer-App** | Statusereignisse, RideStatusEvent-Protokoll | Sprint 11 |
 | **Live-Status & Standortfreigabe** | Fahrtstatus + Standort teilen, Link-Freigabe, Widerruf | Sprint 12 |
