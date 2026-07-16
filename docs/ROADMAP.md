@@ -117,6 +117,20 @@ Fahrer startet Schicht, wählt Fahrzeug (Standardfahrzeug oder per Kennzeichen),
 - **Tests:** 20/20 passed, TypeScript-Check ✅, Vite-Build ✅
 - **Noch nicht:** STT/Spracheingabe, Live-GPS, Push-Notifications, Statusbuttons zugestiegen/ausgestiegen
 
+## Sprint FAHRANDO-2 — Gate-Schutzseite & Website-Testzugänge ✅
+
+Separate Passwortschutzseite (`/gate`) mit DB-basierten Testzugängen — vollständig unabhängig vom App-Login.
+
+- **`/gate`:** Neue Schutzseite (GateView), immer öffentlich erreichbar, zwei-spaltiges schwarzes Layout, Fahrando-Logo
+- **`PreviewAccessUser`:** Eigenes Modell + Tabelle (getrennt von `User`), bcrypt-gehashte Passwörter, Aktivstatus, Nutzungshistorie (`last_used_at`)
+- **Alembic-Migration** `e6f7a8b9c0d1`: Tabelle `preview_access_users` mit Unique-Index auf email
+- **`POST /public/test-access/login`:** DB-Lookup, kein Env-Var, gleiche 401-Meldung für alle Fehler
+- **Platform-Admin-Modul „Website-Testzugänge":** 7 Endpoints + CRUD-UI (Liste/Suche/Aktivfilter, Anlegen, Bearbeiten, Passwort-Reset, De-/Aktivierung)
+- **Gate-Guard im Router:** `/` erfordert `sessionStorage.fahrando_unlocked === '1'`, `/gate` immer frei, `/login` → App-Login (unverändert)
+- **`vite.config.ts` Proxy:** `/api` → `http://localhost:8010` — behebt fehlende API-Erreichbarkeit für `fetch`-Module im Vite Dev-Server
+- **46 neue Pytest-Tests** (Zugriffskontrolle, CRUD, Login, Aktivierung, Passwort-Reset, Regression), alle passed
+- TypeScript-Check ✅, Vite-Build ✅, Proxy ✅
+
 ## Sprint FAHRANDO-1 — Fahrando Coming-Soon, Testzugang & Platform-Admin-Benutzerverwaltung ✅
 
 Plattform-Marke sichtbar machen, Testzugang absichern, Platform-Admin kann Nutzer vollständig verwalten.

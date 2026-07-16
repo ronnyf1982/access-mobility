@@ -209,7 +209,62 @@ Platform-Admin-Zugänge werden über das Bootstrap-Script angelegt (Abschnitt 9)
 
 ---
 
-## 17. Login-Flow
+## 17. Website-Testzugang anlegen (Gate-Schutzseite)
+
+Die Schutzseite `/gate` nutzt ein eigenes Benutzersystem (`preview_access_users`-Tabelle), vollständig getrennt vom App-Login.
+
+**Option A — Über die Admin-UI (empfohlen):**
+1. Als Platform-Admin einloggen (`/login`)
+2. Sidebar → „Website-Testzugänge"
+3. „Neuen Zugang anlegen" → E-Mail/Benutzernamen + Passwort (min. 10 Zeichen) eingeben
+
+**Option B — Direkteintrag per Python (Ersteinrichtung):**
+
+```powershell
+$env:_GP = "<PASSWORT_HIER>"; cd C:\access-mobility\backend
+.\.venv\Scripts\python.exe -c "
+import os, bcrypt, psycopg2
+h = bcrypt.hashpw(os.environ['_GP'].encode(), bcrypt.gensalt(12)).decode()
+conn = psycopg2.connect('postgresql://access_user:access_pass@localhost:5440/access_mobility')
+cur = conn.cursor()
+cur.execute('''
+  INSERT INTO preview_access_users (email, password_hash, is_active, created_at, updated_at)
+  VALUES (%s, %s, TRUE, NOW(), NOW())
+  ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, is_active=TRUE, updated_at=NOW()
+''', ('<BENUTZERNAME_HIER>', h))
+conn.commit(); conn.close(); print('OK')
+"
+$env:_GP = ""
+```
+
+Das Passwort wird nur im Arbeitsspeicher verarbeitet — nie in Dateien gespeichert.
+
+**Sicherheitsregeln:**
+- `password_hash` nie in API-Responses
+- Gleiche 401-Antwort für alle Fehler (kein Enumeration-Angriff)
+- Unlock per `sessionStorage.fahrando_unlocked = '1'` — kein Token, kein Cookie
+
+---
+
+## 17a. Vite Dev-Server Proxy
+
+Der Vite Dev-Server leitet alle `/api`-Requests an das Backend (Port 8010) weiter.
+Konfiguriert in `frontend/vite.config.ts`:
+
+```ts
+proxy: {
+  '/api': {
+    target: 'http://localhost:8010',
+    changeOrigin: true,
+  },
+},
+```
+
+Für Produktivbetrieb: nginx/Caddy übernimmt das Forwarding — kein Proxy im Build nötig.
+
+---
+
+## 18. Login-Flow
 
 1. `http://localhost:5180` öffnen → Fahrando Coming-Soon-Seite
 2. E-Mail und Passwort eingeben → „Einloggen"
@@ -221,7 +276,17 @@ Platform-Admin-Zugänge werden über das Bootstrap-Script angelegt (Abschnitt 9)
 
 ---
 
-## 18. Platform-Admin-Zugang verifizieren
+## 18. Gate-Login-Flow
+
+1. `http://localhost:5180` öffnen → Weiterleitung zu `/gate` (Schutzseite)
+2. Benutzername + Passwort eingeben → „Einloggen"
+3. Bei Erfolg: `sessionStorage.fahrando_unlocked = '1'` gesetzt → Weiterleitung zu `/`
+4. `/` zeigt die öffentliche Fahrando-Website (Landing Page)
+5. App-Login weiterhin über `/login` (separates System, JWT-basiert)
+
+---
+
+## 19. Platform-Admin-Zugang verifizieren
 
 ```powershell
 # Login
@@ -239,7 +304,7 @@ Invoke-WebRequest -Uri "http://localhost:8010/api/v1/platform-admin/users" -Head
 
 ---
 
-## 19. Sicherheitsregeln (unverhandelbar)
+## 20. Sicherheitsregeln (unverhandelbar)
 
 - CORS: nur konfigurierte Origins in `ALLOWED_ORIGINS` — niemals `*`
 - JWT: `SECRET_KEY` muss ein sicherer Zufallswert sein (mind. 32 Bytes, kryptografisch sicher)
@@ -250,7 +315,7 @@ Invoke-WebRequest -Uri "http://localhost:8010/api/v1/platform-admin/users" -Head
 
 ---
 
-## 20. Bekannte Einschränkungen (Testumgebung)
+## 21. Bekannte Einschränkungen (Testumgebung)
 
 - Kein E-Mail-Versand (kein SMTP konfiguriert)
 - Kein SSL/TLS im Entwicklungsmodus (lokale Nutzung)

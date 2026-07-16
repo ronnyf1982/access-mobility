@@ -351,6 +351,66 @@
 
 ---
 
+---
+
+## Sprint FAHRANDO-2 — Gate-Schutzseite & Website-Testzugänge ✅
+
+**Abgeschlossen:** 2026-07-16
+
+### Backend
+
+- [x] `backend/app/models/preview_access.py` — `PreviewAccessUser`-Modell (email, password_hash, first_name, last_name, is_active, note, last_used_at, created_at, updated_at)
+- [x] `backend/app/db/base.py` — `preview_access`-Import für Alembic ergänzt
+- [x] `backend/alembic/versions/20260716_0010-e6f7a8b9c0d1_preview_access_users.py` — Tabelle `preview_access_users`, Unique-Index auf email
+- [x] `backend/app/schemas/preview_access.py` — `PublicGateLoginRequest`, `PreviewAccessUserPublic` (ohne password_hash), `PreviewAccessUserCreate` (email normalisiert, Passwort min. 10 Zeichen), `PreviewAccessUserUpdate`, `PreviewAccessPasswordReset`
+- [x] `backend/app/crud/crud_preview_access.py` — `get_by_email`, `get_by_id`, `list_users` (Suche/Aktivfilter), `create_user`, `update_user`, `reset_password`, `set_active`, `validate_login` (aktualisiert last_used_at)
+- [x] `backend/app/api/v1/endpoints/public_gate.py` — `POST /public/test-access/login` DB-basiert (kein Env-Var), 401 bei ungültigen Daten
+- [x] `backend/app/api/v1/endpoints/preview_access_admin.py` — 7 Endpoints unter `/platform-admin/test-access-users`: GET (Liste), POST (Anlegen, 409 bei Duplikat), GET /{id}, PATCH /{id}, POST /{id}/activate, POST /{id}/deactivate, POST /{id}/reset-password (400 bei Mismatch); alle `require_platform_admin`
+- [x] `backend/app/api/v1/router.py` — `preview_access_admin.router` + `public_gate.router` registriert
+
+### Tests
+
+- [x] `backend/tests/api/test_preview_access.py` — **46 Tests, alle passed**:
+  - TestAccessControl (11), TestListUsers (4, inkl. kein password_hash in Response)
+  - TestCreateUser (8, inkl. E-Mail-Normalisierung, 409 Duplikat, 422 kurzes Passwort)
+  - TestPublicGateLogin (6, inkl. last_used_at-Update, gleiche 401 für alle Fehler)
+  - TestActivation (6), TestPasswordReset (7), TestRegression (4, App-Login unverändert)
+
+### Frontend
+
+- [x] `frontend/src/api/previewAccess.ts` — `listPreviewUsers`, `createPreviewUser`, `getPreviewUser`, `updatePreviewUser`, `activatePreviewUser`, `deactivatePreviewUser`, `resetPreviewUserPassword`
+- [x] `frontend/src/views/platform_admin/PlatformAdminTestAccessView.vue` — CRUD-Tabelle mit Suche/Aktivfilter, 3 Modals (Anlegen, Bearbeiten, Passwort-Reset), Toast-Benachrichtigungen, Hinweis: „kein App-Benutzerkonto"
+- [x] `frontend/src/views/GateView.vue` — Neubau: Zwei-Spalten-Layout (schwarz/gelb), Fahrando-Logo, H1 „Hier entsteht etwas Großes.", 3 horizontale Nutzen-Punkte, Hinweis-Box, Login-Card (Shield-Icon, E-Mail/Passwort, Passwort-Sichtbarkeit-Toggle, gelber Button), dekorative SVG-Ellipsen. Unlock per `sessionStorage.setItem('fahrando_unlocked', '1')`.
+- [x] `frontend/public/Logo1.png` — Fahrando-Marken-Logo (RGBA-PNG, transparent) als statisches Asset
+- [x] `frontend/src/router/index.ts` — `/gate` öffentlich (`meta: { public: true }`), `/` erfordert `fahrando_unlocked` in sessionStorage (Gate-Guard), `/login` → LoginView (App-Login, unverändert)
+- [x] `frontend/src/components/layout/AppSidebar.vue` — „Website-Testzugänge" unter Plattform-Admin-Sektion ergänzt
+- [x] `frontend/vite.config.ts` — **Proxy-Eintrag** `/api` → `http://localhost:8010` (behebt fehlende API-Erreichbarkeit im Vite Dev-Server für `fetch`-basierte API-Module)
+- [x] `.env.example` — `TEST_ACCESS_CODE`-Variable entfernt, Hinweis auf DB-basierten Ansatz
+
+### Checks
+
+- [x] TypeScript-Check (`vue-tsc --noEmit`): keine Fehler
+- [x] Vite-Build: ✅ erfolgreich
+- [x] Backend pytest: 46/46 neue Tests passed (alle 192+ Gesamttests passed)
+- [x] Vite-Proxy verifiziert: `GET http://localhost:5180/api/v1/health → 200 OK`
+
+### Sicherheitsregeln (unverhandelbar)
+
+- `PreviewAccessUser` ist vollständig getrennt von der `User`-Tabelle — kein JWT, kein App-Login
+- `password_hash` nie in API-Responses
+- Login-Fehler geben immer dieselbe 401-Meldung zurück (kein Enumeration-Angriff)
+- Gate-Unlock nur per `sessionStorage` (`fahrando_unlocked=1`) — kein Token, kein Cookie
+- Kein Passwort in Dateien, Logs, Tests, Doku oder Abschlussbericht
+
+### Bewusst nicht umgesetzt (Sprint FAHRANDO-2)
+
+- Kein E-Mail-Versand bei Zugangserstellung
+- Kein Ablaufdatum / zeitlich begrenzte Testzugänge (folgt bei Bedarf)
+- Kein Audit-Log für Gate-Logins (last_used_at reicht für MVP)
+- Keine Rate-Limiting auf dem Gate-Endpoint (folgt vor Produktivbetrieb)
+
+---
+
 ## Nächster Sprint: Sprint 11 — Fahrtstatus & Fahrer-App
 
 - Backend: `RideStatusEvent`-Protokoll (driver_on_way / arrived_pickup / passenger_picked_up / arrived_destination / completed / delayed)

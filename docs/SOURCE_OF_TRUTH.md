@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-16 · Sprint FAHRANDO-COMING-SOON-TESTZUGANG-PLATTFORMADMIN-1 abgeschlossen · Sprint 11 geplant
+Letzte Aktualisierung: 2026-07-16 · Sprint FAHRANDO-2 abgeschlossen · Sprint 11 geplant
 
 ---
 
@@ -112,6 +112,7 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint 9B** | **Verbesserter Sprachassistent: TTS-Flow, STT, Tastaturkürzel** | ✅ abgeschlossen |
 | **Sprint 10** | **Fahrer-Schichtstart & Fahrzeugwahl (mobile-first, Standardfahrzeug, Auftragsstruktur)** | ✅ abgeschlossen |
 | **Sprint FAHRANDO-1** | **Fahrando Coming-Soon + Testzugang + Platform-Admin-Benutzerverwaltung** | ✅ abgeschlossen |
+| **Sprint FAHRANDO-2** | **Gate-Schutzseite mit DB-basierten Testzugängen & Website-Testzugänge-Modul** | ✅ abgeschlossen |
 
 ---
 

@@ -661,6 +661,34 @@ oder ob `RideStatusEvent` direkt an `TransportRequest` hängt.
 
 ---
 
+## Gate-Schutzseite & Website-Testzugänge (Sprint FAHRANDO-2)
+
+### Entscheidung: Vollständig getrenntes Auth-System für Preview-Zugänge
+
+Preview-Zugänge (Website-Testzugänge) nutzen eine eigene `PreviewAccessUser`-Tabelle — keine Verbindung zur `User`-Tabelle, kein JWT, keine App-Rolle. Der Login auf `/gate` setzt ausschließlich `sessionStorage.setItem('fahrando_unlocked', '1')`.
+
+**Begründung:** Testzugänge sollen technisch isoliert bleiben. Sie gewähren nur Zugang zur öffentlichen Website (`/`), nicht zum App-Portal. Ein JWT wäre überdimensioniert und würde die Rollen-/Rechteverwaltung des Portals belasten. sessionStorage ist tab-gebunden und wird beim Schließen des Browsers automatisch gelöscht — sicher genug für einen Vorschau-Schutz.
+
+### Entscheidung: Gleichbleibende 401-Antwort für alle Login-Fehler am Gate
+
+`POST /public/test-access/login` gibt bei ungültigem Benutzer, falschem Passwort und inaktivem Account immer dieselbe 401-Meldung zurück: „Zugangsdaten nicht korrekt."
+
+**Begründung:** Unterschiedliche Fehlermeldungen erlauben Enumeration-Angriffe (feststellen, ob ein Benutzername existiert). Die einheitliche Meldung verhindert das.
+
+### Entscheidung: DB-basiert statt Env-Var für Gate-Zugänge
+
+Der ursprüngliche Ansatz mit `TEST_ACCESS_CODE` als Umgebungsvariable (ein einziger globaler Code) wurde durch DB-basierte Einzelzugänge ersetzt.
+
+**Begründung:** Einzelzugänge erlauben gezielte Deaktivierung, Aktivitätsprotokollierung (`last_used_at`), Mehrbenutzer-Betrieb und Administration ohne Server-Neustart. Ein gemeinsamer Code kann nicht einzeln widerrufen werden.
+
+### Entscheidung: Vite-Dev-Server-Proxy für `/api`
+
+`frontend/vite.config.ts` leitet alle Requests unter `/api` an `http://localhost:8010` weiter.
+
+**Begründung:** Die `fetch`-basierten API-Module (`platformAdmin.ts`, `previewAccess.ts`) nutzen relative URLs (`/api/v1/...`). Ohne Proxy landen diese Requests beim Vite-Dev-Server (Port 5180) und erhalten 404. Der Proxy ist nur für den Dev-Server relevant — im Produktivbetrieb übernimmt nginx/Caddy das Forwarding.
+
+---
+
 ## Fahrando-Marke & Testzugang (Sprint FAHRANDO-1)
 
 ### Entscheidung: Kein zweites Auth-System
