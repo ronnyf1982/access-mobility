@@ -20,6 +20,9 @@ class DriverProfile(Base):
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    default_vehicle_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("vehicles.id"), nullable=True, default=None
+    )
 
     # Qualifikationen — Grundqualifikationen
     can_assist_wheelchair: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

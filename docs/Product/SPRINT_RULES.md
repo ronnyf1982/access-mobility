@@ -74,14 +74,48 @@ Sie sind nicht optional. Bei Widerspruch zu kurzfristigen Anforderungen gilt: Re
 ✅ pytest (alle Tests grün)
 ✅ npx vue-tsc --noEmit (TypeScript-Check: 0 Fehler)
 ✅ npm run build (Build erfolgreich)
+✅ PFLICHT-Umgebungsprüfung (siehe Abschnitt unten) — vor Browser-Test!
 ✅ Browser-Test: Golden Path manuell durchklicken
-✅ Browser-Test: Demo-Login alle 4 Rollen prüfen
+✅ Browser-Test: Demo-Login alle betroffenen Rollen prüfen
 ✅ git status --short (Überblick über Änderungen)
 ✅ docs/PROJECT_STATUS.md aktualisieren
 ✅ docs/ROADMAP.md aktualisieren (Sprint als ✅ markieren)
 ✅ KEIN Commit ohne explizite Freigabe
 ✅ KEIN Push ohne explizite Freigabe
 ```
+
+---
+
+## PFLICHT: Umgebungsprüfung vor jedem Browser-Test
+
+**Diese Prüfung ist nicht optional.** Kein Login-Test, kein Browser-Test, keine
+API-Prüfung darf stattfinden, ohne dass alle fünf Punkte bestätigt sind.
+
+```
+✅ 1. Docker läuft — PostgreSQL erreichbar auf Port 5440
+       docker compose -f docker-compose.dev.yml ps
+
+✅ 2. Alembic auf aktuellem Stand (zeigt "(head)")
+       cd backend && .venv\Scripts\python.exe -m alembic current
+
+✅ 3. Seed-Daten vorhanden / aktuell
+       cd backend && .venv\Scripts\python.exe -m app.scripts.seed_demo_data
+
+✅ 4. Backend läuft und antwortet
+       GET http://localhost:8010/api/v1/health → 200 OK
+
+✅ 5. Frontend erreichbar
+       http://localhost:5180 → HTTP 200
+```
+
+**Wenn eine Prüfung fehlschlägt:** Dienste starten, dann erneut prüfen.
+Schnellstart: `scripts\windows\Start-AccessMobility-Dev.ps1`
+
+**Was Claude tun muss:**
+1. Alle fünf Ports / Dienste aktiv prüfen (kein Annahmen treffen)
+2. Alle Ergebnisse explizit melden (Port 8010: ✅ / ❌)
+3. Erst nach vollständiger Bestätigung: Browser-Test durchführen
+4. Erst nach erfolgreichem Browser-Test: Sprint als "fertig" melden
 
 ---
 
@@ -130,6 +164,8 @@ Folgende Prüfungen sind **Pflicht** bevor ein neues Modul als fertig gilt:
 - API-Keys ins Frontend schreiben
 - Medizinische Felder als Pflichtfelder setzen
 - Den Sprachassistenten als „kann man später machen" einordnen
+- **Einen Browser-Test oder Login-Test durchführen oder behaupten, ohne vorher alle 5 Umgebungs-Checks bestätigt zu haben**
+- **Einen Sprint als abgeschlossen melden, wenn die lokale Umgebung beim Browser-Test nicht vollständig lief**
 
 ---
 

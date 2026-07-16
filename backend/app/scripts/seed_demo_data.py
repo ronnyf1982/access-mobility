@@ -380,6 +380,25 @@ def main() -> None:
                 existing_dp.has_wheelchair_restraint_training = True
                 print("  upd   DriverProfile driver@access.test — has_wheelchair_restraint_training gesetzt")
 
+        # ── Fahrerprofil-Erweiterung Sprint 10B: Standardfahrzeug ──────────
+        if driver_user and wb:
+            existing_dp = (
+                db.query(DriverProfile)
+                .filter(DriverProfile.user_id == driver_user.id)
+                .first()
+            )
+            if existing_dp and existing_dp.default_vehicle_id is None:
+                default_vehicle = (
+                    db.query(Vehicle)
+                    .filter(Vehicle.license_plate == "AM-BUS-1", Vehicle.is_active == True)  # noqa: E712
+                    .first()
+                )
+                if default_vehicle:
+                    existing_dp.default_vehicle_id = default_vehicle.id
+                    print(f"  upd   DriverProfile driver@access.test — default_vehicle_id = {default_vehicle.license_plate}")
+            elif existing_dp and existing_dp.default_vehicle_id is not None:
+                print("  ok    DriverProfile driver@access.test — default_vehicle_id bereits gesetzt")
+
         # ── Transportanfragen (für passenger@access.test) ───────────────────
         if passenger_user:
             existing_requests = (
@@ -531,6 +550,28 @@ def main() -> None:
                     print(f"  +req  {label}")
                 else:
                     print(f"  skip  TransportRequest '{seed['pickup_address']}' (bereits vorhanden)")
+
+        # ── Onboarding-Backfill für Staff-Rollen ────────────────────────────────
+        # Fahrer, Disponenten, Admins etc. müssen kein Onboarding durchlaufen.
+        # Alle Nicht-Fahrgast-Rollen bekommen onboarding_completed_at gesetzt,
+        # falls es noch NULL ist (z. B. nach Migration von Sprint 8).
+        _staff_roles = {
+            UserRole.driver,
+            UserRole.provider_admin,
+            UserRole.dispatcher,
+            UserRole.organization_admin,
+            UserRole.platform_admin,
+            UserRole.trusted_person,
+        }
+        _backfill_ts = datetime.datetime.now(datetime.timezone.utc)
+        _backfilled = 0
+        for email, user in created_users.items():
+            if user.role in _staff_roles and user.onboarding_completed_at is None:
+                user.onboarding_completed_at = _backfill_ts
+                _backfilled += 1
+                print(f"  upd   {email} — onboarding_completed_at gesetzt (Staff-Rolle)")
+        if _backfilled == 0:
+            print("  ok    Onboarding-Backfill: alle Staff-Nutzer bereits gesetzt")
 
         db.commit()
         print("\nDemo-Daten erfolgreich angelegt.")

@@ -53,7 +53,7 @@ Für jedes Modul wird hier festgehalten:
 
 ---
 
-## Aktuelle Module (Sprint 9B-Stand)
+## Aktuelle Module (Sprint 10-Stand)
 
 ### Auth / Login
 
@@ -227,33 +227,33 @@ Fragenkatalog: `frontend/src/data/mobilityAssistantQuestions.ts`
 
 ---
 
+### Fahrer-Schichtstart & Fahrzeugwahl (Sprint 10)
+
+| Aspekt | Details |
+|---|---|
+| **Zweck** | Fahrer meldet sich für Schicht an, wählt Fahrzeug per Kennzeichen, kann Schicht pausieren/beenden |
+| **Strukturierte Felder** | `vehicle_id` (UUID oder Kennzeichen), `ShiftStatus` (active/paused/ended), `started_at`, `ended_at`, `break_started_at`, `notes` |
+| **Visuelle Bedienung** | `DriverDashboardView`: Schichtstatus-Karte, Kennzeichen-Suchfeld, Fahrzeugtreffer-Liste, Pause/Beenden-Buttons mit Bestätigungsdialog, Tagesauftragsliste (read-only) |
+| **Sprach-/Assistenzmodus** | `voice_mode: "voice_later"` — Spracheingabe geplant für späteren Sprint; vorerst nur visuell |
+| **Offline möglich?** | ❌ (Datenbank-Lookup für Kennzeichen-Suche und Schichtstatus) |
+| **Online-KI sinnvoll?** | ❌ (Schichtdaten sind strukturiert — kein KI-Bedarf) |
+| **Bestätigung erforderlich?** | ✅ vor Schichtstart, Pause, Beenden |
+| **Datenschutz** | Keine sensiblen Personendaten — nur Fahrzeug-ID und Zeitstempel |
+
+**Implementierter Stand (Sprint 10 / Sprint 10B):**
+- Backend: `DriverShift`-Modell, Migration `driver_shifts`, CRUD + 7 Endpoints unter `/driver/...` inkl. `GET /driver/me`
+- `DriverProfile.default_vehicle_id` (nullable FK vehicles) + Migration, Seed-Daten: driver@access.test → AM-BUS-1
+- Frontend: `DriverDashboardView` (mobile-first, große Buttons), Route `/driver`, Sidebar „Meine Schicht"
+- Zwei Szenarien: Standardfahrzeug direkt anzeigen / Kennzeichen-Suche falls kein Standardfahrzeug
+- Auftragsstruktur: „Linienfahrten" (Platzhalter) + „Spontane Fahrten" (aus assignments)
+- Noch keine STT-Spracheingabe — voice_mode: "voice_later" (Sprint 11+)
+- Sicherheitsnotizen: keine Statusänderung ohne Bestätigung, Schicht beenden nur nach Dialog
+
+---
+
 ## Geplante Module (zukünftige Sprints)
 
-### Fahrer-Schichtstart (Sprint 10)
-
-| Aspekt | Details |
-|---|---|
-| **Zweck** | Fahrer meldet sich für Schicht an, wählt Fahrzeug |
-| **Strukturierte Felder** | vehicle_id (Kennzeichen oder Liste), shift_start_time, online_status (Bool) |
-| **Sprach-/Assistenzmodus** | „Ich starte meine Schicht. Kennzeichen: M-AM-1234." → Fahrzeug suchen + bestätigen |
-| **Offline möglich?** | ⚠️ (Lokal speicherbar, Sync wenn online) |
-| **Bestätigung erforderlich?** | ✅ vor Schichtstart |
-
----
-
-### Fahrzeugwahl über Kennzeichen (Sprint 10)
-
-| Aspekt | Details |
-|---|---|
-| **Zweck** | Fahrer wählt Fahrzeug schnell per Kennzeichen |
-| **Strukturierte Felder** | license_plate (Text, validiert), vehicle_id (gefunden) |
-| **Sprach-/Assistenzmodus** | Kennzeichen buchstabieren oder diktieren |
-| **Offline möglich?** | ❌ (Datenbank-Lookup) |
-| **Bestätigung erforderlich?** | ✅ |
-
----
-
-### Fahrt per Sprache anfragen (Sprint 12)
+### Fahrt per Sprache anfragen (Sprint 14)
 
 | Aspekt | Details |
 |---|---|

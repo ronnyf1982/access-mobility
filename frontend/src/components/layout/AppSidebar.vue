@@ -80,8 +80,9 @@ const navItems = computed<NavItem[]>(() => {
 
   if (role === 'driver') {
     return [
-      { label: 'Dashboard',     icon: 'pi-th-large',    to: '/dashboard' },
-      { label: 'Meine Aufträge', icon: 'pi-list',       to: '/transport-requests' },
+      { label: 'Meine Schicht',  icon: 'pi-car',     to: '/driver' },
+      { label: 'Meine Aufträge', icon: 'pi-list',    to: '/driver' },
+      { label: 'Dashboard',      icon: 'pi-th-large', to: '/dashboard' },
     ]
   }
 

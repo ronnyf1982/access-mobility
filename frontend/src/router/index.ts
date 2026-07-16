@@ -11,6 +11,7 @@ import MobilityAssistantView from '@/views/MobilityAssistantView.vue'
 import VehiclesView from '@/views/VehiclesView.vue'
 import DriversView from '@/views/DriversView.vue'
 import TransportRequestView from '@/views/TransportRequestView.vue'
+import DriverDashboardView from '@/views/DriverDashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -45,6 +46,7 @@ const router = createRouter({
         { path: '/vehicles', name: 'vehicles', component: VehiclesView },
         { path: '/drivers', name: 'drivers', component: DriversView },
         { path: '/transport-requests', name: 'transport-requests', component: TransportRequestView },
+        { path: '/driver', name: 'driver-dashboard', component: DriverDashboardView },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/login' },

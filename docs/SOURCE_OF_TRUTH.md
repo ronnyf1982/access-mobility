@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-16 · Sprint 9 abgeschlossen · Sprint 10 geplant
+Letzte Aktualisierung: 2026-07-16 · Sprint 10 abgeschlossen · Sprint 11 geplant
 
 ---
 
@@ -109,7 +109,8 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | Sprint 7 | Manuelles Matching & Disposition | ✅ abgeschlossen |
 | **Sprint 8** | **Assistant Core & barrierefreies Onboarding-Fundament** | ✅ abgeschlossen |
 | **Sprint 9** | **Sprachgeführter Mobilitätscheck (offline-fähig)** | ✅ abgeschlossen |
-| **Sprint 10** | **Fahrer-Schichtstart & Fahrzeugwahl** | **geplant** |
+| **Sprint 9B** | **Verbesserter Sprachassistent: TTS-Flow, STT, Tastaturkürzel** | ✅ abgeschlossen |
+| **Sprint 10** | **Fahrer-Schichtstart & Fahrzeugwahl (mobile-first, Standardfahrzeug, Auftragsstruktur)** | ✅ abgeschlossen |
 
 ---
 
@@ -339,6 +340,19 @@ Vollständige Regeln: `docs/Product/SPRINT_RULES.md`
 - `docs/PROJECT_STATUS.md` + `docs/ROADMAP.md` aktualisieren
 - `git status` — kein Commit, kein Push ohne Freigabe
 
+**Pflicht-Umgebungsprüfung vor jedem Browser-Test (nicht optional):**
+
+| # | Prüfung | Befehl |
+|---|---|---|
+| 1 | PostgreSQL läuft (Port 5440) | `docker compose -f docker-compose.dev.yml ps` |
+| 2 | Alembic auf Stand `(head)` | `cd backend && .venv\Scripts\python.exe -m alembic current` |
+| 3 | Seed-Daten aktuell | `cd backend && .venv\Scripts\python.exe -m app.scripts.seed_demo_data` |
+| 4 | Backend antwortet (Port 8010) | `GET /api/v1/health → 200 OK` |
+| 5 | Frontend erreichbar (Port 5180) | `http://localhost:5180 → 200` |
+
+Alle fünf Punkte müssen ✅ sein, bevor ein Browser-Test beginnt.
+Schnellstart: `scripts\windows\Start-AccessMobility-Dev.ps1`
+
 ---
 
 ## 12. Regel für künftige Claude-Sprints
@@ -357,6 +371,7 @@ Claude muss vor und während jedem Sprint folgende Prüfliste durchgehen:
 | 7 | Wird ein neues Modul gebaut? | Eintrag in `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md` anlegen |
 | 8 | Wird Code geändert? | TypeScript-Check + Browser-Test danach |
 | 9 | Ist der Sprint fertig? | Git-Status prüfen — kein Commit ohne Freigabe |
+| 10 | Wird ein Browser-Test durchgeführt? | **Pflicht-Umgebungsprüfung** (alle 5 Punkte ✅) vor dem Test — kein Browser-Test ohne laufende Umgebung |
 
 ---
 

@@ -71,9 +71,10 @@ Koordinieren den operativen Betrieb:
 ### Fahrer
 
 Erhalten ihre Tagesaufträge digital:
-- Auftragsliste mit Fahrgastdaten und Adresse
-- Statuswechsel: unterwegs → angekommen → Fahrgast an Bord → abgeschlossen
-- Schichtstart und Fahrzeugwahl (ab Sprint 10)
+- **Schichtstart & Fahrzeugwahl (Sprint 10):** Schicht beginnen mit Standardfahrzeug oder Kennzeichen-Suche; Pause / Schicht beenden; Zeitstempel werden automatisch gesetzt
+- **Zwei Auftragsarten:** Linienfahrten (vorgeplant, optimiert — ab Sprint 15) und Spontane Fahrten (einzelne zugewiesene TransportRequests)
+- **Statuswechsel (Sprint 11):** unterwegs → angekommen → Fahrgast an Bord → abgeschlossen
+- Kein Verwaltungsbereich, keine Tabellen — nur große klare Arbeitsbuttons
 
 ### Spätere Zielgruppen (Phase 3)
 
@@ -97,7 +98,8 @@ Erhalten ihre Tagesaufträge digital:
 | **Dashboard** | KPI-Kacheln, Fahrtliste, rollenbasierte Ansichten | ✅ Sprint 2+7 |
 | **Assistant Core** | Sprachassistenz-Fundament, barrierefreies Onboarding | ✅ Sprint 8 |
 | **Geführter Mobilitätscheck** | Offline-fähiger sprachgeführter Profil-Assistent | ✅ Sprint 9 |
-| **Fahrer-Schichtstart** | Tagesaufträge, Statuswechsel, Schichtverwaltung | Sprint 10 |
+| **Verbesserter Sprachassistent** | TTS-Flow, STT-Bestätigung, Tastaturkürzel | ✅ Sprint 9B |
+| **Fahrer-Schichtstart & Fahrzeugwahl** | Schicht beginnen/pausieren/beenden, Standard- + Kennzeichen-Fahrzeugwahl, Auftragsstruktur | ✅ Sprint 10 |
 | **Fahrtstatus / Fahrer-App** | Statusereignisse, RideStatusEvent-Protokoll | Sprint 11 |
 | **Live-Status & Standortfreigabe** | Fahrtstatus + Standort teilen, Link-Freigabe, Widerruf | Sprint 12 |
 | **KI-Berater** | Online-ChatGPT-Integration (Backend-only) | Sprint 13 |

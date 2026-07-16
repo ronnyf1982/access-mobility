@@ -89,13 +89,33 @@ Geführter Mobilitätscheck als offline-fähiges Dialogfundament implementiert.
 
 Referenz: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`, `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md`
 
-## Sprint 10 — Fahrer-Schichtstart & Fahrzeugwahl
+## Sprint 9B — Verbesserter Sprachassistent: TTS-Flow, STT-Bestätigung, Tastaturkürzel ✅
 
-Fahrer sieht Tagesaufträge, startet Schicht, wählt Fahrzeug.
+Erweiterte Sprachinteraktion für den geführten Mobilitätscheck.
 
-- Backend: Schichtstart-/Abschluss-Endpoints, Fahrzeugwahl per Kennzeichen, Statuswechsel
-- Frontend: Fahrer-Dashboard, Auftragsliste, Statuswechsel (unterwegs → angekommen → an Bord → abgeschlossen)
-- Sprachassistenz: „Ich starte meine Schicht, Kennzeichen M-AM-1234" → Fahrzeug suchen + bestätigen
+- **TTS-Flow:** Frage vorlesen → nachfragen, ob Optionen vorgelesen werden sollen → nur auf Anfrage vorlesen
+- **STT (optional):** Button-gesteuert, nie dauerhaft — `window.SpeechRecognition` / `webkitSpeechRecognition`
+- **STT-Bestätigungsdialog:** Erkannte Antwort anzeigen + Bestätigung vor Übernahme
+- **Tastaturkürzel:** J/N/W/S/R/H/ArrowLeft/Escape mit sichtbarer Hinweisleiste
+- **Neues Utility:** `frontend/src/utils/speech.ts` (TTS + STT + `normalizeSpokenInput`)
+- Browser-Test ✅, TypeScript-Check ✅, Vite-Build ✅
+
+## Sprint 10 — Fahrer-Schichtstart & Fahrzeugwahl ✅
+
+Fahrer startet Schicht, wählt Fahrzeug (Standardfahrzeug oder per Kennzeichen), pausiert/beendet Schicht, sieht Tagesaufträge.
+
+- **Backend:** `DriverShift`-Modell mit `ShiftStatus` (active/paused/ended), Alembic-Migration `driver_shifts`-Tabelle
+- **`DriverProfile.default_vehicle_id`:** Nullable FK, Seed setzt AM-BUS-1 für driver@access.test; neuer Endpoint `GET /driver/me` liefert Profil + Standardfahrzeug + aktive Schicht in einem Call
+- **API-Endpoints:** `GET /driver/me`, `GET /driver/shift/current`, `POST /shift/start|end|pause|resume`, `GET /vehicles/search`, `GET /assignments`
+- **Schicht starten:** vehicle_id > license_plate > default_vehicle_id des Profils (Fallback)
+- **Fahrer-App (mobile-first):** Große Statuskarte oben, große Aktions-Buttons (56 px+), kein Verwaltungs-UI
+  - Szenario A: Standardfahrzeug direkt sichtbar → ein Button „Schicht mit diesem Fahrzeug beginnen"
+  - Szenario B: Kennzeichen-Suche → Fahrzeug wählen → „Schicht beginnen"
+  - Schicht beenden: immer mit Bestätigungs-Modal (Bottom-Sheet)
+- **Auftragsstruktur:** „Linienfahrten" (Platzhalter, Sprint 15) + „Spontane Fahrten" (TransportRequests)
+- **Sidebar:** Fahrer-Nav mit „Meine Schicht" + „Meine Aufträge" → `/driver`
+- **Tests:** 20/20 passed, TypeScript-Check ✅, Vite-Build ✅
+- **Noch nicht:** STT/Spracheingabe, Live-GPS, Push-Notifications, Statusbuttons zugestiegen/ausgestiegen
 
 ## Sprint 11 — Fahrtstatus & Benachrichtigungseinstellungen
 

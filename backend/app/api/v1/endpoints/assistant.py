@@ -22,7 +22,21 @@ _PASSENGER_CAPABILITIES = [
 ]
 
 _DRIVER_CAPABILITIES = [
-    {"id": "shift_start", "label": "Schicht beginnen", "available": False, "planned_sprint": 10},
+    {
+        "id": "driver_shift",
+        "label": "Schicht & Fahrzeugwahl",
+        "available": True,
+        "route": "/driver",
+        "actions": ["start_shift", "select_vehicle_by_license_plate", "end_shift", "pause_shift", "resume_shift"],
+        "confirmation_required": ["start_shift", "end_shift", "vehicle_selection"],
+        "voice_mode": "voice_later",
+        "offline_supported": False,
+        "safety_notes": [
+            "Keine Statusänderung ohne Bestätigung",
+            "Fahrer-App darf nicht ablenken",
+            "Spracheingabe kommt in späterem Sprint",
+        ],
+    },
     {"id": "ride_status_update", "label": "Fahrstatus melden", "available": False, "planned_sprint": 11},
 ]
 

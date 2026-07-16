@@ -168,6 +168,45 @@ Spezifische Anforderungen:
 
 ---
 
+## 5a. Fahreroberfläche — Besondere Regeln (Sprint 10)
+
+Die Fahrer-App ist keine Verwaltungsansicht. Sie ist eine **Arbeitsansicht für unterwegs**.
+
+### Grundprinzipien
+
+- **Große Buttons** (min. 56 px Höhe) — Bedienung auch mit Handschuhen oder in Bewegung.
+- **Eine klare Statuskarte oben** — Fahrer sieht sofort: Schicht aktiv / Pause / keine Schicht.
+- **Möglichst wenig Text** — Buttons beschreiben die Aktion, kein erklärender Fließtext.
+- **Mobile-first** — max. 680 px Breite, vertikaler Layout-Fluss, keine Seitenleiste nötig.
+- **Keine Admin-Elemente** — kein Matching, keine Dispositionsansicht, keine Tabellen.
+
+### Fahrzeugwahl
+
+- **Szenario A — Standardfahrzeug:** Wird direkt auf der Startseite angezeigt. Ein Button: „Schicht mit diesem Fahrzeug beginnen". Keine Suche nötig.
+- **Szenario B — Kein Standardfahrzeug:** Kennzeichen-Suchfeld sichtbar. Fahrer gibt Kennzeichen ein, wählt aus Trefferliste. Erst dann erscheint „Schicht beginnen".
+- Link „Anderes Fahrzeug wählen" bei Szenario A — öffnet Kennzeichen-Suche optional.
+
+### Schichtflow
+
+| Aktion | Button | Zeitstempel |
+|---|---|---|
+| Schicht beginnen | Primär (gelb, groß) | `started_at` |
+| Pause beginnen | Sekundär | `break_started_at` |
+| Pause beenden | Primär (gelb, groß) | `break_started_at = null`, `status = active` |
+| Schicht beenden | Danger (rot, groß) + Bestätigung | `ended_at` |
+
+- „Schicht beenden" immer mit Modal-Bestätigung: Sheet von unten, klar lesbar.
+- Kein Bestätigungsdialog für Pause — nur für End.
+
+### Auftragsstruktur
+
+- **Zwei klar getrennte Abschnitte:** „Linienfahrten" und „Spontane Fahrten".
+- Linienfahrten: noch Platzhalter (kommt Sprint 15). Text: „Wird in einem späteren Sprint ergänzt."
+- Spontane Fahrten: zugewiesene TransportRequests, Uhrzeit links, Route rechts, Fahrgastname.
+- Noch keine Statusbuttons „zugestiegen / ausgestiegen" — diese kommen Sprint 11.
+
+---
+
 ## 6. Disponentenoberfläche — Besondere Regeln
 
 Disponenten brauchen keine vereinfachte, sondern eine **effiziente, übersichtliche** Oberfläche.

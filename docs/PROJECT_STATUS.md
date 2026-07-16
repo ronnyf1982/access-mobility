@@ -230,10 +230,68 @@
 
 ---
 
-## Nächster Sprint: Sprint 6 — Fahrtenbuchung
+## Sprint 10 — Fahrer-Schichtstart & Fahrzeugwahl ✅
 
-- Modell: `Ride` mit Statusmaschine (`pending → confirmed → in_progress → completed → cancelled`)
-- Buchungs-Wizard für Fahrgäste
-- Disponenten-Zuteilung (Fahrzeug + Fahrer)
-- Fahrtenliste (reale Daten statt Dummy)
-- Fahrer-View: zugewiesene Aufträge + Statuswechsel
+**Abgeschlossen:** 2026-07-16
+
+### Backend
+
+- [x] `backend/app/models/driver_shift.py` — `ShiftStatus` (active/paused/ended), `DriverShift`
+- [x] `backend/app/models/driver_profile.py` — `default_vehicle_id` (nullable FK → vehicles.id)
+- [x] `backend/app/db/base.py` — Import `driver_shift` für Alembic
+- [x] `backend/alembic/versions/20260716_0008-c4d5e6f7a8b9_sprint10_driver_shift.py` — Tabelle `driver_shifts`
+- [x] `backend/alembic/versions/20260716_0009-d5e6f7a8b9c0_sprint10b_driver_profile_default_vehicle.py` — Spalte `default_vehicle_id`
+- [x] `backend/app/schemas/driver_shift.py` — `VehicleBrief`, `DriverShiftPublic`, `DriverShiftWithVehicle`, `DriverShiftStartRequest`, `DriverProfileBrief`, `DriverDashboardContext`
+- [x] `backend/app/crud/crud_driver_shift.py` — `start_shift`, `end_shift`, `pause_shift`, `resume_shift`, `find_vehicles_by_license_plate`
+- [x] `backend/app/api/v1/endpoints/driver.py` — 7 Endpoints: `GET /me`, `GET /shift/current`, `POST /shift/start|end|pause|resume`, `GET /vehicles/search`, `GET /assignments`; Schichtstart: vehicle_id > license_plate > default_vehicle_id
+- [x] `backend/app/api/v1/router.py` — `driver.router` registriert
+- [x] `backend/app/api/v1/endpoints/assistant.py` — `_DRIVER_CAPABILITIES` auf Sprint 10 aktualisiert
+- [x] `backend/app/scripts/seed_demo_data.py` — Onboarding-Backfill (Staff-Rollen) + default_vehicle_id für driver@access.test (AM-BUS-1)
+
+### Tests
+
+- [x] `backend/tests/api/test_sprint10_driver_shift.py` — **20/20 passed**: /driver/me, default vehicle, start mit Standardfahrzeug, duplicate block, pause/resume, end active/paused, assignments
+
+### Frontend
+
+- [x] `frontend/src/types/index.ts` — `ShiftStatus`, `SHIFT_STATUS_LABELS`, `VehicleBrief`, `DriverShift`, `DriverShiftWithVehicle`, `DriverShiftStartRequest`, `DriverProfileBrief`, `DriverDashboardContext`
+- [x] `frontend/src/api/driver.ts` — `getDriverContext`, `startShift`, `endShift`, `pauseShift`, `resumeShift`, `searchVehicles`, `getDriverAssignments`
+- [x] `frontend/src/views/DriverDashboardView.vue` — **Mobile-first, große Buttons (56 px+)**:
+  - Große Statuskarte (idle / active / paused) mit Status-Icon
+  - Szenario A: Standardfahrzeug direkt + ein Button „Schicht mit diesem Fahrzeug beginnen"
+  - Szenario B: Kennzeichen-Suche → Fahrzeugliste → „Schicht beginnen"
+  - Aktive Schicht: „Pause beginnen" / „Pause beenden" / „Schicht beenden" (mit Bestätigungs-Modal)
+  - Abschnitt „Linienfahrten" (Platzhalter) + „Spontane Fahrten" (aus assignments)
+- [x] `frontend/src/router/index.ts` — Route `/driver`
+- [x] `frontend/src/components/layout/AppSidebar.vue` — Fahrer-Nav: „Meine Schicht" + „Meine Aufträge"
+
+### Docs
+
+- [x] `docs/ROADMAP.md`, `docs/SOURCE_OF_TRUTH.md`, `docs/PROJECT_STATUS.md`
+- [x] `docs/Product/APP_CONCEPT.md` — Fahrer-Abschnitt aktualisiert
+- [x] `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md` — implementierter Stand Sprint 10
+- [x] `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md` — Abschnitt 5a Fahreroberfläche ergänzt
+
+### Checks
+
+- [x] TypeScript-Check (`vue-tsc --noEmit`): keine Fehler
+- [x] Vite-Build: ✅ erfolgreich
+- [x] Backend pytest: 20/20 passed
+
+### Bewusst nicht umgesetzt (Sprint 10)
+
+- Kein STT / Spracheingabe für Fahrer-App (voice_mode: "voice_later")
+- Kein Live-GPS
+- Keine Push-Notifications
+- Keine Lohnabrechnung / Zeiterfassung
+- Kein Tourenoptimierer / Linienverkehr-Datenmodell
+- Keine Statusbuttons „Fahrgast zugestiegen / ausgestiegen" (Sprint 11)
+- Kein OpenAI/KI
+
+---
+
+## Nächster Sprint: Sprint 11 — Fahrtstatus & Fahrer-App
+
+- Backend: `RideStatusEvent`-Protokoll (driver_on_way / arrived_pickup / passenger_picked_up / arrived_destination / completed / delayed)
+- Frontend: Statuswechsel-Buttons in Fahrer-App
+- Benachrichtigungseinstellungen im Fahrgastprofil (Vertrauenspersonen, Kanäle, Ereignisse)

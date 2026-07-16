@@ -70,6 +70,32 @@ npm run dev
 
 Frontend läuft auf http://localhost:5180
 
+### Schnellstart (Windows — alle Dienste auf einmal)
+
+```powershell
+scripts\windows\Start-AccessMobility-Dev.ps1
+```
+
+Das Skript startet Docker-DB, führt Migrationen und Seed aus, startet das Backend
+in einem neuen Fenster und gibt den Frontend-Startbefehl aus.
+
+---
+
+## Umgebungsprüfung vor Browser-Test (Pflicht)
+
+Vor jedem Login-Test oder Browser-Test müssen alle Dienste laufen:
+
+| # | Dienst | Port | Prüfung |
+|---|--------|------|---------|
+| 1 | PostgreSQL (Docker) | 5440 | `docker compose -f docker-compose.dev.yml ps` |
+| 2 | Alembic-Migrationen | — | `cd backend && alembic current` → zeigt `(head)` |
+| 3 | Seed-Daten | — | `cd backend && python -m app.scripts.seed_demo_data` |
+| 4 | Backend (FastAPI) | 8010 | `curl http://localhost:8010/api/v1/health` → 200 OK |
+| 5 | Frontend (Vue/Vite) | 5180 | http://localhost:5180 erreichbar |
+
+**Alle 5 Punkte müssen ✅ sein.** uvicorn läuft nicht automatisch — es muss
+nach jedem Systemneustart neu gestartet werden.
+
 ---
 
 ## Demo-Zugangsdaten (alle mit Passwort `Access123!`)

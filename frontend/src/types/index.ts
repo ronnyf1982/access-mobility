@@ -419,6 +419,64 @@ export interface MatchingOptionsResponse {
   drivers: MatchingDriverOption[]
 }
 
+// ─── Fahrerschicht ───────────────────────────────────────────────────────────
+
+export type ShiftStatus = 'active' | 'paused' | 'ended'
+
+export const SHIFT_STATUS_LABELS: Record<ShiftStatus, string> = {
+  active: 'Aktiv',
+  paused: 'Pause',
+  ended: 'Beendet',
+}
+
+export interface VehicleBrief {
+  id: string
+  name: string
+  license_plate: string
+  vehicle_type: VehicleTypeName
+  wheelchair_space_count: number
+  has_ramp: boolean
+  has_lift: boolean
+  supports_stretcher_transport: boolean
+  supports_electric_wheelchair: boolean
+}
+
+export interface DriverShift {
+  id: string
+  driver_profile_id: string
+  vehicle_id: string
+  status: ShiftStatus
+  started_at: string
+  ended_at: string | null
+  break_started_at: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DriverShiftWithVehicle {
+  shift: DriverShift
+  vehicle: VehicleBrief
+}
+
+export interface DriverShiftStartRequest {
+  vehicle_id?: string | null
+  license_plate?: string | null
+  notes?: string | null
+}
+
+export interface DriverProfileBrief {
+  id: string
+  display_name: string
+  default_vehicle_id: string | null
+}
+
+export interface DriverDashboardContext {
+  profile: DriverProfileBrief
+  default_vehicle: VehicleBrief | null
+  active_shift: DriverShiftWithVehicle | null
+}
+
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 
 export interface TransportType {
