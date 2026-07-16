@@ -125,7 +125,7 @@ function isActive(to: string): boolean {
 
 async function handleLogout() {
   await authStore.logout()
-  await router.push('/')
+  await router.push('/login')
 }
 </script>
 

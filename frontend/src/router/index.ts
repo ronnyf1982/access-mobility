@@ -1,7 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import PublicLayout from '@/layouts/PublicLayout.vue'
 import PortalLayout from '@/layouts/PortalLayout.vue'
 import LandingView from '@/views/LandingView.vue'
+import LoginView from '@/views/auth/LoginView.vue'
+import GateView from '@/views/GateView.vue'
 import OnboardingView from '@/views/OnboardingView.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
 import MobilityProfileView from '@/views/MobilityProfileView.vue'
@@ -14,22 +17,34 @@ import PlatformAdminUsersView from '@/views/platform_admin/PlatformAdminUsersVie
 import ImpressumView from '@/views/ImpressumView.vue'
 import DatenschutzView from '@/views/DatenschutzView.vue'
 
+const ONBOARDING_BYPASS = new Set(['/onboarding', '/login', '/'])
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    // Coming-Soon / Login — standalone, keine PublicLayout
+    // ── Schutzseite (immer erreichbar) ──────────────────
     {
-      path: '/',
-      name: 'home',
-      component: LandingView,
+      path: '/gate',
+      name: 'gate',
+      component: GateView,
       meta: { public: true },
     },
-    // /login → Weiterleitung zu /
+    // ── Öffentliche Website (nur nach Gate-Freigabe) ────
+    {
+      path: '/',
+      component: PublicLayout,
+      children: [
+        { path: '', name: 'home', component: LandingView },
+      ],
+    },
+    // ── App-Login (unverändert) ──────────────────────────
     {
       path: '/login',
-      redirect: '/',
+      name: 'login',
+      component: LoginView,
+      meta: { public: true },
     },
-    // Rechtliches
+    // ── Rechtliches ─────────────────────────────────────
     {
       path: '/impressum',
       name: 'impressum',
@@ -42,14 +57,14 @@ const router = createRouter({
       component: DatenschutzView,
       meta: { public: true },
     },
-    // Onboarding
+    // ── Onboarding ──────────────────────────────────────
     {
       path: '/onboarding',
       name: 'onboarding',
       component: OnboardingView,
       meta: { requiresAuth: true },
     },
-    // Portal (eingeloggt)
+    // ── Portal (eingeloggt) ─────────────────────────────
     {
       path: '/dashboard',
       component: PortalLayout,
@@ -64,7 +79,7 @@ const router = createRouter({
         { path: '/driver', name: 'driver-dashboard', component: DriverDashboardView },
       ],
     },
-    // Platform-Admin
+    // ── Platform-Admin ──────────────────────────────────
     {
       path: '/platform-admin',
       component: PortalLayout,
@@ -77,23 +92,36 @@ const router = createRouter({
         },
       ],
     },
-    { path: '/:pathMatch(.*)*', redirect: '/' },
+    // ── Catch-all ───────────────────────────────────────
+    { path: '/:pathMatch(.*)*', redirect: '/login' },
   ],
 })
 
-const ONBOARDING_BYPASS = new Set(['/onboarding', '/', '/impressum', '/datenschutz'])
-
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
+  const unlocked = !!sessionStorage.getItem('fahrando_unlocked')
 
-  // Öffentliche Routen
-  if (to.meta.public) {
+  // Gate-Guard: / und seine Kinder erfordern Gate-Freigabe
+  if (to.path === '/' && !unlocked) {
+    return next('/gate')
+  }
+
+  // Bereits freigeschaltet: /gate → /
+  if (to.path === '/gate' && unlocked) {
+    return next('/')
+  }
+
+  // Öffentliche Routen (inkl. /gate, /login, /impressum, /datenschutz)
+  if (to.meta.public || to.path === '/') {
+    if (to.path === '/login' && auth.isAuthenticated) {
+      return next('/dashboard')
+    }
     return next()
   }
 
-  // Auth-Prüfung
+  // Auth-Prüfung für geschützte Routen
   if (!auth.isAuthenticated) {
-    return next('/')
+    return next('/login')
   }
 
   if (!auth.user) {
@@ -101,7 +129,7 @@ router.beforeEach(async (to, _from, next) => {
       await auth.loadUser()
     } catch {
       auth.logout()
-      return next('/')
+      return next('/login')
     }
   }
 
@@ -110,7 +138,7 @@ router.beforeEach(async (to, _from, next) => {
     return next('/onboarding')
   }
 
-  // Platform-Admin-Guard: 403 → /dashboard
+  // Platform-Admin-Guard
   if (to.meta.requiresPlatformAdmin && auth.user?.role !== 'platform_admin') {
     return next('/dashboard')
   }
