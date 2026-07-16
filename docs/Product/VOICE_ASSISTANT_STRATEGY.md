@@ -215,6 +215,86 @@ Assistent: "Möchten Sie noch etwas hinzufügen, zum Beispiel Rampe oder Hebebü
 
 ---
 
+## 8. Sprachassistenz Fahrer-App (Sprint 11)
+
+Die Fahrer-App erhält ebenfalls Sprachunterstützung — insbesondere für Aktionen,
+bei denen der Fahrer die Hände nicht frei hat.
+
+**Mögliche Sprachbefehle:**
+
+| Befehl | Aktion |
+|---|---|
+| „Schicht beginnen" | `shift_start` setzen |
+| „Ich fahre Fahrzeug B-AM 1234" | Fahrzeug über Kennzeichen suchen + zuweisen |
+| „Pause beginnen" | `break_start` setzen |
+| „Pause beenden" | `break_end` setzen |
+| „Fahrgast ist zugestiegen" | `passenger_picked_up` → Bestätigung → Status setzen |
+| „Fahrgast ist ausgestiegen" | `arrived_destination` → Bestätigung → Status setzen |
+| „Nächster Halt" | Nächste Adresse vorlesen |
+| „Problem melden" | Problem-Dialog öffnen, Beschreibung diktieren |
+| „Schicht beenden" | `shift_end` → Bestätigung |
+
+**Sicherheitsregel:**
+Alle statusrelevanten Aktionen (Fahrgast zugestiegen, ausgestiegen, Schicht beenden)
+erfordern eine Bestätigung — auch wenn der Befehl klar war.
+
+Beispiel:
+> Fahrer: „Fahrgast ist zugestiegen."
+> Assistent: „Soll ich Max Mustermann als zugestiegen markieren?"
+> Fahrer: „Ja."
+
+**Offline-Fähigkeit:**
+Grundlegende Statusbefehle müssen ohne Internetverbindung lokal queuen können
+und beim nächsten Online-Gang synchronisiert werden.
+
+---
+
+## 8a. Standortfreigabe per Sprache
+
+Sobald Live-Standortteilung implementiert ist (Sprint 12), muss der Assistent folgende
+Sprachbefehle unterstützen:
+
+**Freigabe starten:**
+- „Teile meine Fahrt mit meiner Vertrauensperson."
+- „Schick meiner Tochter meinen Standort."
+- „Sag meiner Einrichtung, wann ich ankomme."
+
+**Freigabe beenden:**
+- „Beende die Standortfreigabe."
+- „Stoppe das Teilen."
+
+**Status abfragen:**
+- „Wer kann meinen Standort sehen?"
+- „Ist mein Standort geteilt?"
+
+**Pflichtanforderung Bestätigungsdialog:**
+
+Der Assistent muss vor jeder Aktivierung einer Standortfreigabe immer alle vier Punkte
+explizit nennen und bestätigen lassen:
+
+1. **Empfänger:** Wer erhält die Freigabe?
+2. **Art der Freigabe:** Fahrtstatus und/oder Standort?
+3. **Dauer:** Nur für diese Fahrt / bis Fahrtende.
+4. **Bestätigung:** Explicit Ja/Nein abwarten.
+
+**Beispieldialog:**
+
+> Nutzer: „Teile meine Fahrt mit meiner Tochter."
+>
+> Assistent: „Ich teile den Fahrtstatus und Standort für diese Fahrt mit Anna Müller.
+> Der Link ist nur bis Fahrtende gültig. Soll ich das jetzt tun?"
+>
+> Nutzer: „Ja."
+>
+> Assistent: „Anna Müller wurde informiert. Sie kann jetzt Ihren Fahrtstatus sehen.
+> Um die Freigabe zu beenden, sagen Sie: Standortfreigabe beenden."
+
+**Wichtig:** Der Assistent darf ohne explizites „Ja" des Nutzers **niemals** eine
+Standortfreigabe aktivieren. Das gilt auch, wenn der Nutzer seinen Wunsch sehr klar
+formuliert hat.
+
+---
+
 ## 9. Sprachassistent-Prüfung bei neuen Modulen
 
 Bei jedem neuen Modul (Fahrgast-Bereich):

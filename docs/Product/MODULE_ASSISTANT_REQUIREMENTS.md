@@ -247,7 +247,68 @@ Für jedes Modul wird hier festgehalten:
 
 ---
 
-### Tourenplanung (Sprint 15)
+### Benachrichtigungseinstellungen (Sprint 11)
+
+| Aspekt | Details |
+|---|---|
+| **Zweck** | Fahrgast konfiguriert, wer bei welchen Fahrt-Ereignissen wie benachrichtigt wird |
+| **Strukturierte Felder** | recipient_name, phone, email, is_app_user, can_see_live_location, can_receive_status_updates, notify_channels (Array), events (Array) |
+| **Visuelle Bedienung** | Liste der Vertrauenspersonen + Toggles für Kanäle und Ereignisse |
+| **Sprach-/Assistenzmodus** | „Meine Tochter soll benachrichtigt werden, wenn ich zugestiegen bin." → Konfiguration vorschlagen + bestätigen |
+| **Offline möglich?** | ⚠️ (Einstellungen lokal änderbar, Sync erfordert Backend) |
+| **Online-KI sinnvoll?** | ⚠️ (KI kann Empfänger aus Kontext erkennen) |
+| **Bestätigung erforderlich?** | ✅ vor Speichern der Benachrichtigungseinstellungen |
+| **Datenschutz** | Keine med. Details in Nachrichten; Standortdaten nur wenn explizit erlaubt |
+
+---
+
+### Fahrtstatus / Fahrer-App-Grundlage (Sprint 11)
+
+| Aspekt | Details |
+|---|---|
+| **Zweck** | Fahrtstatus-Ereignisse erfassen — Grundlage für Live-Tracking und Benachrichtigungen |
+| **Strukturierte Felder** | RideStatusEvent: ride_id, status (Enum), timestamp, location (nullable), source |
+| **Visuelle Bedienung** | Statuswechsel-Buttons in Fahrer-App (unterwegs / angekommen / an Bord / abgeliefert) |
+| **Sprach-/Assistenzmodus** | „Fahrgast ist zugestiegen" → Bestätigung → Status setzen |
+| **Offline möglich?** | ⚠️ (lokal queuen, bei Online-Gang senden) |
+| **Online-KI sinnvoll?** | ❌ |
+| **Bestätigung erforderlich?** | ✅ bei sicherheitskritischen Statuswechseln |
+| **Datenschutz** | Standort bei Statuswechsel nur speichern wenn erlaubt |
+
+---
+
+### Live-Standort & Statusfreigabe (Sprint 12)
+
+| Aspekt | Details |
+|---|---|
+| **Zweck** | Fahrgast teilt Fahrtstatus und optional Standort mit berechtigten Personen |
+| **Strukturierte Felder** | LiveLocationShare: share_token, expires_at, revoked_at, share_channel (Enum), recipient_user_id / _name / _phone / _email |
+| **Visuelle Bedienung** | Button „Fahrt teilen" (Fahrgast), Empfänger-Anzeige, Button „Teilen beenden", Vertrauenspersonen-Ansicht (Status + ETA) |
+| **Sprach-/Assistenzmodus** | „Teile meine Fahrt mit meiner Tochter." → Bestätigungsdialog (Empfänger + Art + Dauer) → erst dann teilen |
+| **Offline möglich?** | ❌ (Freigabe erfordert Backend) |
+| **Online-KI sinnvoll?** | ⚠️ (KI kann Empfänger aus Kontext erkennen: „meine Tochter" → Anna Müller aus TrustedRelationship) |
+| **Bestätigung erforderlich?** | ✅ immer — vor Aktivierung UND vor Widerruf |
+| **Datenschutz** | Standortdaten sensibel; zeitliche Begrenzung; Widerruf; Protokollierung (wer/wann/mit wem/bis wann); keine medizinischen Details an Empfänger |
+
+**Assistenten-Sprachbefehle:**
+
+| Befehl | Aktion |
+|---|---|
+| „Teile meine Fahrt mit meiner Vertrauensperson." | Freigabe-Dialog starten |
+| „Schick meiner Tochter meinen Standort." | Empfänger identifizieren + Dialog |
+| „Sag meiner Einrichtung, wann ich ankomme." | Statusmeldung-Freigabe starten |
+| „Beende die Standortfreigabe." | Widerruf mit Bestätigung |
+| „Wer kann meinen Standort sehen?" | Aktive Freigaben vorlesen |
+
+**Pflichtinhalt des Bestätigungsdialogs:**
+1. Empfänger nennen
+2. Art der Freigabe (Status / Standort)
+3. Gültigkeitsdauer nennen
+4. Explizites Ja abwarten
+
+---
+
+### Tourenplanung (Sprint 17)
 
 | Aspekt | Details |
 |---|---|

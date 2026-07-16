@@ -97,11 +97,13 @@ Erhalten ihre Tagesaufträge digital:
 | **Dashboard** | KPI-Kacheln, Fahrtliste, rollenbasierte Ansichten | ✅ Sprint 2+7 |
 | **Assistant Core** | Sprachassistenz-Fundament, barrierefreies Onboarding | **Sprint 8** |
 | **Fahrer-Schichtstart** | Tagesaufträge, Statuswechsel, Schichtverwaltung | Sprint 10 |
-| **KI-Berater** | Online-ChatGPT-Integration (Backend-only) | Sprint 11 |
-| **Fahrt per Sprache** | Vollständige Sprachführung durch Buchungsprozess | Sprint 12 |
-| **Regelmäßige Touren** | Serienfahrten, RRULE | Sprint 13 |
-| **Ausfallmanagement** | Ersatzfahrzeug, Fahrerausfall | Sprint 14 |
-| **Tourenoptimierung** | KI-gestützte Routenoptimierung | Sprint 15 |
+| **Fahrtstatus / Fahrer-App** | Statusereignisse, RideStatusEvent-Protokoll | Sprint 11 |
+| **Live-Status & Standortfreigabe** | Fahrtstatus + Standort teilen, Link-Freigabe, Widerruf | Sprint 12 |
+| **KI-Berater** | Online-ChatGPT-Integration (Backend-only) | Sprint 13 |
+| **Fahrt per Sprache** | Vollständige Sprachführung durch Buchungsprozess | Sprint 14 |
+| **Regelmäßige Touren** | Serienfahrten, RRULE | Sprint 15 |
+| **Ausfallmanagement** | Ersatzfahrzeug, Fahrerausfall | Sprint 16 |
+| **Tourenoptimierung** | KI-gestützte Routenoptimierung | Sprint 17 |
 
 ---
 
@@ -176,7 +178,37 @@ Vollständiges Konzept: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`
 - Sprint 9: Sprachgeführter Mobilitätscheck offline
 - Sprint 12: Vollständige Fahrtbuchung per Sprache
 
-### 7. Tourenplanung (Sprint 13–15)
+### 6a. Live-Status & Standortfreigabe (Sprint 12)
+
+Während einer aktiven Fahrt kann der Fahrgast seinen Fahrtstatus und optional seinen Standort
+mit berechtigten Personen teilen.
+
+**Wer teilt:**
+- Fahrgast selbst (per Button in der App)
+- Sprachbefehl: „Teile meine Fahrt mit meiner Vertrauensperson."
+
+**Mit wem:**
+- Vertrauenspersonen / Angehörige (in-App oder per Link)
+- Betreuer / Einrichtung
+- Abhol- oder Zielkontakt
+
+**Freigabewege:**
+1. **In-App-Freigabe** — Empfänger sieht Fahrtstatus + ETA in der App
+2. **Link-Freigabe** — zeitlich begrenzter Token-Link, ohne Account nutzbar
+3. **System-Teilen** — native Browser-Share-API (WhatsApp, SMS, E-Mail)
+4. **Statusnachrichten** — „Fahrt gestartet", „Fahrzeug unterwegs", „Fahrgast abgeholt", „Angekommen"
+
+**Datenschutz-Grundregeln:**
+- Teilen ist immer freiwillig, Zustimmung erforderlich.
+- Freigabe ist zeitlich begrenzt (maximal bis Fahrtende).
+- Freigabe ist jederzeit widerrufbar.
+- Vertrauenspersonen sehen Fahrtstatus und ETA — keine medizinischen Details.
+- Sprachassistent aktiviert Freigabe nur nach ausdrücklicher Bestätigung.
+
+Vollständige Datenschutzregeln: `docs/SOURCE_OF_TRUTH.md` (Abschnitt 7.9)
+Datenmodell-Konzept: `docs/DECISIONS.md`
+
+### 7. Tourenplanung (Sprint 15–17)
 
 - Serienfahrten (RRULE)
 - Ausfallmanagement

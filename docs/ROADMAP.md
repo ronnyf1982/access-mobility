@@ -82,7 +82,43 @@ Fahrer sieht Tagesaufträge, startet Schicht, wählt Fahrzeug.
 - Frontend: Fahrer-Dashboard, Auftragsliste, Statuswechsel (unterwegs → angekommen → an Bord → abgeschlossen)
 - Sprachassistenz: „Ich starte meine Schicht, Kennzeichen M-AM-1234" → Fahrzeug suchen + bestätigen
 
-## Sprint 11 — Online-KI-Berater / ChatGPT-Anbindung
+## Sprint 11 — Fahrtstatus & Benachrichtigungseinstellungen
+
+Fahrtstatus-Grundlage und Benachrichtigungseinstellungen — Voraussetzung für Live-Tracking.
+
+**Fahrtstatus / Fahrer-App:**
+- Backend: `RideStatusEvent`-Protokoll mit Statuswechseln + Zeitstempel + optionalem Standort
+- Statuswerte: `driver_on_way` / `arrived_pickup` / `passenger_picked_up` / `arrived_destination` / `completed` / `delayed`
+- Frontend: Fahrer-App-Ansicht mit Statuswechsel-Buttons (7 Aktionen)
+- Schichtverwaltung: Schicht beginnen / Pause / Schicht beenden (Zeitprotokoll als spätere Arbeitszeitgrundlage)
+- Sprachassistenz: „Fahrgast ist zugestiegen" → Bestätigung → Status setzen
+- Linienverkehr-Ansicht: optimierte Fahrgastliste (Adresse, geplante Zeit, Mobilitätsbedarf, Hinweise)
+
+**Benachrichtigungseinstellungen (Fahrgastprofil):**
+- Vertrauenspersonen mit Kontaktdaten + Berechtigungen (Standort ja/nein, Status ja/nein)
+- Kanäle: In-App, SMS, E-Mail, System-Teilen
+- Ereignisse konfigurierbar: Fahrzeug unterwegs, Fahrgast zugestiegen, angekommen, Verspätung, Stornierung
+
+**Begründung:** Live-Tracking (Sprint 12) benötigt Statusereignisse und Berechtigungsstruktur.
+Beides muss vor Live-Sharing vorhanden sein.
+
+## Sprint 12 — Live-Status & Standortfreigabe
+
+Fahrtstatus und optionaler Live-Standort mit berechtigten Personen teilen.
+
+- Backend: `LiveLocationShare`-Modell (share_token, expires_at, revoked_at, share_channel, recipient_*)
+- Datenschutz: Zustimmung, zeitliche Begrenzung auf Fahrtende, Widerruf jederzeit, Protokollierung
+- In-App-Freigabe: Vertrauenspersonen sehen Fahrtstatus + ETA in der App
+- Link-Freigabe: zeitlich begrenzter Token-Link (kein Account erforderlich)
+- System-Teilen: native Browser-Share-API (WhatsApp, SMS, E-Mail)
+- Statusnachrichten: „Fahrt gestartet", „Fahrzeug unterwegs", „Fahrgast abgeholt", „Angekommen", „Verspätung"
+- Sprachassistent: Freigabe nur nach ausdrücklicher Bestätigung
+- Frontend (Fahrgast): Button „Fahrt teilen", Button „Teilen beenden", Anzeige aktiver Freigaben
+- Frontend (Vertrauensperson): Fahrtstatus-Ansicht, ETA, keine med. Details
+
+Referenz: `docs/SOURCE_OF_TRUTH.md` (Abschnitt 7.9), `docs/DECISIONS.md`
+
+## Sprint 13 — Online-KI-Berater / ChatGPT-Anbindung
 
 Assistierter Anfrageprozess: KI schlägt Transporttyp und Anforderungen vor.
 
@@ -92,7 +128,7 @@ Assistierter Anfrageprozess: KI schlägt Transporttyp und Anforderungen vor.
 - Fahrgast kann Vorschlag übernehmen oder manuell anpassen
 - Datenschutz: Zustimmung erforderlich, keine unnötige Weitergabe med. Daten
 
-## Sprint 12 — Fahrt per Sprache anfragen
+## Sprint 14 — Fahrt per Sprache anfragen
 
 Vollständige Fahrtbuchung per Sprachführung.
 
@@ -101,15 +137,16 @@ Vollständige Fahrtbuchung per Sprachführung.
 - Datum/Zeit-Erkennung aus natürlicher Sprache
 - Bestätigungs-Dialog vor Absenden (kein automatisches Absenden)
 
-## Sprint 13 — Regelmäßige Touren / Serienfahrten
+## Sprint 15 — Regelmäßige Touren / Linienverkehr
 
 Fahrgäste können regelmäßige Fahrten (täglich, wöchentlich) als Serienfahrten anlegen.
+Disponenten können Touren mit festen Reihenfolgen und Zeitplänen konfigurieren (Linienverkehr).
 
-## Sprint 14 — Ausfallmanagement
+## Sprint 16 — Ausfallmanagement
 
 Ersatzfahrzeug, Fahrerausfall, Stornierung mit Neuzuweisung.
 
-## Sprint 15 — Tourenoptimierung
+## Sprint 17 — Tourenoptimierung
 
 KI-gestützte Routenoptimierung für Disponenten.
 
@@ -120,6 +157,6 @@ KI-gestützte Routenoptimierung für Disponenten.
 - Echte Krankenkassenabrechnung
 - Zahlungsintegration
 - Externe APIs (GTFS, Maps)
-- Live-GPS / Tracking
+- Echtzeit-GPS-Tracking (Live-Positionsdaten vom Fahrzeug) — geplant Sprint 12+
 - Native Mobile App
 - Push-Notifications

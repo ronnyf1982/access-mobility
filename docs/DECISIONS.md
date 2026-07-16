@@ -472,6 +472,134 @@ PostgreSQL-Enum-Einschränkung: `ALTER TYPE ... ADD VALUE` kann in einer Transak
 
 ---
 
+## Fahrer-App, Linienverkehr & Benachrichtigungen — Konzept (Sprint 10–11, noch nicht implementiert)
+
+### Fahrer-App
+
+**Schichtverwaltung:**
+- Fahrer startet Schicht (Zeitstempel) — wählt Fahrzeug primär über Kennzeichen.
+- Fahrer kann Pause starten/beenden mit Zeitprotokoll.
+- Fahrer beendet Schicht (Zeitstempel).
+- Alle Schicht- und Pausenzeiten werden protokolliert — mögliche spätere Grundlage für Arbeitszeiterfassung. Keine Lohnabrechnung im MVP.
+
+**Auftragstypen:**
+1. **Linienverkehr** — optimierte Fahrgastliste für einen Tour-Block:
+   - Nächster Fahrgast (Name, Adresse, geplante Einstiegszeit, geplante Ausstiegszeit)
+   - Mobilitätsbedarf des Fahrgastes (aus Snapshot)
+   - Hinweise zur Abholung
+   - Reihenfolge vom Disponenten vorgeschlagen, manuell anpassbar
+2. **Spontanfahrten** — einzelne zugewiesene Transporte außerhalb der Tour
+
+**Statusbuttons (7 Aktionen):**
+
+| Button | Aktion |
+|---|---|
+| Schicht beginnen | `shift_start` + Timestamp |
+| Pause beginnen | `break_start` + Timestamp |
+| Pause beenden | `break_end` + Timestamp |
+| Fahrgast zugestiegen | `passenger_picked_up` + Timestamp + optionaler Standort |
+| Fahrgast ausgestiegen | `arrived_destination` + Timestamp + optionaler Standort |
+| Fahrt abgeschlossen | `completed` + Timestamp |
+| Problem melden | `problem_reported` + Freitext + Timestamp |
+| Schicht beenden | `shift_end` + Timestamp |
+
+**Sprachassistenz Fahrer-App:**
+Befehle: „Schicht beginnen" / „Ich fahre Fahrzeug B-AM 1234" / „Pause beginnen" / „Fahrgast ist zugestiegen" / „Fahrgast ist ausgestiegen" / „Nächster Halt" / „Problem melden" / „Schicht beenden"
+Sicherheitskritische Aktionen erfordern Bestätigung: „Soll ich Max Mustermann als zugestiegen markieren?"
+
+### Benachrichtigungseinstellungen
+
+Konfigurierbar im Fahrgastprofil je Vertrauensperson:
+
+| Feld | Typ | Beschreibung |
+|---|---|---|
+| `recipient_name` | Text | Name der Vertrauensperson |
+| `recipient_phone` | Text | Telefonnummer |
+| `recipient_email` | Text | E-Mail-Adresse |
+| `is_app_user` | Bool | Nutzt ebenfalls die App |
+| `can_see_live_location` | Bool | Darf Standort empfangen |
+| `can_receive_status_updates` | Bool | Darf Statusmeldungen empfangen |
+| `notify_channels` | Array[Enum] | app / sms / email / system_share |
+
+**Konfigurierbare Ereignisse:**
+- `shift_started` — Fahrer hat Schicht begonnen
+- `driver_on_way` — Fahrzeug ist unterwegs
+- `arriving_soon` — Fahrer ist bald da (ETA ≤ X Minuten)
+- `passenger_picked_up` — Fahrgast zugestiegen
+- `passenger_dropped_off` — Fahrgast ausgestiegen / angekommen
+- `delayed` — Verspätung erkannt
+- `trip_cancelled` — Fahrt storniert
+- `problem_reported` — Problem gemeldet
+
+**Datenschutz:**
+- Benachrichtigungen nur wenn Fahrgast dies explizit konfiguriert hat.
+- Medizinische Details werden niemals in Nachrichten übertragen.
+- Vertrauenspersonen sehen nur ihren berechtigten Fahrgast — keine anderen Fahrgäste, keine Touren.
+- Standortdaten in Nachrichten nur wenn `can_see_live_location = true`.
+
+---
+
+## Live-Standortteilung — Konzeptentscheidung (Sprint 12, noch nicht implementiert)
+
+Verbindliche Grundentscheidung, die vor der Implementierung festgeschrieben wurde.
+
+### Konzept
+
+Während einer aktiven Fahrt kann der Fahrgast oder eine berechtigte Vertrauensperson
+den Fahrtstatus und optional den Live-Standort mit ausgewählten Personen teilen.
+
+### Freigabewege
+
+| Weg | Beschreibung |
+|---|---|
+| In-App-Freigabe | Empfänger sieht Status + ETA in der App (erfordert Account) |
+| Link-Freigabe | Zeitlich begrenzter Token-Link, ohne Account nutzbar |
+| System-Teilen | Native Browser-Share-API (WhatsApp, SMS, E-Mail) |
+| Statusnachrichten | Textuelle Ereignismeldungen je Fahrtstatusänderung |
+
+### Datenmodell-Konzept (spätere Implementierung)
+
+**`LiveLocationShare`** — eine Freigabe pro Fahrt und Empfänger:
+- `id`, `transport_request_id` / `ride_id`, `passenger_user_id`, `shared_by_user_id`
+- `recipient_user_id` (nullable — für App-Nutzer), `recipient_name`, `recipient_phone`, `recipient_email`
+- `share_token` (eindeutiger Token für Link-Freigabe)
+- `share_channel`: `app` / `sms` / `whatsapp` / `email` / `system_share`
+- `status`: `active` / `expired` / `revoked`
+- `expires_at` (spätestens bei Fahrtende), `revoked_at`, `created_at`
+
+**`RideStatusEvent`** — Statusereignisse einer Fahrt:
+- `id`, `ride_id`, `status`, `recorded_at`, `lat` (nullable), `lng` (nullable), `accuracy` (nullable)
+- `source`: `driver_app` / `passenger_app` / `vehicle_device`
+
+**Geplante Statuswerte:**
+`requested` → `assigned` → `driver_on_way` → `arrived_pickup` → `passenger_picked_up` → `arrived_destination` → `completed`
+Sonderstatus: `delayed`, `cancelled`
+
+### Datenschutz-Grundregeln (verbindlich)
+
+- Standortdaten sind sensible Daten — besonderer Schutzbedarf.
+- Teilen ist immer freiwillig und erfordert explizite Zustimmung des Fahrgastes.
+- Freigabe ist zeitlich begrenzt (automatischer Ablauf spätestens bei Fahrtende).
+- Freigabe ist jederzeit widerrufbar (`revoked`-Status + `revoked_at`-Timestamp).
+- Tracking-Links sind nicht dauerhaft gültig und nicht öffentlich auffindbar.
+- Keine Standortweitergabe außerhalb aktiver Fahrten oder ohne klare Berechtigung.
+- Vertrauenspersonen sehen Fahrtstatus und ETA — keine medizinischen Details.
+- Protokollierung: `shared_by`, `recipient`, `created_at`, `expires_at`, `revoked_at`.
+- Sprachassistent aktiviert Freigabe nur nach ausdrücklicher Bestätigung (Empfänger + Art + Dauer).
+
+### Abhängigkeit
+
+Live-Standortteilung (Sprint 12) setzt Sprint 11 (Fahrtstatus / Fahrer-App-Grundlage) voraus.
+Ohne belastbare `RideStatusEvent`-Daten können Statusmeldungen nicht zuverlässig weitergegeben werden.
+
+### Hinweis zur aktuellen Datenmodellstruktur
+
+In Sprint 7 gibt es noch keine eigene `Ride`-Tabelle — `TransportRequest` trägt Zuweisungsfelder.
+Für Live-Tracking wird in Sprint 11 entschieden, ob ein separates `Ride`-Modell eingeführt wird
+oder ob `RideStatusEvent` direkt an `TransportRequest` hängt.
+
+---
+
 ## Bewusst nicht umgesetzt (MVP-Scope)
 
 - Auth/JWT: Sprint 3 ✅

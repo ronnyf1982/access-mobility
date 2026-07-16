@@ -91,11 +91,13 @@ Korrekter Wert: `VITE_API_BASE_URL=http://localhost:8010/api/v1`
 | Sprint 8 | Assistant Core: Sprachassistenz-Fundament, barrierefreies Erst-Onboarding |
 | Sprint 9 | Sprachgeführter Mobilitätscheck (offline-fähig) |
 | Sprint 10 | Fahrer-Schichtstart & Fahrzeugwahl |
-| Sprint 11 | Online-KI-Berater / ChatGPT-Anbindung (Backend-only) |
-| Sprint 12 | Fahrt per Sprache anfragen |
-| Sprint 13 | Regelmäßige Touren / Serienfahrten |
-| Sprint 14 | Ausfallmanagement |
-| Sprint 15 | Tourenoptimierung |
+| Sprint 11 | Fahrtstatus, Fahrer-App, Benachrichtigungseinstellungen |
+| Sprint 12 | Live-Status & Standortfreigabe |
+| Sprint 13 | Online-KI-Berater / ChatGPT-Anbindung (Backend-only) |
+| Sprint 14 | Fahrt per Sprache anfragen |
+| Sprint 15 | Regelmäßige Touren / Serienfahrten |
+| Sprint 16 | Ausfallmanagement |
+| Sprint 17 | Tourenoptimierung |
 
 ---
 
@@ -182,6 +184,62 @@ nie das aktuelle Profil.
 `DELETE` setzt `is_active=False`. Permanentes Löschen nur über separaten Endpoint.
 Fahrzeuge und Fahrer sind historisch relevante Entitäten.
 
+### 7.9 Fahrer-App, Linienverkehr & Benachrichtigungen — Konzept (Sprint 10–12)
+
+**Fahrer-App (Sprint 10–11):**
+- Fahrer startet Schicht — wählt Fahrzeug primär über Kennzeichen.
+- Fahrer kann Pause starten/beenden und Schicht beenden.
+- Schicht- und Pausenzeiten werden als Ereignisse protokolliert — mögliche spätere Grundlage für Arbeitszeiterfassung. Keine Lohnabrechnung im MVP.
+- Fahrer sieht **Tagesaufträge**: Einzelfahrten (spontan) und Tourenblöcke (Linienverkehr).
+- Linienverkehr: optimierte Fahrgastliste mit Reihenfolge, Adresse, Einstiegszeit, Mobilitätsbedarf, Abholhinweisen. Reihenfolge ist vom Disponenten anpassbar.
+- Spontanfahrten: Einzelne zugewiesene Fahrten außerhalb des Linienverkehrs.
+
+**Statusbuttons Fahrer (Sprint 11):**
+`Schicht beginnen` · `Pause beginnen` · `Pause beenden` · `Fahrgast zugestiegen` · `Fahrgast ausgestiegen` · `Fahrt abgeschlossen` · `Problem melden` · `Schicht beenden`
+
+Sicherheitskritische Aktionen (z. B. „Fahrgast zugestiegen") erfordern im Sprachassistenten immer Bestätigung.
+
+**Benachrichtigungseinstellungen im Fahrgastprofil (Sprint 12):**
+- Fahrgast legt Vertrauenspersonen mit Kontaktdaten fest.
+- Je Vertrauensperson: Telefon, E-Mail, ob App-Nutzer.
+- Berechtigungen: darf Live-Standort sehen (ja/nein), darf Statusmeldungen erhalten (ja/nein).
+- Kanäle: In-App, SMS/Nachrichten, E-Mail, System-Teilen (WhatsApp).
+- Benachrichtigungsereignisse: Schicht begonnen, Fahrzeug unterwegs, bald da, Fahrgast zugestiegen, Fahrgast angekommen, Verspätung, Fahrt storniert, Problem gemeldet.
+- Datenschutz: Benachrichtigungen nur, wenn Fahrgast dies explizit aktiviert hat. Medizinische Details nie in Nachrichten. Vertrauenspersonen sehen nur ihren Fahrgast.
+
+Details: `docs/DECISIONS.md` (Abschnitt Fahrer-App & Benachrichtigungen)
+
+### 7.10 Live-Standortteilung — Konzeptentscheidung (Sprint 12)
+
+Live-Standortteilung ist als geplantes Feature (Sprint 12) vorgesehen.
+**Noch nicht implementiert — nur konzeptionell festgeschrieben.**
+
+Mögliche Empfänger einer Standortfreigabe:
+- Vertrauenspersonen / Angehörige (in-App oder per Link)
+- Betreuer / Einrichtungen
+- Abhol- oder Zielkontakt
+
+Freigabewege:
+1. **In-App-Freigabe** — Empfänger nutzt ebenfalls die App
+2. **Link-Freigabe** — zeitlich begrenzter Tracking-Link, auch ohne App nutzbar
+3. **System-Teilen** — native Teilen-Funktion (WhatsApp, SMS, E-Mail)
+4. **Statusnachrichten** — textuelle Fahrtmeldungen (gestartet / unterwegs / angekommen)
+
+**Verbindliche Datenschutz-Grundregeln (vor Implementierung festgeschrieben):**
+- Standortdaten sind sensible Daten — besonderer Schutzbedarf.
+- Teilen ist immer freiwillig und erfordert explizite Zustimmung des Fahrgastes.
+- Freigabe ist zeitlich begrenzt (maximal bis Fahrtende).
+- Freigabe ist jederzeit widerrufbar.
+- Tracking-Links sind nicht dauerhaft gültig — automatischer Ablauf bei Fahrtende.
+- Keine öffentliche Auffindbarkeit des Tracking-Links.
+- Keine Standortweitergabe außerhalb aktiver Fahrten oder ohne klare Berechtigung.
+- Protokollierung: wer hat wann mit wem geteilt, wann beendet.
+- **Sprachassistent darf Standortfreigabe nur nach ausdrücklicher Bestätigung aktivieren.**
+
+Datenmodell-Konzept: `docs/DECISIONS.md` (Abschnitt Live-Standortteilung)
+Sprachassistenz: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`
+UI-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
+
 ---
 
 ## 8. Design-Grundsätze (verbindlich)
@@ -229,6 +287,7 @@ Matching-Details: `docs/Product/ACCESSIBILITY_AND_MATCHING_REQUIREMENTS.md`
 - KI/ChatGPT: API-Key nur im Backend. Kein direkter KI-Aufruf aus dem Frontend.
 - Zustimmung vor jeder KI-Verarbeitung sensibler Daten erforderlich.
 - Token-Ablauf: 60 Minuten (`ACCESS_TOKEN_EXPIRE_MINUTES`).
+- **Standortdaten** (Live-Tracking): sensible Daten, explizite Zustimmung erforderlich, zeitlich begrenzte Freigabe, jederzeit widerrufbar, Protokollierung (wer / wann / mit wem / bis wann).
 
 ---
 
@@ -264,7 +323,8 @@ Claude muss vor und während jedem Sprint folgende Prüfliste durchgehen:
 | 3 | Betrifft der Sprint Matching? | Fahrzeuge, Fahrer, Qualifikationen, Snapshots berücksichtigen |
 | 4 | Betrifft der Sprint die UI? | Accessibility, Screenreader, Tastatur, Fokus, einfache Sprache prüfen |
 | 5 | Betrifft der Sprint sensible Daten? | Datenschutz, keine unnötige KI-Weitergabe, Bestätigungspflicht |
-| 6 | Betrifft der Sprint Fahrt-Absenden oder Zuweisung? | Assistent handelt erst nach expliziter Bestätigung |
+| 5a | Betrifft der Sprint Standortdaten? | Zustimmung, zeitliche Begrenzung, Widerruf, Protokollierung sicherstellen |
+| 6 | Betrifft der Sprint Fahrt-Absenden, Zuweisung oder Standortfreigabe? | Assistent handelt erst nach expliziter Bestätigung |
 | 7 | Wird ein neues Modul gebaut? | Eintrag in `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md` anlegen |
 | 8 | Wird Code geändert? | TypeScript-Check + Browser-Test danach |
 | 9 | Ist der Sprint fertig? | Git-Status prüfen — kein Commit ohne Freigabe |

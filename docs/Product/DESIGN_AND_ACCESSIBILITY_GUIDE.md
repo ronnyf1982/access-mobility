@@ -185,6 +185,35 @@ Disponenten brauchen keine vereinfachte, sondern eine **effiziente, übersichtli
 
 ---
 
+## 7a. Live-Standortteilung — UI-Grundsätze
+
+### Fahrgast-Ansicht
+
+- **Prominenter Button** „Fahrt teilen" — sichtbar während aktiver Fahrt, groß, gelber Primär-Button.
+- **Klarer Hinweis**, mit wem aktuell geteilt wird (Name der Empfänger sichtbar).
+- **Button „Teilen beenden"** immer sichtbar wenn aktive Freigabe besteht — Widerruf mit einem Tap.
+- **Keine versteckten Freigaben:** Aktive Freigaben sind immer explizit in der Oberfläche sichtbar.
+- **Bestätigungsdialog** vor jeder Freigabe: Empfänger + Art + Dauer vor Aktivierung anzeigen.
+
+### Vertrauenspersonen-Ansicht (Empfänger)
+
+- **Einfache, reduzierte Ansicht:** Kein volles Portal — nur für diese Fahrt relevante Daten.
+- **Fahrtstatus** (z. B. „Fahrzeug unterwegs", „Fahrgast abgeholt", „Angekommen").
+- **Geschätzte Ankunftszeit (ETA)** sofern verfügbar.
+- **Karte** als späteres Feature mit ungefährem Fahrzeugstandort.
+- **Kein Zugriff auf medizinische Details** des Fahrgastes.
+- **Kein Zugriff auf andere Fahrten** oder andere Fahrgäste.
+- **Ablauf-Hinweis:** „Dieser Link ist bis Fahrtende gültig."
+
+### Barrierefreiheit / Screenreader
+
+- Button „Fahrt teilen": `aria-label="Fahrtstatus mit Vertrauensperson teilen"`
+- Aktiver Freigabestatus: `aria-live`-Region — automatische Ansage wenn Freigabe aktiv/beendet.
+- Alle Bestätigungsdialoge vollständig per Tastatur und Screenreader bedienbar.
+- Sprachbefehl-Freigabe per Assistent: vollständiger Bestätigungsdialog vorlesbar.
+
+---
+
 ## 8. Zugänglichkeit als Qualitätskriterium
 
 Vor jedem Sprint mit UI-Änderungen prüfen:
