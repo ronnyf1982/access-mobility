@@ -1,5 +1,9 @@
 # Architekturentscheidungen
 
+**Verbindliche Grundsätze und Sprint-Regeln:** `docs/SOURCE_OF_TRUTH.md`
+Dieses Dokument enthält die technischen Begründungen für getroffene Entscheidungen.
+Bei inhaltlichen Widersprüchen gilt SOURCE_OF_TRUTH.md.
+
 ## Stack
 
 **Frontend:** Vue 3 + TypeScript + Vite + PrimeVue 4 + Pinia + Vue Router + Axios

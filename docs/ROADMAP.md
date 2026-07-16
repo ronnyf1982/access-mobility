@@ -52,27 +52,66 @@ Anfrage-Snapshot → Matching-Bewertung → manuelle Zuweisung durch Disponenten
 - Seed: 2 neue Demo-Anfragen (gute Übereinstimmung + Warnungsfall), Fahrer-Qualifikation aktualisiert
 - Tests: 26 Pytest-Tests (alle bestanden), TypeScript-Check ✅, Build ✅
 
-## Sprint 8 — Kontakt & Erreichbarkeit
-Vollständige Kontaktdaten für Fahrgäste und bessere Erreichbarkeit für Disponenten.
+## Sprint 8 — Assistant Core & barrierefreies Onboarding-Fundament
 
-- Telefon-Pflichtfeld oder Alternativtelefon im Benutzerkonto (`User.phone`, Pflicht vs. optional)
-- Alternativtelefon / Mobilnummer als zweites Feld
-- Abholkontakt (Ansprechperson vor Ort, kann vom Fahrgast abweichen)
-- Notfallkontakt direkt im Mobilitätsprofil besser sichtbar / einfacher befüllbar
-- Dispatcher-Ansicht: direkte Telefon-Shortcut-Links (tel:) in Listenansicht und Detailansicht
+Sprachassistenz-Fundament aufbauen und barrierefreies Erst-Onboarding implementieren.
 
-## Sprint 8 — Fahrtstart & Fahreransicht
-Fahrer sieht Tagesaufträge, startet Fahrt, markiert Abschluss.
+- Assistant-Core-Komponente (`VoiceAssistantPanel`): Aktivierungsbutton, TTS (Text-to-Speech), STT (Speech-to-Text), Dialogprotokoll
+- Frage beim ersten Start: „Möchten Sie die sprachgeführte Bedienung aktivieren?" (nicht stigmatisierend)
+- Offline-Fragenkatalog für Mobilitätsprofil (alle 11 Basisbedarfe per Sprache setzbar)
+- Fallback: strukturierte Buttons wenn kein Mikrofon verfügbar
+- ARIA-Verbesserungen: aria-live für Assistenten-Status, vollständige Screenreader-Tauglichkeit
+- Kontaktdaten-Verbesserung: Telefon, Abholkontakt, Notfallkontakt sichtbarer
 
-- Backend: Fahrtstart-/Abschluss-Endpoints, Zeitstempel
-- Frontend: Fahrer-Dashboard, Auftragsliste, Statuswechsel (unterwegs → abgeschlossen)
+Referenz: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`, `docs/Product/MODULE_ASSISTANT_REQUIREMENTS.md`
 
-## Sprint 9 — KI-Transportberater (Prototyp)
+## Sprint 9 — Sprachgeführter Mobilitätscheck (offline-fähig)
+
+Vollständiger sprachgeführter Durchlauf durch alle Mobilitätsprofil-Felder ohne Cloud-Abhängigkeit.
+
+- Alle 11 Basisbedarfe + 14 med. Detailfelder per Sprache setzbar
+- Lokale Regelauswertung: kontextsensitive Folgefragen (z. B. Rollstuhltyp nur wenn Rollstuhl = Ja)
+- Draft lokal speicherbar, Sync beim nächsten Online-Gang
+- Zusammenfassung vorlesen lassen vor Speichern
+
+## Sprint 10 — Fahrer-Schichtstart & Fahrzeugwahl
+
+Fahrer sieht Tagesaufträge, startet Schicht, wählt Fahrzeug.
+
+- Backend: Schichtstart-/Abschluss-Endpoints, Fahrzeugwahl per Kennzeichen, Statuswechsel
+- Frontend: Fahrer-Dashboard, Auftragsliste, Statuswechsel (unterwegs → angekommen → an Bord → abgeschlossen)
+- Sprachassistenz: „Ich starte meine Schicht, Kennzeichen M-AM-1234" → Fahrzeug suchen + bestätigen
+
+## Sprint 11 — Online-KI-Berater / ChatGPT-Anbindung
+
 Assistierter Anfrageprozess: KI schlägt Transporttyp und Anforderungen vor.
 
-- Integration Claude API (claude-sonnet-4-6 oder höher)
-- Kontext: Mobilitätsprofil + Fahrtdaten → Vorschlag-Text
+- Backend-Endpoint `/api/v1/assistant/interpret` (API-Key nur im Backend)
+- Integration Claude API (claude-sonnet-4-6 oder höher) oder ChatGPT
+- Kontext: Mobilitätsprofil + Fahrtdaten → Vorschlag-Text + strukturierte Feldvorschläge
 - Fahrgast kann Vorschlag übernehmen oder manuell anpassen
+- Datenschutz: Zustimmung erforderlich, keine unnötige Weitergabe med. Daten
+
+## Sprint 12 — Fahrt per Sprache anfragen
+
+Vollständige Fahrtbuchung per Sprachführung.
+
+- Sprachgeführter Buchungs-Wizard: Abholort → Ziel → Datum/Zeit → Anforderungen → Bestätigung
+- Adresseingabe per Sprache (Online-KI-Interpretation)
+- Datum/Zeit-Erkennung aus natürlicher Sprache
+- Bestätigungs-Dialog vor Absenden (kein automatisches Absenden)
+
+## Sprint 13 — Regelmäßige Touren / Serienfahrten
+
+Fahrgäste können regelmäßige Fahrten (täglich, wöchentlich) als Serienfahrten anlegen.
+
+## Sprint 14 — Ausfallmanagement
+
+Ersatzfahrzeug, Fahrerausfall, Stornierung mit Neuzuweisung.
+
+## Sprint 15 — Tourenoptimierung
+
+KI-gestützte Routenoptimierung für Disponenten.
 
 ---
 

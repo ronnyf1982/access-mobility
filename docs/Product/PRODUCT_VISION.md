@@ -1,5 +1,6 @@
 # Produktvision — access-mobility
 
+**Verbindliche Grundsätze und Sprint-Regeln:** `docs/SOURCE_OF_TRUTH.md`
 Grundlage: `MobilityCare_Berlin_Konzept_final.pdf` (abgelegt in `docs/Product/`).
 Das PDF ist Referenz und Vision — keine Bauanweisung für den MVP.
 
