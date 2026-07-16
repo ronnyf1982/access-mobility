@@ -316,6 +316,105 @@ Invoke-WebRequest -Uri "http://localhost:8010/api/v1/platform-admin/users" -Head
 
 ---
 
+## 22. Statisches Frontend — Webspace-Upload via FileZilla
+
+### Voraussetzungen
+
+- Frontend gebaut: `cd C:\access-mobility\frontend && npm run build`
+- Upload-Quelle: `C:\access-mobility\frontend\dist\`
+- `.htaccess` muss im dist-Ordner vorhanden sein (SPA-Fallback, Apache)
+- Kein Backend-Upload, kein Sourcecode, keine `.env`-Dateien, kein `node_modules`, keine Git-Dateien
+
+### Inhalt von dist (wird hochgeladen)
+
+| Datei/Ordner | Zweck |
+|---|---|
+| `index.html` | Einstiegspunkt der SPA |
+| `assets/` | JS, CSS, Fonts, Icons |
+| `Logo1.png` | Branding-Bild |
+| `.htaccess` | SPA-Fallback für Apache (Direktlinks) |
+
+### .htaccess (SPA-Fallback für Apache)
+
+Liegt in `frontend/dist/.htaccess` — muss hochgeladen werden, damit Direktlinks wie `/login`, `/impressum`, `/datenschutz` nicht 404 geben.
+
+```apache
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteRule ^index\.html$ - [L]
+
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule . /index.html [L]
+</IfModule>
+```
+
+### FileZilla — Schritt-für-Schritt
+
+**A) Verbinden**
+
+1. FileZilla öffnen → „Datei" → „Servermanager"
+2. Zugangsdaten aus united-domains Kundencenter eintragen:
+   - Host: aus Kundencenter (z. B. `ssh.hosting.example.com`)
+   - Protokoll: **SFTP** bevorzugt, sonst FTP-TLS
+   - Benutzer + Passwort: aus Kundencenter
+   - Port: 22 (SFTP) oder 21 (FTP)
+3. Verbinden
+
+**B) Zielordner finden**
+
+Typische Document-Root bei united-domains für `fahrando.com`:
+
+- `/www/`
+- `/htdocs/`
+- `/html/`
+- `/public_html/`
+- `/fahrando.com/`
+
+Im rechten FileZilla-Panel navigieren, bis `index.html` (falls schon vorhanden) sichtbar ist.
+
+**C) Backup des bestehenden Webspace-Inhalts**
+
+Vor dem Upload:
+1. Im rechten Panel (Server) bestehenden Inhalt markieren
+2. Lokal herunterladen in: `C:\access-mobility\backup-before-fahrando-upload\`
+3. Erst danach hochladen
+
+**D) Upload**
+
+1. Im linken Panel (lokal) navigieren zu: `C:\access-mobility\frontend\dist\`
+2. Alle Dateien und Ordner **innerhalb** von `dist` markieren (nicht den Ordner `dist` selbst)
+3. In die Document-Root des Servers ziehen / hochladen
+4. Sicherstellen:
+   - `index.html` liegt **direkt** in der Document-Root
+   - `assets/` liegt **neben** `index.html`
+   - `.htaccess` liegt **neben** `index.html`
+   - `Logo1.png` liegt **neben** `index.html`
+5. Upload abwarten — alle Dateien müssen übertragen sein
+
+**E) Nicht hochladen**
+
+- `src/`
+- `node_modules/`
+- `package.json` / `package-lock.json`
+- `.env` / `.env.local`
+- `.git/`
+- `backend/`
+- `docs/`
+- Logdateien
+
+### Wichtiger Hinweis: API / Gate-Login
+
+> Das statische Frontend funktioniert vollständig für Optik, Routing und Direktlinks.
+> **Gate-Login und alle App-Funktionen (Login, Dashboard) funktionieren online erst, wenn das Backend öffentlich erreichbar ist.**
+> Für Produktivbetrieb: `frontend/.env.production` mit öffentlicher Backend-URL anlegen, dann neu bauen.
+
+---
+
 ## 21. Bekannte Einschränkungen (Testumgebung)
 
 - Kein E-Mail-Versand (kein SMTP konfiguriert)
