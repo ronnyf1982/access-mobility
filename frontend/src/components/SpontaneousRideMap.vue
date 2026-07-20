@@ -3,32 +3,43 @@
     ref="mapEl"
     class="spontaneous-map"
     role="img"
-    aria-label="Karte mit verfügbaren Fahrzeugen in der Nähe"
+    :aria-label="ariaLabel"
   ></div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { SpontaneousRideMatchResult } from '@/types'
 
-// Fix Leaflet default icon paths for Vite builds (icons are imported as assets)
 import iconUrl from 'leaflet/dist/images/marker-icon.png'
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png'
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png'
 
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   pickupLat: number
   pickupLon: number
-  matches: SpontaneousRideMatchResult[]
-}>()
+  matches?: SpontaneousRideMatchResult[]
+  driverLat?: number | null
+  driverLon?: number | null
+}>(), {
+  matches: () => [],
+  driverLat: null,
+  driverLon: null,
+})
+
+const ariaLabel = computed(() =>
+  props.driverLat != null
+    ? 'Karte mit Fahrerposition und Abholpunkt'
+    : 'Karte mit verfügbaren Fahrzeugen in der Nähe',
+)
 
 const mapEl = ref<HTMLElement | null>(null)
 let map: L.Map | null = null
-let vehicleLayer: L.LayerGroup | null = null
+let dynamicLayer: L.LayerGroup | null = null
 
 function buildPassengerIcon(): L.DivIcon {
   return L.divIcon({
@@ -48,21 +59,46 @@ function buildVehicleIcon(): L.DivIcon {
   })
 }
 
-function renderVehicles(): void {
-  if (!map || !vehicleLayer) return
-  vehicleLayer.clearLayers()
-  for (const m of props.matches) {
-    const popup = L.popup({ closeButton: false }).setContent(
-      `<strong>${m.vehicle_label}</strong><br>` +
-        `Entfernung: ${m.distance_km.toFixed(1)} km<br>` +
-        `Ankunft ca. ${m.estimated_arrival_minutes} Min.<br>` +
-        (m.matched_capabilities.length
-          ? `Ausstattung: ${m.matched_capabilities.join(', ')}`
-          : ''),
+function buildDriverIcon(): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    html: '<div class="smap-marker smap-marker--driver" title="Fahrer">🚗</div>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+  })
+}
+
+function renderDynamic(): void {
+  if (!map || !dynamicLayer) return
+  dynamicLayer.clearLayers()
+
+  if (props.driverLat != null && props.driverLon != null) {
+    // Tracking-Modus: Fahrer-Marker
+    L.marker([props.driverLat, props.driverLon], { icon: buildDriverIcon() })
+      .bindTooltip('Fahrer', { permanent: true, direction: 'top' })
+      .addTo(dynamicLayer!)
+
+    // Karte auf beide Punkte anpassen
+    const bounds = L.latLngBounds(
+      [props.pickupLat, props.pickupLon],
+      [props.driverLat, props.driverLon],
     )
-    L.marker([m.vehicle_latitude, m.vehicle_longitude], { icon: buildVehicleIcon() })
-      .bindPopup(popup)
-      .addTo(vehicleLayer!)
+    map.fitBounds(bounds, { padding: [40, 40] })
+  } else {
+    // Such-Modus: Fahrzeug-Marker
+    for (const m of props.matches) {
+      const popup = L.popup({ closeButton: false }).setContent(
+        `<strong>${m.vehicle_label}</strong><br>` +
+          `Entfernung: ${m.distance_km.toFixed(1)} km<br>` +
+          `Ankunft ca. ${m.estimated_arrival_minutes} Min.<br>` +
+          (m.matched_capabilities.length
+            ? `Ausstattung: ${m.matched_capabilities.join(', ')}`
+            : ''),
+      )
+      L.marker([m.vehicle_latitude, m.vehicle_longitude], { icon: buildVehicleIcon() })
+        .bindPopup(popup)
+        .addTo(dynamicLayer!)
+    }
   }
 }
 
@@ -80,11 +116,11 @@ onMounted(() => {
     .bindTooltip('Mein Standort', { permanent: true, direction: 'top' })
     .addTo(map)
 
-  vehicleLayer = L.layerGroup().addTo(map)
-  renderVehicles()
+  dynamicLayer = L.layerGroup().addTo(map)
+  renderDynamic()
 })
 
-watch(() => props.matches, renderVehicles, { deep: true })
+watch(() => [props.matches, props.driverLat, props.driverLon], renderDynamic, { deep: true })
 
 onUnmounted(() => {
   map?.remove()

@@ -3,6 +3,7 @@ import type {
   SpontaneousRideBookResponse,
   SpontaneousRideMatchRequest,
   SpontaneousRideMatchResult,
+  SpontaneousRideTracking,
 } from '@/types'
 import apiClient from './client'
 
@@ -22,6 +23,13 @@ export async function bookSpontaneousRide(
   const { data } = await apiClient.post<SpontaneousRideBookResponse>(
     '/spontaneous-rides/book',
     payload,
+  )
+  return data
+}
+
+export async function getTrackingStatus(requestId: string): Promise<SpontaneousRideTracking> {
+  const { data } = await apiClient.get<SpontaneousRideTracking>(
+    `/spontaneous-rides/${requestId}/tracking`,
   )
   return data
 }

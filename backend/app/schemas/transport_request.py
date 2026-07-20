@@ -96,7 +96,10 @@ class TransportRequestListItem(BaseModel):
     passenger_user_id: uuid.UUID
     transport_type_id: Optional[str]
     status: TransportRequestStatus
+    is_spontaneous: bool = False
     pickup_address: Optional[str]
+    pickup_latitude: Optional[float] = None
+    pickup_longitude: Optional[float] = None
     destination_address: Optional[str]
     pickup_date: Optional[date]
     pickup_time: Optional[time]

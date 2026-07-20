@@ -323,6 +323,40 @@
               {{ req.passenger_display_name }}
             </div>
 
+            <!-- ── Standort teilen (nur spontane Fahrten) ────────────── -->
+            <div v-if="req.is_spontaneous" class="location-share-section">
+              <div class="location-privacy-notice">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                Standort wird nur während dieser Fahrt geteilt — kein Hintergrundtracking.
+              </div>
+              <div class="location-share-btns">
+                <button
+                  v-if="!locationSharingActive[req.id]"
+                  class="driver-btn driver-btn--location driver-btn--sm"
+                  @click="startLocationSharing(req.id)"
+                >
+                  <i class="pi pi-map-marker" aria-hidden="true"></i>
+                  Standort teilen
+                </button>
+                <button
+                  v-else
+                  class="driver-btn driver-btn--location-stop driver-btn--sm"
+                  @click="stopLocationSharing(req.id)"
+                >
+                  <i class="pi pi-times" aria-hidden="true"></i>
+                  Standort stoppen
+                </button>
+                <span v-if="locationSharingActive[req.id]" class="location-share-active-label">
+                  <i class="pi pi-circle-fill location-pulse" aria-hidden="true"></i>
+                  Aktiv — alle 15 Sek.
+                </span>
+              </div>
+              <div v-if="locationSharingError[req.id]" class="ride-status-error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ locationSharingError[req.id] }}
+              </div>
+            </div>
+
             <!-- ── Statusverlauf ────────────────────────────────────────── -->
             <div class="ride-status-section">
               <div v-if="statusEventsLoading[req.id]" class="ride-status-loading">
@@ -421,11 +455,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   getDriverContext, startShift, endShift, pauseShift, resumeShift, searchVehicles,
   getDriverAssignments, createRideStatusEvent, getRideStatusEvents,
   getSpontaneousRideRequests, acceptSpontaneousRideRequest, declineSpontaneousRideRequest,
+  updateDriverLocation,
 } from '@/api/driver'
 import type {
   DriverDashboardContext, RideStatusEvent, RideStatusEventType,
@@ -457,7 +492,59 @@ const spontaneousLoading = ref(false)
 const spontaneousActionLoading = ref<Record<string, boolean>>({})
 const spontaneousError = ref<Record<string, string | null>>({})
 
-// ── Ride Status Events ─────────────────────────────────────────────────────
+// ── Standort-Teilen (spontane Fahrten, Sprint 12D) ────────────────────────────
+
+const LOCATION_SHARE_INTERVAL_MS = 15_000
+const locationSharingActive = ref<Record<string, boolean>>({})
+const locationSharingError = ref<Record<string, string | null>>({})
+const locationIntervals: Record<string, ReturnType<typeof setInterval>> = {}
+
+async function sendLocationForRide(requestId: string, lat: number, lon: number): Promise<void> {
+  try {
+    await updateDriverLocation({ latitude: lat, longitude: lon, transport_request_id: requestId })
+  } catch {
+    // Nicht-kritisch für automatische Aktualisierungen — Fehler still ignorieren
+  }
+}
+
+function stopLocationSharing(requestId: string): void {
+  if (locationIntervals[requestId]) {
+    clearInterval(locationIntervals[requestId])
+    delete locationIntervals[requestId]
+  }
+  locationSharingActive.value[requestId] = false
+}
+
+function startLocationSharing(requestId: string): void {
+  if (!navigator.geolocation) {
+    locationSharingError.value[requestId] = 'Ihr Browser unterstützt keine Standortermittlung.'
+    return
+  }
+  locationSharingError.value[requestId] = null
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      locationSharingActive.value[requestId] = true
+      await sendLocationForRide(requestId, pos.coords.latitude, pos.coords.longitude)
+      locationIntervals[requestId] = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          (p) => sendLocationForRide(requestId, p.coords.latitude, p.coords.longitude),
+          () => {}, // stille Fehler bei Aktualisierungen
+        )
+      }, LOCATION_SHARE_INTERVAL_MS)
+    },
+    (err) => {
+      if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
+        locationSharingError.value[requestId] =
+          'Standortzugriff verweigert. Bitte Einstellung im Browser prüfen.'
+      } else {
+        locationSharingError.value[requestId] = 'Standort konnte nicht ermittelt werden.'
+      }
+    },
+    { timeout: 10000 },
+  )
+}
+
+// ── Ride Status Events ─────────────────────────────────────────────────────────
 
 const statusEventsMap = ref<Record<string, RideStatusEvent[]>>({})
 const statusEventsLoading = ref<Record<string, boolean>>({})
@@ -565,6 +652,12 @@ const statusIconPi = computed(() => {
 
 onMounted(async () => {
   await Promise.all([loadContext(), loadAssignments(), loadSpontaneousRequests()])
+})
+
+onUnmounted(() => {
+  for (const id of Object.keys(locationIntervals)) {
+    clearInterval(locationIntervals[id])
+  }
 })
 
 async function loadContext() {
@@ -1249,4 +1342,63 @@ function extractError(err: unknown): string {
 }
 
 .driver-btn--success:hover:not(:disabled) { opacity: 0.9; }
+
+/* ─── Standort-Teilen ────────────────────────────────────────────────── */
+.location-share-section {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+  border-top: 1px solid var(--am-border);
+  padding-top: var(--am-space-s);
+  margin-top: var(--am-space-s);
+}
+
+.location-privacy-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--am-text-secondary);
+}
+
+.location-share-btns {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  flex-wrap: wrap;
+}
+
+.driver-btn--location {
+  background: var(--am-accent);
+  color: var(--am-text-on-accent);
+  border-color: var(--am-accent);
+}
+
+.driver-btn--location:hover:not(:disabled) { opacity: 0.9; }
+
+.driver-btn--location-stop {
+  background: var(--am-bg-raised);
+  color: var(--am-text-secondary);
+  border-color: var(--am-border-strong);
+}
+
+.location-share-active-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--am-success, #22c55e);
+  font-weight: 600;
+}
+
+.location-pulse {
+  font-size: 0.55rem;
+  animation: location-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes location-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
 </style>

@@ -780,8 +780,60 @@ Fahrgast bucht ein passendes Fahrzeug aus der Match-Liste. Fahrer nimmt die Anfr
 
 ---
 
-## Nächster Sprint: Sprint 12D — Spontane Fahrten: Live-Zufahrt
+## Sprint 12D — Spontane Fahrten: Live-Tracking Fahrer → Fahrgast ✅
 
-- Fahrer-App zeigt eigene spontane Anfragen als prominente Alert-Karte
-- Echtes GPS-Update des Fahrers nach Annahme
-- Fahrgast sieht „Fahrer ist unterwegs" mit Live-Tracking
+**Abgeschlossen:** 2026-07-20
+
+### Neue Endpunkte
+
+- [x] `POST /api/v1/driver/location` — Fahrer sendet Schichtstandort (nur eigene aktive Schicht); optional `transport_request_id` für Fahrtvalidierung; 204 No Content; Datenschutz: kein Verlauf, nur letzter Punkt
+- [x] `GET /api/v1/spontaneous-rides/{id}/tracking` — Fahrgast/Fahrer liest Tracking-Status; Zugriffskontrolle nach Rolle; `can_track: bool`; keine sensiblen Daten in Response
+
+### Backend-Änderungen
+
+- [x] `backend/app/schemas/spontaneous_ride.py` — `DriverLocationUpdate`, `SpontaneousRideTracking`
+- [x] `backend/app/schemas/transport_request.py` — `TransportRequestListItem` + `is_spontaneous`, `pickup_latitude`, `pickup_longitude`
+- [x] `backend/app/api/v1/endpoints/driver.py` — `POST /driver/location`
+- [x] `backend/app/api/v1/endpoints/spontaneous_rides.py` — `GET /{id}/tracking` + `_TRACKING_STATUS_LABELS`
+- [x] Keine neue Alembic-Migration (`DriverShift.current_latitude/longitude` aus Sprint 12B)
+
+### Frontend-Änderungen
+
+- [x] `frontend/src/types/index.ts` — `DriverLocationUpdate`, `SpontaneousRideTracking`, `TransportRequestListItem` erweitert
+- [x] `frontend/src/api/driver.ts` — `updateDriverLocation()`
+- [x] `frontend/src/api/spontaneous.ts` — `getTrackingStatus()`
+- [x] `frontend/src/components/SpontaneousRideMap.vue` — Fahrer-Marker (🚗), `fitBounds`, optionale `driverLat/driverLon`-Props
+- [x] `frontend/src/views/SpontaneousRideView.vue` — Tracking-Polling (15 Sek.) in Phase `booked`; Status-Badge; Karte mit Fahrerpunkt; Textliste (Fahrer, ETA, Entfernung, Zeitstempel); Cleanup on unmount
+- [x] `frontend/src/views/DriverDashboardView.vue` — Standort-Teilen für spontane Fahrten; Geolocation nach Klick; Auto-Update 15 Sek.; Stopp-Button; Datenschutz-Hinweis; Cleanup on unmount
+
+### Tests
+
+- [x] `backend/tests/api/test_sprint12d_tracking.py` — 16 neue Tests (alle grün)
+- [x] `backend/tests/api/test_sprint12c_spontaneous_booking.py` — Fixture um Ride-Bereinigung erweitert (verhindert DB-State-Pollution zwischen Läufen)
+- [x] Gesamtsuite: **206 passed**, 0 failed
+- [x] TypeScript-Check: ✅
+- [x] `npm run build`: ✅ 404 Module, 793 kB, 5.10s
+- [x] Alembic: ✅ (keine neue Migration)
+
+### Datenschutzgrenzen (verbindlich)
+
+- Fahrer-Standort NUR in `DriverShift.current_latitude/longitude` — kein Verlauf, kein Logging
+- Tracking-Response: nur Anzeigename, kein Telefon, keine E-Mail, keine private Adresse
+- Fahrgast sieht nur eigene Fahrt; Fahrer sieht nur eigene zugewiesene Fahrt
+- Standortfreigabe nur nach explizitem Klick; kein Hintergrundtracking
+
+### Bewusst nicht umgesetzt (Sprint 12D)
+
+- Kein WebSocket (Polling 15 Sek. reicht für MVP)
+- Keine externe Routing-API
+- Kein dauerhafter Standortverlauf
+- Keine Zahlungs-/Abrechnungslogik
+- Vertrauensperson-Tracking (folgt Sprint 12E)
+
+---
+
+## Nächster Sprint: Sprint 12E — Vertrauenspersonen-View & Notification-Dispatch
+
+- Vertrauensperson kann Fahrt-Status live verfolgen
+- Echter Dispatch (E-Mail/Push-Grundlage)
+- Fahrtabschluss-Flow für spontane Fahrten

@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.crud import crud_driver_shift
-from app.models.driver_shift import ShiftStatus
+from app.models.driver_shift import DriverShift, ShiftStatus
 from app.models.transport_request import TransportRequest, TransportRequestStatus
 from app.models.user import User, UserRole
 from app.models.vehicle import Vehicle
@@ -18,7 +18,7 @@ from app.schemas.driver_shift import (
     DriverShiftWithVehicle,
     VehicleBrief,
 )
-from app.schemas.spontaneous_ride import SpontaneousRideRequestItem
+from app.schemas.spontaneous_ride import DriverLocationUpdate, SpontaneousRideRequestItem
 from app.schemas.transport_request import TransportRequestListItem
 
 router = APIRouter(prefix="/driver", tags=["driver"])
@@ -337,3 +337,48 @@ def decline_spontaneous_ride_request(
     db.commit()
     db.refresh(req)
     return _build_spontaneous_request_item(req, db)
+
+
+# ── Fahrerstandort aktualisieren (Sprint 12D) ─────────────────────────────────
+# Datenschutz: Standort wird NUR im DriverShift (current_latitude/longitude) gespeichert.
+# Kein Standortverlauf, kein Logging, nur letzter bekannter Punkt.
+# Fahrer teilt Standort ausschließlich während aktiver Schicht.
+
+@router.post("/location", status_code=status.HTTP_204_NO_CONTENT)
+def update_driver_location(
+    body: DriverLocationUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    _require_driver(current_user)
+    profile = _get_driver_profile_or_404(db, current_user.id)
+
+    shift: DriverShift | None = crud_driver_shift.get_active_shift(db, profile.id)
+    if not shift:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Keine aktive Schicht. Standort kann nur während aktiver Schicht geteilt werden.",
+        )
+
+    if body.transport_request_id:
+        tr = db.get(TransportRequest, body.transport_request_id)
+        if not tr:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fahrtanfrage nicht gefunden.")
+        if tr.assigned_driver_profile_id != profile.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Diese Fahrt ist Ihnen nicht zugewiesen.",
+            )
+        if tr.status not in (
+            TransportRequestStatus.assigned,
+            TransportRequestStatus.spontaneous_requested,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Standort kann nur für aktive Fahrten geteilt werden.",
+            )
+
+    shift.current_latitude = body.latitude
+    shift.current_longitude = body.longitude
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

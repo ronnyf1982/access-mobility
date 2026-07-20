@@ -62,6 +62,17 @@ def ensure_active_driver_shift():
             DriverShift.status.in_([ShiftStatus.active, ShiftStatus.paused]),
         ).all():
             s.status = ShiftStatus.ended
+
+        # Complete any blocking rides from previous test runs so AM-VAN-1 appears in matches
+        from app.models.transport_request import TransportRequest, TransportRequestStatus
+        for tr in db.query(TransportRequest).filter(
+            TransportRequest.assigned_vehicle_id == vehicle.id,
+            TransportRequest.status.in_([
+                TransportRequestStatus.assigned,
+                TransportRequestStatus.spontaneous_requested,
+            ]),
+        ).all():
+            tr.status = TransportRequestStatus.completed
         db.flush()
 
         shift = DriverShift(

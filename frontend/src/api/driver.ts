@@ -1,5 +1,6 @@
 import type {
   DriverDashboardContext,
+  DriverLocationUpdate,
   DriverShift,
   DriverShiftStartRequest,
   DriverShiftWithVehicle,
@@ -94,4 +95,8 @@ export async function declineSpontaneousRideRequest(
     `/driver/spontaneous-ride-requests/${requestId}/decline`,
   )
   return data
+}
+
+export async function updateDriverLocation(payload: DriverLocationUpdate): Promise<void> {
+  await apiClient.post('/driver/location', payload)
 }

@@ -288,17 +288,46 @@ Fahrgast bucht ein Fahrzeug aus dem Matching-Ergebnis, Fahrer nimmt an oder lehn
 - Keine Hintergrundüberwachung im MVP
 - Vertrauenspersonen nur gemäß Benachrichtigungseinstellungen (Sprint 11) informiert
 
-## Sprint 12D — Spontane Fahrten: Fahrerannahme und Live-Zufahrt
-_geplant_
+## Sprint 12D — Spontane Fahrten: Live-Tracking Fahrer → Fahrgast ✅
 
-Fahrer-App-Erweiterung für spontane Anfragen und sichtbare Zufahrt zum Fahrgast.
+Nach Fahrerannahme sieht der Fahrgast den Fahrer auf der Karte. Kein WebSocket, kein externe Routing-API — Polling-MVP.
 
-- Fahrer bekommt neue spontane Anfrage als Push-ähnliche Benachrichtigung
-- Fahrer kann Anfrage annehmen oder ablehnen (mit Timeout)
-- Bei Annahme: Fahrzeug/Fahrer wird reserviert/als belegt markiert
-- Fahrgast sieht Statuswechsel: „Fahrer hat angenommen" → „Fahrer ist unterwegs"
-- Grundlage für echtes Live-Tracking (GPS-Koordinaten des Fahrers → Folge-Sprint)
-- Fahrer-App bleibt mobile-first, große Buttons, kein Verwaltungsbereich
+**Backend:**
+- `POST /api/v1/driver/location` — Fahrer aktualisiert Schichtstandort (nur eigene aktive Schicht); optional mit `transport_request_id` für Fahrtvalidierung
+- `GET /api/v1/spontaneous-rides/{id}/tracking` — Fahrgast/Fahrer liest Tracking-Status; Zugriffskontrolle (eigene Fahrt), keine sensiblen Daten (kein Telefon, keine E-Mail)
+- `TransportRequestListItem` um `is_spontaneous`, `pickup_latitude`, `pickup_longitude` erweitert
+- Kein Schema-Change: `DriverShift.current_latitude/longitude` aus Sprint 12B bereits vorhanden
+- Keine neue Migration
+- Zustandslabels: `spontaneous_requested → „Warte auf Fahrerannahme"`, `assigned → „Fahrer angenommen — unterwegs zu Ihnen"`
+
+**Frontend:**
+- `SpontaneousRideView.vue`: Phase `booked` mit Live-Polling (alle 15 Sek.)
+  - Status-Badge (Waiting/Active/Error) mit Icon und Farbe
+  - Karte zeigt Fahrer-Marker + Abhol-Marker wenn `can_track=True`
+  - Textliste: Fahrer, Fahrzeug, Entfernung, ETA, letzter Standortzeitpunkt
+  - Bei Ablehnung: Fehlermeldung + „Erneut suchen"
+  - Polling stoppt bei Terminal-Status (declined/completed/cancelled) und bei unmount
+- `SpontaneousRideMap.vue`: neuer Fahrer-Marker (🚗), fitBounds für Fahrer + Abholpunkt
+- `DriverDashboardView.vue`: Standort-Teilen-Sektion für spontane Fahrten
+  - Button „Standort teilen" → Browser-Geolocation → sendet an Backend
+  - Auto-Update alle 15 Sek.
+  - „Standort stoppen"-Button, grüner Puls-Indikator
+  - Datenschutz-Hinweis: nur während dieser Fahrt, kein Hintergrundtracking
+
+**Datenschutzgrenzen (verbindlich):**
+- Standort wird NUR in `DriverShift.current_latitude/longitude` gespeichert — kein Verlauf, kein Log
+- Tracking-Response enthält nur Anzeigename, keine Kontaktdaten
+- Fahrgast sieht nur eigene Fahrt; Fahrer sieht nur eigene zugewiesene Fahrt
+- Standortfreigabe nur nach explizitem Klick (kein Auto-Start), Stopp jederzeit möglich
+
+**Tests:** 16 neue Tests (206 gesamt, alle grün) · TypeScript ✅ · Build ✅ (404 Module, 793 kB, 5.10s) · Alembic ✅ (keine Migration)
+
+**Bewusst zurückgestellt:**
+- Kein WebSocket (Polling reicht für MVP)
+- Keine externe Routing-API
+- Kein dauerhafter Standortverlauf
+- Keine Zahlungs-/Abrechnungslogik
+- Vertrauensperson-Tracking folgt Sprint 12E
 
 ## Sprint 12E — Vertrauenspersonen-View & echter Notification-Dispatch
 _geplant_

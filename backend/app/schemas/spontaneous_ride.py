@@ -51,3 +51,30 @@ class SpontaneousRideRequestItem(BaseModel):
     pickup_longitude: float
     status: TransportRequestStatus
     created_at: datetime
+
+
+# ── Sprint 12D: Fahrer-Standort & Live-Tracking ───────────────────────────────
+
+class DriverLocationUpdate(BaseModel):
+    latitude: Annotated[float, Field(ge=-90.0, le=90.0)]
+    longitude: Annotated[float, Field(ge=-180.0, le=180.0)]
+    transport_request_id: uuid.UUID | None = None
+
+
+class SpontaneousRideTracking(BaseModel):
+    transport_request_id: uuid.UUID
+    status: TransportRequestStatus
+    can_track: bool
+    # Nur wenn Fahrer angenommen hat und Position vorhanden — keine sensiblen Daten
+    driver_id: uuid.UUID | None = None
+    driver_display_name: str | None = None
+    vehicle_id: uuid.UUID | None = None
+    vehicle_label: str | None = None
+    driver_latitude: float | None = None
+    driver_longitude: float | None = None
+    pickup_latitude: float | None = None
+    pickup_longitude: float | None = None
+    distance_km: float | None = None
+    estimated_arrival_minutes: int | None = None
+    last_location_update: datetime | None = None
+    ride_status_label: str

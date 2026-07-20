@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.crud import crud_driver_shift
 from app.models.driver_profile import DriverProfile
 from app.models.driver_shift import DriverShift, ShiftStatus
 from app.models.transport_request import TransportRequest, TransportRequestStatus
@@ -16,6 +17,7 @@ from app.schemas.spontaneous_ride import (
     SpontaneousRideBookResponse,
     SpontaneousRideMatchRequest,
     SpontaneousRideMatchResult,
+    SpontaneousRideTracking,
 )
 from app.services import spontaneous_matching
 
@@ -179,4 +181,115 @@ def book_spontaneous_ride(
         driver_display_name=driver_profile.display_name,
         vehicle_label=vehicle.name,
         estimated_arrival_minutes=eta,
+    )
+
+
+# ── Sprint 12D: Live-Tracking ─────────────────────────────────────────────────
+
+_TRACKING_STATUS_LABELS: dict[TransportRequestStatus, str] = {
+    TransportRequestStatus.spontaneous_requested: "Warte auf Fahrerannahme",
+    TransportRequestStatus.assigned: "Fahrer angenommen — unterwegs zu Ihnen",
+    TransportRequestStatus.completed: "Fahrt abgeschlossen",
+    TransportRequestStatus.cancelled: "Fahrt storniert",
+    TransportRequestStatus.driver_declined: "Fahrer hat Anfrage abgelehnt",
+    TransportRequestStatus.draft: "Entwurf",
+    TransportRequestStatus.requested: "Anfrage gestellt",
+}
+
+
+@router.get("/{transport_request_id}/tracking", response_model=SpontaneousRideTracking)
+def get_spontaneous_ride_tracking(
+    transport_request_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SpontaneousRideTracking:
+    tr = db.get(TransportRequest, transport_request_id)
+    if not tr or not tr.is_spontaneous:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spontane Fahrtanfrage nicht gefunden.")
+
+    # Zugriffskontrolle: Fahrgast (eigene Fahrt), Fahrer (eigene Fahrt), Staff
+    if current_user.role == UserRole.passenger:
+        if tr.passenger_user_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
+    elif current_user.role == UserRole.driver:
+        profile = crud_driver_shift.get_driver_profile_for_user(db, current_user.id)
+        if not profile or tr.assigned_driver_profile_id != profile.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
+    elif current_user.role == UserRole.trusted_person:
+        rel = (
+            db.query(TrustedRelationship)
+            .filter(
+                TrustedRelationship.trusted_user_id == current_user.id,
+                TrustedRelationship.passenger_user_id == tr.passenger_user_id,
+                TrustedRelationship.can_view_rides.is_(True),
+                TrustedRelationship.status == TrustStatus.active,
+            )
+            .first()
+        )
+        if not rel:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
+    elif current_user.role not in _STAFF_ROLES:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
+
+    label = _TRACKING_STATUS_LABELS.get(tr.status, tr.status.value)
+
+    # Wenn Fahrt nicht angenommen: can_track=False, kein Fahrerstandort
+    if tr.status != TransportRequestStatus.assigned or not tr.assigned_driver_profile_id:
+        return SpontaneousRideTracking(
+            transport_request_id=tr.id,
+            status=tr.status,
+            can_track=False,
+            pickup_latitude=tr.pickup_latitude,
+            pickup_longitude=tr.pickup_longitude,
+            ride_status_label=label,
+        )
+
+    driver_profile: DriverProfile | None = db.get(DriverProfile, tr.assigned_driver_profile_id)
+    vehicle: Vehicle | None = db.get(Vehicle, tr.assigned_vehicle_id) if tr.assigned_vehicle_id else None
+
+    # Aktive Schicht des Fahrers für Standort
+    shift: DriverShift | None = (
+        db.query(DriverShift)
+        .filter(
+            DriverShift.driver_profile_id == tr.assigned_driver_profile_id,
+            DriverShift.status == ShiftStatus.active,
+        )
+        .first()
+    )
+
+    driver_lat = shift.current_latitude if shift else None
+    driver_lon = shift.current_longitude if shift else None
+    last_update = shift.updated_at if shift else None
+    can_track = driver_lat is not None and driver_lon is not None
+
+    distance_km = None
+    eta = None
+    if can_track and tr.pickup_latitude is not None and tr.pickup_longitude is not None:
+        assert driver_lat is not None and driver_lon is not None
+        distance_km = round(
+            spontaneous_matching.haversine_km(
+                tr.pickup_latitude, tr.pickup_longitude,
+                driver_lat, driver_lon,
+            ),
+            2,
+        )
+        eta = spontaneous_matching._eta_minutes(distance_km)
+
+    return SpontaneousRideTracking(
+        transport_request_id=tr.id,
+        status=tr.status,
+        can_track=can_track,
+        # Kein Telefon, keine E-Mail, nur Anzeigename
+        driver_id=driver_profile.user_id if driver_profile else None,
+        driver_display_name=driver_profile.display_name if driver_profile else None,
+        vehicle_id=vehicle.id if vehicle else None,
+        vehicle_label=vehicle.name if vehicle else None,
+        driver_latitude=driver_lat,
+        driver_longitude=driver_lon,
+        pickup_latitude=tr.pickup_latitude,
+        pickup_longitude=tr.pickup_longitude,
+        distance_km=distance_km,
+        estimated_arrival_minutes=eta,
+        last_location_update=last_update,
+        ride_status_label=label,
     )

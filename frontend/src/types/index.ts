@@ -346,14 +346,18 @@ export interface TransportRequestRead {
   passenger_emergency_contact_phone?: string | null
 }
 
-export type TransportRequestListItem = Pick<
+export interface TransportRequestListItem extends Pick<
   TransportRequestRead,
   | 'id' | 'requester_user_id' | 'passenger_user_id' | 'transport_type_id' | 'status'
   | 'pickup_address' | 'destination_address' | 'pickup_date' | 'pickup_time'
   | 'is_round_trip' | 'created_at' | 'submitted_at' | 'cancelled_at'
   | 'assigned_vehicle_id' | 'assigned_driver_profile_id' | 'assigned_at' | 'assignment_notes'
   | 'passenger_display_name' | 'passenger_phone' | 'passenger_email'
->
+> {
+  is_spontaneous: boolean
+  pickup_latitude: number | null
+  pickup_longitude: number | null
+}
 
 export interface TransportRequestCreate {
   passenger_user_id?: string | null
@@ -606,6 +610,32 @@ export interface SpontaneousRideRequestItem {
   pickup_longitude: number
   status: string
   created_at: string
+}
+
+// ─── Spontane Fahrten (Sprint 12D) ───────────────────────────────────────────
+
+export interface DriverLocationUpdate {
+  latitude: number
+  longitude: number
+  transport_request_id?: string | null
+}
+
+export interface SpontaneousRideTracking {
+  transport_request_id: string
+  status: string
+  can_track: boolean
+  driver_id: string | null
+  driver_display_name: string | null
+  vehicle_id: string | null
+  vehicle_label: string | null
+  driver_latitude: number | null
+  driver_longitude: number | null
+  pickup_latitude: number | null
+  pickup_longitude: number | null
+  distance_km: number | null
+  estimated_arrival_minutes: number | null
+  last_location_update: string | null
+  ride_status_label: string
 }
 
 // ─── Transporttypen ──────────────────────────────────────────────────────────
