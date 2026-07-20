@@ -215,7 +215,8 @@ async function handleSubmit() {
   errorMsg.value = ''
   loading.value = true
   try {
-    const res = await fetch('/api/v1/public/test-access/login', {
+    const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010/api/v1'
+    const res = await fetch(`${apiBase}/public/test-access/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email_or_username: emailOrUsername.value, password: password.value }),

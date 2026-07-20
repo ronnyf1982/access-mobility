@@ -46,14 +46,14 @@ function authHeader(): { Authorization: string } {
   return { Authorization: `Bearer ${token ?? ''}` }
 }
 
-const BASE = '/api/v1/platform-admin'
+const BASE = `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010/api/v1'}/platform-admin`
 
 export async function listUsers(params?: {
   search?: string
   role?: string
   is_active?: boolean
 }): Promise<PlatformAdminUser[]> {
-  const url = new URL(BASE + '/users', window.location.origin)
+  const url = new URL(BASE + '/users')
   if (params?.search) url.searchParams.set('search', params.search)
   if (params?.role) url.searchParams.set('role', params.role)
   if (params?.is_active !== undefined) url.searchParams.set('is_active', String(params.is_active))

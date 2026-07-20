@@ -35,13 +35,13 @@ function authHeader(): { Authorization: string } {
   return { Authorization: `Bearer ${token ?? ''}` }
 }
 
-const BASE = '/api/v1/platform-admin/test-access-users'
+const BASE = `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010/api/v1'}/platform-admin/test-access-users`
 
 export async function listPreviewUsers(params?: {
   search?: string
   is_active?: boolean
 }): Promise<PreviewAccessUser[]> {
-  const url = new URL(BASE, window.location.origin)
+  const url = new URL(BASE)
   if (params?.search) url.searchParams.set('search', params.search)
   if (params?.is_active !== undefined) url.searchParams.set('is_active', String(params.is_active))
 
