@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, time
 from enum import Enum
 
-from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, ForeignKey, Index, String, Text, Time, func
+from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKey, Index, String, Text, Time, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,6 +15,8 @@ class TransportRequestStatus(str, Enum):
     assigned = "assigned"
     completed = "completed"
     cancelled = "cancelled"
+    spontaneous_requested = "spontaneous_requested"
+    driver_declined = "driver_declined"
 
 
 class TransportRequest(Base):
@@ -43,11 +45,17 @@ class TransportRequest(Base):
         server_default="draft",
     )
 
+    is_spontaneous: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     # Adressen
     pickup_address: Mapped[str | None] = mapped_column(Text, nullable=True)
     pickup_details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pickup_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pickup_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     destination_address: Mapped[str | None] = mapped_column(Text, nullable=True)
     destination_details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    destination_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    destination_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Zeit
     pickup_date: Mapped[date | None] = mapped_column(Date, nullable=True)

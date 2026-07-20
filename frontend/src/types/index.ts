@@ -580,6 +580,34 @@ export interface SpontaneousRideMatchResult {
   can_accept_now: boolean
 }
 
+// ─── Spontane Fahrten (Sprint 12C) ───────────────────────────────────────────
+
+export interface SpontaneousRideBookRequest {
+  driver_id: string
+  vehicle_id: string
+  pickup_latitude: number
+  pickup_longitude: number
+  passenger_user_id?: string | null
+}
+
+export interface SpontaneousRideBookResponse {
+  request_id: string
+  status: string
+  driver_display_name: string
+  vehicle_label: string
+  estimated_arrival_minutes: number
+}
+
+export interface SpontaneousRideRequestItem {
+  id: string
+  passenger_user_id: string
+  passenger_display_name: string | null
+  pickup_latitude: number
+  pickup_longitude: number
+  status: string
+  created_at: string
+}
+
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 
 export interface TransportType {

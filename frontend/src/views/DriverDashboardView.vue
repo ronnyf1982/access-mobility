@@ -201,6 +201,70 @@
 
       <!-- ══ AUFTRAGSBEREICH ═══════════════════════════════════════════════ -->
 
+      <!-- Spontane Fahrtanfragen (ausstehend) -->
+      <section class="assignments-section" aria-labelledby="spontan-req-heading">
+        <div class="section-title-row">
+          <h2 id="spontan-req-heading" class="section-heading">
+            <i class="pi pi-bell" aria-hidden="true"></i>
+            Spontane Fahrtanfragen
+          </h2>
+          <button class="driver-btn-link driver-btn-link--sm" :disabled="spontaneousLoading" @click="loadSpontaneousRequests">
+            <i class="pi pi-refresh" aria-hidden="true"></i>
+            Aktualisieren
+          </button>
+        </div>
+
+        <div v-if="spontaneousLoading" class="section-loading" aria-live="polite">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Lädt…
+        </div>
+        <div v-else-if="spontaneousRequests.length === 0" class="section-placeholder">
+          <i class="pi pi-inbox" aria-hidden="true"></i>
+          Keine offenen Fahrtanfragen.
+        </div>
+        <div v-else class="assignment-list" role="list">
+          <div
+            v-for="req in spontaneousRequests"
+            :key="req.id"
+            class="assignment-card spontan-req-card"
+            role="listitem"
+          >
+            <div v-if="req.passenger_display_name" class="assignment-passenger">
+              <i class="pi pi-user" aria-hidden="true"></i>
+              {{ req.passenger_display_name }}
+            </div>
+            <div class="assignment-route">
+              <div class="assignment-address">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                Abholpunkt: {{ req.pickup_latitude.toFixed(4) }}, {{ req.pickup_longitude.toFixed(4) }}
+              </div>
+            </div>
+            <div class="spontan-req-actions">
+              <button
+                class="driver-btn driver-btn--success"
+                :disabled="spontaneousActionLoading[req.id]"
+                @click="acceptRequest(req.id)"
+              >
+                <i v-if="spontaneousActionLoading[req.id]" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                <i v-else class="pi pi-check" aria-hidden="true"></i>
+                Annehmen
+              </button>
+              <button
+                class="driver-btn driver-btn--ghost"
+                :disabled="spontaneousActionLoading[req.id]"
+                @click="declineRequest(req.id)"
+              >
+                <i class="pi pi-times" aria-hidden="true"></i>
+                Ablehnen
+              </button>
+            </div>
+            <div v-if="spontaneousError[req.id]" class="ride-status-error" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              {{ spontaneousError[req.id] }}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Linienfahrten -->
       <section class="assignments-section" aria-labelledby="line-heading">
         <h2 id="line-heading" class="section-heading">
@@ -358,8 +422,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { getDriverContext, startShift, endShift, pauseShift, resumeShift, searchVehicles, getDriverAssignments, createRideStatusEvent, getRideStatusEvents } from '@/api/driver'
-import type { DriverDashboardContext, RideStatusEvent, RideStatusEventType, TransportRequestListItem, VehicleBrief } from '@/types'
+import {
+  getDriverContext, startShift, endShift, pauseShift, resumeShift, searchVehicles,
+  getDriverAssignments, createRideStatusEvent, getRideStatusEvents,
+  getSpontaneousRideRequests, acceptSpontaneousRideRequest, declineSpontaneousRideRequest,
+} from '@/api/driver'
+import type {
+  DriverDashboardContext, RideStatusEvent, RideStatusEventType,
+  SpontaneousRideRequestItem, TransportRequestListItem, VehicleBrief,
+} from '@/types'
 import { RIDE_STATUS_EVENT_LABELS, VEHICLE_TYPE_LABELS } from '@/types'
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -378,6 +449,13 @@ const searchDone = ref(false)
 const assignmentsLoading = ref(false)
 const confirmEndShift = ref(false)
 const errorMsg = ref<string | null>(null)
+
+// ── Spontane Fahrtanfragen ─────────────────────────────────────────────────
+
+const spontaneousRequests = ref<SpontaneousRideRequestItem[]>([])
+const spontaneousLoading = ref(false)
+const spontaneousActionLoading = ref<Record<string, boolean>>({})
+const spontaneousError = ref<Record<string, string | null>>({})
 
 // ── Ride Status Events ─────────────────────────────────────────────────────
 
@@ -486,7 +564,7 @@ const statusIconPi = computed(() => {
 // ── Init ───────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
-  await Promise.all([loadContext(), loadAssignments()])
+  await Promise.all([loadContext(), loadAssignments(), loadSpontaneousRequests()])
 })
 
 async function loadContext() {
@@ -510,6 +588,43 @@ async function loadAssignments() {
     assignments.value = []
   } finally {
     assignmentsLoading.value = false
+  }
+}
+
+async function loadSpontaneousRequests() {
+  spontaneousLoading.value = true
+  try {
+    spontaneousRequests.value = await getSpontaneousRideRequests()
+  } catch {
+    spontaneousRequests.value = []
+  } finally {
+    spontaneousLoading.value = false
+  }
+}
+
+async function acceptRequest(requestId: string) {
+  spontaneousActionLoading.value[requestId] = true
+  spontaneousError.value[requestId] = null
+  try {
+    await acceptSpontaneousRideRequest(requestId)
+    await Promise.all([loadSpontaneousRequests(), loadAssignments()])
+  } catch (err: unknown) {
+    spontaneousError.value[requestId] = extractError(err)
+  } finally {
+    spontaneousActionLoading.value[requestId] = false
+  }
+}
+
+async function declineRequest(requestId: string) {
+  spontaneousActionLoading.value[requestId] = true
+  spontaneousError.value[requestId] = null
+  try {
+    await declineSpontaneousRideRequest(requestId)
+    await loadSpontaneousRequests()
+  } catch (err: unknown) {
+    spontaneousError.value[requestId] = extractError(err)
+  } finally {
+    spontaneousActionLoading.value[requestId] = false
   }
 }
 
@@ -1108,4 +1223,30 @@ function extractError(err: unknown): string {
   flex-direction: column;
   gap: var(--am-space-m);
 }
+
+/* ─── Spontane Fahrtanfragen ─────────────────────────────────────────── */
+.spontan-req-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+}
+
+.spontan-req-actions {
+  display: flex;
+  gap: var(--am-space-s);
+}
+
+.spontan-req-actions .driver-btn {
+  min-height: 44px;
+  padding: 10px var(--am-space-l);
+  font-size: 0.9rem;
+}
+
+.driver-btn--success {
+  background: var(--am-success, #22c55e);
+  color: #fff;
+  border-color: var(--am-success, #22c55e);
+}
+
+.driver-btn--success:hover:not(:disabled) { opacity: 0.9; }
 </style>

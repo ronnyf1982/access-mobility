@@ -5,6 +5,7 @@ import type {
   DriverShiftWithVehicle,
   RideStatusEvent,
   RideStatusEventCreate,
+  SpontaneousRideRequestItem,
   TransportRequestListItem,
   VehicleBrief,
 } from '@/types'
@@ -66,6 +67,31 @@ export async function createRideStatusEvent(
 export async function getRideStatusEvents(requestId: string): Promise<RideStatusEvent[]> {
   const { data } = await apiClient.get<RideStatusEvent[]>(
     `/transport-requests/${requestId}/status-events`,
+  )
+  return data
+}
+
+export async function getSpontaneousRideRequests(): Promise<SpontaneousRideRequestItem[]> {
+  const { data } = await apiClient.get<SpontaneousRideRequestItem[]>(
+    '/driver/spontaneous-ride-requests',
+  )
+  return data
+}
+
+export async function acceptSpontaneousRideRequest(
+  requestId: string,
+): Promise<SpontaneousRideRequestItem> {
+  const { data } = await apiClient.post<SpontaneousRideRequestItem>(
+    `/driver/spontaneous-ride-requests/${requestId}/accept`,
+  )
+  return data
+}
+
+export async function declineSpontaneousRideRequest(
+  requestId: string,
+): Promise<SpontaneousRideRequestItem> {
+  const { data } = await apiClient.post<SpontaneousRideRequestItem>(
+    `/driver/spontaneous-ride-requests/${requestId}/decline`,
   )
   return data
 }

@@ -249,15 +249,38 @@ Für Produktion: OSM-Nutzungsbedingungen, Datenschutz und ggf. eigener Tile-/Rou
 - Sortierung nach Entfernung (Haversine, aufsteigend)
 - Kein automatischer Block — Fahrgast wählt aus Vorschlägen
 
-## Sprint 12C — Spontane Fahrten: Buchung & Fahrerannahme
-_geplant_
+## Sprint 12C — Spontane Fahrten: Buchung & Fahrerannahme ✅
 
-Echte Buchung auslösen und Fahrer-Seite implementieren.
+Fahrgast bucht ein Fahrzeug aus dem Matching-Ergebnis, Fahrer nimmt an oder lehnt ab.
 
-- Fahrgast wählt Fahrzeug aus Liste → Buchungsanfrage wird gesendet
-- Fahrzeug und Fahrer werden für diese Fahrt reserviert
-- Fahrer bekommt Anfrage und kann annehmen oder ablehnen
-- Bei Annahme: Status wechselt → Fahrgast sieht „Fahrer hat angenommen"
+**Neue Status-Werte (`TransportRequestStatus`):**
+- `spontaneous_requested` — Buchung angefragt, Fahrer hat noch nicht reagiert
+- `driver_declined` — Fahrer hat abgelehnt (Fahrzeug wird wieder frei)
+
+**Backend:**
+- `POST /api/v1/spontaneous-rides/book` — Buchung anlegen; prüft aktive Schicht, blockiert Doppelbuchung (409)
+- `GET /api/v1/driver/spontaneous-ride-requests` — Fahrer sieht offene Anfragen
+- `POST /api/v1/driver/spontaneous-ride-requests/{id}/accept` — Status → `assigned`
+- `POST /api/v1/driver/spontaneous-ride-requests/{id}/decline` — Status → `driver_declined`
+- Neue `TransportRequest`-Felder: `is_spontaneous`, `pickup_latitude/longitude`, `destination_latitude/longitude`
+- `_BLOCKING_STATUSES` in `spontaneous_matching.py` um `spontaneous_requested` erweitert
+- Alembic-Migration `b9c0d1e2f3a4`: Enum-Werte + 5 neue Spalten
+- 12 neue Tests, alle grün (gesamt: 190 passed)
+
+**Frontend:**
+- Passenger-App: „Auswählen"-Button jetzt aktiv → `POST /spontaneous-rides/book`
+- Buchung per Fahrzeug-Button; Loading-State pro Fahrzeug
+- Nach erfolgreicher Buchung: Bestätigungs-Screen mit Fahrzeug, Fahrer, ETA
+- 409-Fehler (Fahrzeug weg) wird mit Klartext angezeigt
+- Fahrer-App (`DriverDashboardView`): neue Sektion „Spontane Fahrtanfragen"
+- Annehmen/Ablehnen-Buttons mit Loading-State; nach Annahme erscheint Fahrt in Aufträgen
+
+**Bewusst zurückgestellt:**
+- Kein echtes Live-Tracking nach Annahme (folgt 12D)
+- Keine Zahlungs- oder Abrechnungslogik
+- Keine SMS/E-Mail/Push (Grundlage Sprint 11)
+- Keine externe Routing-API
+- Bestehende geplante Fahrten unverändert
 
 **GPS-Datenschutz-Grundregeln (verbindlich):**
 - GPS nur nach ausdrücklicher, informierter Zustimmung

@@ -1,3 +1,6 @@
+import uuid
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -15,6 +18,7 @@ from app.schemas.driver_shift import (
     DriverShiftWithVehicle,
     VehicleBrief,
 )
+from app.schemas.spontaneous_ride import SpontaneousRideRequestItem
 from app.schemas.transport_request import TransportRequestListItem
 
 router = APIRouter(prefix="/driver", tags=["driver"])
@@ -249,3 +253,87 @@ def get_driver_assignments(
         .all()
     )
     return [TransportRequestListItem.model_validate(r) for r in requests]
+
+
+# ── Spontane Fahrtanfragen ────────────────────────────────────────────────────
+
+def _build_spontaneous_request_item(req: TransportRequest, db: Session) -> SpontaneousRideRequestItem:
+    passenger = db.get(User, req.passenger_user_id)
+    display_name = f"{passenger.first_name} {passenger.last_name}" if passenger else None
+    return SpontaneousRideRequestItem(
+        id=req.id,
+        passenger_user_id=req.passenger_user_id,
+        passenger_display_name=display_name,
+        pickup_latitude=req.pickup_latitude or 0.0,
+        pickup_longitude=req.pickup_longitude or 0.0,
+        status=req.status,
+        created_at=req.created_at,
+    )
+
+
+@router.get("/spontaneous-ride-requests", response_model=list[SpontaneousRideRequestItem])
+def get_spontaneous_ride_requests(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[SpontaneousRideRequestItem]:
+    _require_driver(current_user)
+    profile = _get_driver_profile_or_404(db, current_user.id)
+    requests = (
+        db.query(TransportRequest)
+        .filter(
+            TransportRequest.assigned_driver_profile_id == profile.id,
+            TransportRequest.status == TransportRequestStatus.spontaneous_requested,
+        )
+        .order_by(TransportRequest.created_at.desc())
+        .all()
+    )
+    return [_build_spontaneous_request_item(r, db) for r in requests]
+
+
+@router.post(
+    "/spontaneous-ride-requests/{request_id}/accept",
+    response_model=SpontaneousRideRequestItem,
+)
+def accept_spontaneous_ride_request(
+    request_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SpontaneousRideRequestItem:
+    _require_driver(current_user)
+    profile = _get_driver_profile_or_404(db, current_user.id)
+    req = db.get(TransportRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fahrtanfrage nicht gefunden.")
+    if req.assigned_driver_profile_id != profile.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Diese Anfrage gehört nicht zu Ihrem Profil.")
+    if req.status != TransportRequestStatus.spontaneous_requested:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Anfrage ist nicht mehr ausstehend.")
+    req.status = TransportRequestStatus.assigned
+    req.assigned_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(req)
+    return _build_spontaneous_request_item(req, db)
+
+
+@router.post(
+    "/spontaneous-ride-requests/{request_id}/decline",
+    response_model=SpontaneousRideRequestItem,
+)
+def decline_spontaneous_ride_request(
+    request_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SpontaneousRideRequestItem:
+    _require_driver(current_user)
+    profile = _get_driver_profile_or_404(db, current_user.id)
+    req = db.get(TransportRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fahrtanfrage nicht gefunden.")
+    if req.assigned_driver_profile_id != profile.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Diese Anfrage gehört nicht zu Ihrem Profil.")
+    if req.status != TransportRequestStatus.spontaneous_requested:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Anfrage ist nicht mehr ausstehend.")
+    req.status = TransportRequestStatus.driver_declined
+    db.commit()
+    db.refresh(req)
+    return _build_spontaneous_request_item(req, db)

@@ -2,15 +2,6 @@
   <div class="sr-view">
     <h1 class="sr-view__title">Spontane Fahrt buchen</h1>
 
-    <!-- Hinweis: Sprint 12B — noch keine Buchung -->
-    <div class="sr-view__notice" role="note">
-      <span class="pi pi-info-circle" aria-hidden="true"></span>
-      <span>
-        <strong>Vorschau:</strong> Buchung und Fahrerannahme folgen im nächsten Sprint.
-        Hier sehen Sie bereits, welche Fahrzeuge in Ihrer Nähe verfügbar sind.
-      </span>
-    </div>
-
     <!-- Schritt 1: Standortfreigabe -->
     <section v-if="phase === 'idle'" class="sr-view__section">
       <p class="sr-view__intro">
@@ -99,19 +90,52 @@
                 <dd>{{ m.driver_display_name }}</dd>
               </div>
             </dl>
-            <button class="sr-view__btn sr-view__btn--disabled" disabled aria-disabled="true">
-              <span class="pi pi-lock" aria-hidden="true"></span>
-              Auswählen (folgt in Sprint 12C)
+            <button
+              class="sr-view__btn sr-view__btn--primary"
+              :disabled="!!bookingLoading[m.vehicle_id]"
+              @click="bookRide(m)"
+            >
+              <span v-if="bookingLoading[m.vehicle_id]" class="pi pi-spin pi-spinner" aria-hidden="true"></span>
+              <span v-else class="pi pi-send" aria-hidden="true"></span>
+              Fahrzeug anfragen
             </button>
           </div>
         </li>
       </ul>
 
-      <!-- Suchergebnis-Fehler -->
-      <div v-if="searchError" class="sr-view__error" role="alert">
+      <!-- Suchergebnis-Fehler / Buchungsfehler -->
+      <div v-if="searchError || bookingError" class="sr-view__error" role="alert">
         <span class="pi pi-exclamation-triangle" aria-hidden="true"></span>
-        <span>{{ searchError }}</span>
+        <span>{{ searchError || bookingError }}</span>
       </div>
+    </section>
+
+    <!-- Buchung erfolgreich angefragt -->
+    <section v-else-if="phase === 'booked'" class="sr-view__section">
+      <div class="sr-view__booked-success" role="status">
+        <span class="pi pi-check-circle sr-view__booked-icon" aria-hidden="true"></span>
+        <h2 class="sr-view__booked-title">Buchung angefragt!</h2>
+        <dl class="sr-view__booked-details">
+          <div class="sr-view__booked-row">
+            <dt>Fahrzeug</dt>
+            <dd>{{ bookingResult?.vehicle_label }}</dd>
+          </div>
+          <div class="sr-view__booked-row">
+            <dt>Fahrer</dt>
+            <dd>{{ bookingResult?.driver_display_name }}</dd>
+          </div>
+          <div class="sr-view__booked-row">
+            <dt>Geschätzte Ankunft</dt>
+            <dd>ca. {{ bookingResult?.estimated_arrival_minutes }} Min.</dd>
+          </div>
+        </dl>
+        <p class="sr-view__booked-note">
+          Der Fahrer wird Ihre Anfrage in Kürze annehmen oder ablehnen.
+        </p>
+      </div>
+      <button class="sr-view__btn sr-view__btn--secondary" @click="reset">
+        Neue Suche
+      </button>
     </section>
   </div>
 </template>
@@ -119,11 +143,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import SpontaneousRideMap from '@/components/SpontaneousRideMap.vue'
-import { findSpontaneousMatches } from '@/api/spontaneous'
-import type { SpontaneousRideMatchResult } from '@/types'
+import { findSpontaneousMatches, bookSpontaneousRide } from '@/api/spontaneous'
+import type { SpontaneousRideBookResponse, SpontaneousRideMatchResult } from '@/types'
 import { VEHICLE_TYPE_LABELS } from '@/types'
 
-type Phase = 'idle' | 'locating' | 'geo-error' | 'searching' | 'results'
+type Phase = 'idle' | 'locating' | 'geo-error' | 'searching' | 'results' | 'booked'
 
 const phase = ref<Phase>('idle')
 const pickupLat = ref<number | null>(null)
@@ -131,6 +155,9 @@ const pickupLon = ref<number | null>(null)
 const matches = ref<SpontaneousRideMatchResult[]>([])
 const geoErrorMessage = ref('')
 const searchError = ref('')
+const bookingLoading = ref<Record<string, boolean>>({})
+const bookingError = ref<string | null>(null)
+const bookingResult = ref<SpontaneousRideBookResponse | null>(null)
 
 function vehicleTypeLabel(type: string): string {
   return VEHICLE_TYPE_LABELS[type as keyof typeof VEHICLE_TYPE_LABELS] ?? type
@@ -143,6 +170,30 @@ function reset(): void {
   matches.value = []
   geoErrorMessage.value = ''
   searchError.value = ''
+  bookingLoading.value = {}
+  bookingError.value = null
+  bookingResult.value = null
+}
+
+async function bookRide(match: SpontaneousRideMatchResult): Promise<void> {
+  if (!pickupLat.value || !pickupLon.value) return
+  bookingLoading.value[match.vehicle_id] = true
+  bookingError.value = null
+  try {
+    const result = await bookSpontaneousRide({
+      driver_id: match.driver_id,
+      vehicle_id: match.vehicle_id,
+      pickup_latitude: pickupLat.value,
+      pickup_longitude: pickupLon.value,
+    })
+    bookingResult.value = result
+    phase.value = 'booked'
+  } catch (err: unknown) {
+    const e = err as { response?: { data?: { detail?: string } } }
+    bookingError.value = e?.response?.data?.detail ?? 'Buchung fehlgeschlagen. Bitte erneut versuchen.'
+  } finally {
+    bookingLoading.value[match.vehicle_id] = false
+  }
 }
 
 async function searchMatches(lat: number, lon: number): Promise<void> {
@@ -384,6 +435,61 @@ function requestLocation(): void {
 }
 
 .sr-list-item__detail-row dd {
+  margin: 0;
+}
+
+.sr-view__booked-success {
+  background: var(--p-green-50, #f0fdf4);
+  border: 1px solid var(--p-green-200, #bbf7d0);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.sr-view__booked-icon {
+  font-size: 2.5rem;
+  color: var(--p-green-600, #16a34a);
+}
+
+.sr-view__booked-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--p-green-700, #15803d);
+}
+
+.sr-view__booked-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  max-width: 280px;
+}
+
+.sr-view__booked-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.sr-view__booked-row dt {
+  color: var(--p-text-muted-color, #64748b);
+}
+
+.sr-view__booked-row dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.sr-view__booked-note {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color, #64748b);
   margin: 0;
 }
 </style>

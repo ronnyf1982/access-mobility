@@ -18,7 +18,7 @@ from app.models.transport_request import TransportRequest, TransportRequestStatu
 from app.models.vehicle import Vehicle
 from app.schemas.spontaneous_ride import SpontaneousRideMatchResult
 
-_BLOCKING_STATUSES = {TransportRequestStatus.assigned}
+_BLOCKING_STATUSES = {TransportRequestStatus.assigned, TransportRequestStatus.spontaneous_requested}
 
 _AVG_SPEED_KMH = 30.0
 _ETA_MIN_MINUTES = 3

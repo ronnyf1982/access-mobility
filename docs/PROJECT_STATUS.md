@@ -728,9 +728,60 @@ Hinweis: Für Produktionsbetrieb OSM-Nutzungsbedingungen, Datenschutz und ggf. e
 
 ---
 
-## Nächster Sprint: Sprint 12C — Spontane Fahrten: Buchung & Fahrerannahme
+## Sprint 12C — Spontane Fahrten: Buchung & Fahrerannahme ✅
 
-- Fahrgast wählt Fahrzeug → echte Buchungsanfrage
-- Fahrzeug/Fahrer als belegt markieren
-- Fahrer nimmt an oder lehnt ab
-- Statuswechsel sichtbar für Fahrgast
+**Abgeschlossen:** 2026-07-20
+
+### Ziel
+
+Fahrgast bucht ein passendes Fahrzeug aus der Match-Liste. Fahrer nimmt die Anfrage an oder lehnt ab. Fahrzeug wird für die Dauer der offenen Anfrage reserviert.
+
+### Backend
+
+- [x] `backend/alembic/versions/20260720_0013-b9c0d1e2f3a4_sprint12c_spontaneous_booking.py` — Migration: `spontaneous_requested` + `driver_declined` zu `transportrequeststatus` Enum; 5 neue Spalten auf `transport_requests` (`is_spontaneous`, `pickup_latitude/longitude`, `destination_latitude/longitude`)
+- [x] `backend/app/models/transport_request.py` — `TransportRequestStatus.spontaneous_requested / driver_declined` + 5 neue Felder
+- [x] `backend/app/schemas/spontaneous_ride.py` — `SpontaneousRideBookRequest`, `SpontaneousRideBookResponse`, `SpontaneousRideRequestItem`
+- [x] `backend/app/api/v1/endpoints/spontaneous_rides.py` — `POST /spontaneous-rides/book`: prüft aktive Schicht, blockiert Doppelbuchung (409), legt `TransportRequest` mit `status=spontaneous_requested` an
+- [x] `backend/app/api/v1/endpoints/driver.py` — 3 neue Endpoints:
+  - `GET /driver/spontaneous-ride-requests` — offene Anfragen für diesen Fahrer
+  - `POST /driver/spontaneous-ride-requests/{id}/accept` — Status → `assigned`
+  - `POST /driver/spontaneous-ride-requests/{id}/decline` — Status → `driver_declined`
+- [x] `backend/app/services/spontaneous_matching.py` — `_BLOCKING_STATUSES` um `spontaneous_requested` erweitert (kein Doppelbuchen)
+
+### Frontend
+
+- [x] `frontend/src/types/index.ts` — `SpontaneousRideBookRequest`, `SpontaneousRideBookResponse`, `SpontaneousRideRequestItem`
+- [x] `frontend/src/api/spontaneous.ts` — `bookSpontaneousRide()`
+- [x] `frontend/src/api/driver.ts` — `getSpontaneousRideRequests()`, `acceptSpontaneousRideRequest()`, `declineSpontaneousRideRequest()`
+- [x] `frontend/src/views/SpontaneousRideView.vue` — „Auswählen"-Button aktiv; Loading pro Fahrzeug; Phase `booked` mit Bestätigungsscreen (Fahrzeug, Fahrer, ETA); 409-Fehler sichtbar; Vorschau-Banner entfernt
+- [x] `frontend/src/views/DriverDashboardView.vue` — neue Sektion „Spontane Fahrtanfragen"; Annehmen/Ablehnen-Buttons; nach Annahme erscheint Fahrt in regulären Aufträgen
+
+### Checks
+
+- [x] `alembic upgrade head`: ✅ Migration `b9c0d1e2f3a4` angewendet
+- [x] `pytest`: ✅ 190 passed (12 neue Tests Sprint 12C)
+- [x] TypeScript-Check (`vue-tsc --noEmit`): ✅
+- [x] Seed: `python -m app.scripts.seed_demo_data` ausführen nach Migration (aktive Schicht wiederherstellen)
+
+### Sicherheitslogik
+
+- Fahrgast kann nur für sich selbst buchen (403 bei fremder `passenger_user_id`)
+- Fahrer kann nur eigene Anfragen annehmen/ablehnen (403 sonst)
+- Doppelbuchung des gleichen Fahrzeugs → 409
+- Buchung nur bei aktiver Fahrerschicht mit genau diesem Fahrzeug → 409 wenn nicht
+
+### Bewusst nicht umgesetzt (Sprint 12C)
+
+- Kein echtes Live-Tracking nach Annahme (folgt 12D)
+- Keine Zahlungs-/Abrechnungslogik
+- Keine SMS/E-Mail/Push (Grundlage Sprint 11)
+- Keine externe Routing-API
+- Bestehende geplante Fahrten nicht verändert
+
+---
+
+## Nächster Sprint: Sprint 12D — Spontane Fahrten: Live-Zufahrt
+
+- Fahrer-App zeigt eigene spontane Anfragen als prominente Alert-Karte
+- Echtes GPS-Update des Fahrers nach Annahme
+- Fahrgast sieht „Fahrer ist unterwegs" mit Live-Tracking
