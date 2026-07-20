@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-16 · Sprint FAHRANDO-2 abgeschlossen · Sprint 11 geplant
+Letzte Aktualisierung: 2026-07-20 · Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1 abgeschlossen · Sprint 11 geplant
 
 ---
 
@@ -64,7 +64,13 @@ Access Mobility deckt qualifizierten Krankentransport (KTP) und barrierefreie Al
 | API-Pfad | `/api/v1/` | — |
 
 **Wichtig:** `frontend/.env.local` überschreibt `frontend/.env`. Bei Port-Fehlern zuerst dort prüfen.
-Korrekter Wert: `VITE_API_BASE_URL=http://localhost:8010/api/v1`
+Korrekter Wert lokal: `VITE_API_BASE_URL=http://localhost:8010/api/v1`
+
+**Produktionsbetrieb (fahrando.com):**
+- Backend läuft auf Railway, nicht auf dem Webspace
+- Webspace enthält nur den statischen Frontend-Build (`index.html`, `assets/`, `.htaccess`, `Logo1.png`)
+- `frontend/.env.production` (nicht committed): `VITE_API_BASE_URL=https://fahrando-api-production.up.railway.app/api/v1`
+- Upload-Staging lokal: `deploy/fahrando-webspace-upload/` (nicht committed)
 
 ---
 
@@ -113,6 +119,9 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint 10** | **Fahrer-Schichtstart & Fahrzeugwahl (mobile-first, Standardfahrzeug, Auftragsstruktur)** | ✅ abgeschlossen |
 | **Sprint FAHRANDO-1** | **Fahrando Coming-Soon + Testzugang + Platform-Admin-Benutzerverwaltung** | ✅ abgeschlossen |
 | **Sprint FAHRANDO-2** | **Gate-Schutzseite mit DB-basierten Testzugängen & Website-Testzugänge-Modul** | ✅ abgeschlossen |
+| **Sprint FAHRANDO-PREVIEW-GATE-DIREKTLINK-SCHUTZ-1** | **Direktlink-Schutz für öffentliche Website-Routen** | ✅ abgeschlossen |
+| **Sprint FAHRANDO-DEPLOYMENT-1** | **Railway-Deployment, CORS, API-Base-Fix, Production-Build für fahrando.com** | ✅ abgeschlossen |
+| **Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1** | **Variante B: Gate schützt /login und alle App-Routen** | ✅ abgeschlossen |
 
 ---
 
@@ -312,7 +321,9 @@ Matching-Details: `docs/Product/ACCESSIBILITY_AND_MATCHING_REQUIREMENTS.md`
 
 - JWT wird im MVP in `localStorage` gespeichert (Schlüssel: `am_token`) — bekanntes Risiko, MVP-akzeptiert.
 - Produktivbetrieb: Keycloak/Auth0 mit httpOnly-Cookies oder Auth-Code-Flow mit PKCE.
-- CORS: Nur `http://localhost:5180` als erlaubter Origin — kein Wildcard `*`. (`ALLOWED_ORIGINS` per Env für Fahrando-Domains erweiterbar.)
+- CORS: Nur konfigurierte Origins in `ALLOWED_ORIGINS` — kein Wildcard `*`.
+  - Lokal: `ALLOWED_ORIGINS=http://localhost:5180`
+  - Produktion Railway: `ALLOWED_ORIGINS=https://fahrando.com,https://www.fahrando.com`
 - **Fahrando-Marke:** Die `/`-Route zeigt die Fahrando-Coming-Soon-Seite. Das Login-Formular auf `/` nutzt **dasselbe** JWT/User-System wie das Portal — kein zweites Auth-System, keine zweite Datenbank.
 - **Platform-Admin-Bootstrap-Passwort:** Nur über `backend/app/scripts/ensure_platform_admin.py` per Umgebungsvariablen. Das Passwort darf **niemals** in Dateien, Logs, Tests, Seed-Daten, Migrationen, Dokumentation oder API-Responses erscheinen. Nur der Hash wird in der DB gespeichert.
 - `/login` leitet dauerhaft auf `/` um. Logout kehrt zu `/` zurück.

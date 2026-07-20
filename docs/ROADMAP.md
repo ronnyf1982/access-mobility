@@ -148,6 +148,34 @@ Plattform-Marke sichtbar machen, Testzugang absichern, Platform-Admin kann Nutze
 - **Sicherheit:** Passwort-Hash nie in API-Response, kein Passwort in Logs/Tests/Doku
 - **Tests:** 54 neue Pytest-Tests (alle bestanden), TypeScript-Check ✅, Build ✅
 
+## Sprint FAHRANDO-DEPLOYMENT-1 — Railway-Deployment & Production-Build ✅
+
+Backend auf Railway deployed, statisches Frontend für fahrando.com gebaut und via FileZilla hochgeladen.
+
+- **Railway Backend:** Nixpacks-Deployment, Root-Level `railway.json` + `Procfile`, PostgreSQL auf Railway angebunden
+- **Migrationen + Seed:** `alembic upgrade head` + `seed_demo_data` online ausgeführt
+- **CORS:** `ALLOWED_ORIGINS=https://fahrando.com,https://www.fahrando.com` als Railway-Umgebungsvariable gesetzt
+- **`frontend/.env.production`:** `VITE_API_BASE_URL=https://fahrando-api-production.up.railway.app/api/v1` (nicht committed, in `.gitignore`)
+- **API-Base-Fix:** `GateView.vue`, `previewAccess.ts`, `platformAdmin.ts` nutzten relative `/api/v1`-Pfade statt `VITE_API_BASE_URL` — behoben
+- **Production-Build:** `npm run build` mit `.env.production` → `dist/` für Webspace
+- **Upload-Staging:** `deploy/fahrando-webspace-upload/` (nicht committed, gitignored)
+- Website-Testzugänge und Benutzerverwaltung laden online über Railway API
+
+Railway API: `https://fahrando-api-production.up.railway.app` · Frontend: `https://fahrando.com`
+
+## Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1 — Gate schützt /login (Variante B) ✅
+
+Gesamter Teststand liegt hinter dem Preview-Gate — auch `/login` und alle App-Routen sind ohne Gate-Unlock nicht direkt erreichbar.
+
+- **Variante B:** Alle Routen außer `/gate`, `/impressum`, `/datenschutz` erfordern Gate-Unlock
+- `/login` ohne Gate-Unlock → Gate-Seite erscheint, Redirect-Parameter (`?redirect=/login`) erhalten
+- Nach Gate-Unlock → Weiterleitung zu `/login` → normaler App-Login
+- `/platform-admin`, `/dashboard`, `/driver` ohne Gate-Unlock → ebenfalls Gate-Redirect
+- Nach Gate-Unlock greifen App-Routen weiterhin normale App-Auth (unverändert)
+- Gate erzeugt kein App-JWT — vollständig getrennte Systeme
+- `gateExempt`-Flag auf `/impressum` und `/datenschutz` — immer frei erreichbar
+- Open-Redirect-Schutz bleibt erhalten (nur interne Pfade, kein `//`)
+
 ## Sprint 11 — Fahrtstatus & Benachrichtigungseinstellungen
 
 Fahrtstatus-Grundlage und Benachrichtigungseinstellungen — Voraussetzung für Live-Tracking.

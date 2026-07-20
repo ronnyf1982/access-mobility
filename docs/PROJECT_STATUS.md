@@ -451,6 +451,116 @@ Der Gate-Guard prüfte ausschließlich `to.path === '/'`. Direktlinks zu beliebi
 
 ---
 
+## Sprint FAHRANDO-DEPLOYMENT-1 — Railway-Deployment & Production-Build ✅
+
+**Abgeschlossen:** 2026-07-20
+
+### Backend (Railway)
+
+- [x] `railway.json` + `Procfile` für Nixpacks-Deployment auf Root-Ebene
+- [x] `requirements.txt` auf Root-Ebene für Nixpacks (Backend-Abhängigkeiten)
+- [x] Railway PostgreSQL als `DATABASE_URL`-Umgebungsvariable in Railway-Dashboard
+- [x] `alembic upgrade head` auf Railway-Datenbank ausgeführt
+- [x] `seed_demo_data` auf Railway-Datenbank ausgeführt
+- [x] `ALLOWED_ORIGINS=https://fahrando.com,https://www.fahrando.com` in Railway-Umgebungsvariablen gesetzt
+- [x] CORS-Fehler behoben: Frontend auf fahrando.com kann Railway API erreichen
+
+### Frontend (Production-Build & Webspace)
+
+- [x] `frontend/.env.production` mit `VITE_API_BASE_URL=https://fahrando-api-production.up.railway.app/api/v1` angelegt
+- [x] `frontend/.env.production` in `.gitignore` eingetragen (`frontend/.env.production`)
+- [x] **API-Base-Fix:** alle Frontend-API-Aufrufe auf `VITE_API_BASE_URL` umgestellt:
+  - `frontend/src/views/GateView.vue` — Gate-Login-Request nutzte relativen Pfad `/api/v1/public/test-access/login`
+  - `frontend/src/api/previewAccess.ts` — `BASE` + `new URL(BASE, window.location.origin)` → absolut
+  - `frontend/src/api/platformAdmin.ts` — `BASE` + `new URL(BASE + '/users', window.location.origin)` → absolut
+- [x] Production-Build (`npm run build`) mit `.env.production` erfolgreich
+- [x] `localhost:8010` nicht im dist-Build vorhanden, Railway-URL korrekt eingebaut
+- [x] `deploy/fahrando-webspace-upload/` als Upload-Staging-Ordner (nicht committed, gitignored)
+- [x] `deploy/fahrando-webspace-upload/` enthält: `index.html`, `assets/`, `Logo1.png`, `.htaccess`
+- [x] Upload via FileZilla auf fahrando.com Webspace ausgeführt
+
+### Verifikation online
+
+- [x] App-Login `https://fahrando.com/login` → Gate erscheint (da noch kein Gate-Unlock)
+- [x] Railway Backend antwortet auf `https://fahrando-api-production.up.railway.app/api/v1/health`
+- [x] Website-Testzugänge (Platform-Admin) laden über Railway API
+- [x] Benutzerverwaltung (Platform-Admin) lädt über Railway API
+
+### Relevante Commits
+
+- `a7894cc` chore: prepare backend for Railway deployment
+- `e2da4f9` chore: add root-level Railway config for monorepo deployment
+- `7bc8579` chore: use python module pip in Railway build
+- `d020192` fix: let Nixpacks manage Python env via root requirements.txt
+- `be6c08e` fix: route frontend API calls through configured base URL
+
+### Checks
+
+- [x] TypeScript-Check (`vue-tsc --noEmit`): keine Fehler
+- [x] Vite-Build: ✅ erfolgreich
+- [x] `localhost:8010` nicht im dist vorhanden
+- [x] Railway-URL im dist vorhanden
+
+### Sicherheitsregeln
+
+- `DATABASE_URL` und `SECRET_KEY` nur in Railway-Umgebungsvariablen — nicht in Dateien, Logs oder Doku
+- `frontend/.env.production` nicht committed — enthält nur öffentliche API-Base-URL (kein Secret)
+- `deploy/`-Ordner nicht committed — enthält fertigen Upload-Build
+
+### Bewusst nicht umgesetzt
+
+- Kein Railway-CLI-Deployment-Script (manuell über Railway-Dashboard)
+- Kein automatisches CI/CD (manueller Build + FileZilla-Upload)
+- Keine SSL/TLS-Konfiguration auf Webspace (liegt bei united-domains)
+
+---
+
+## Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1 — Gate schützt /login (Variante B) ✅
+
+**Abgeschlossen:** 2026-07-20
+
+### Problem
+
+`/login` war mit `meta: { public: true }` markiert und umging den Gate-Check vollständig. Ein Direktlink zu `https://fahrando.com/login` zeigte den App-Login ohne Gate.
+
+### Umgesetzt
+
+- [x] `frontend/src/router/index.ts` — `beforeEach`-Guard komplett neu strukturiert:
+  - **Variante B:** Alle Routen außer `/gate`, `/impressum`, `/datenschutz` erfordern Gate-Unlock
+  - `/gate`: immer erreichbar; bei bereits freigeschaltetem Gate → Redirect zu `?redirect`-Ziel
+  - `gateExempt: true` auf `/impressum` und `/datenschutz` — immer frei
+  - Alle anderen Routen: `!unlocked` → `next({ path: '/gate', query: { redirect: to.fullPath } })`
+  - Nach Gate-Unlock: `/login`-Branch prüft App-Auth; nicht-auth-pflichtige Routen (`/`) passieren direkt; `requiresAuth`-Routen → normale App-Auth-Prüfung
+- [x] `/impressum` und `/datenschutz`: `meta: { public: true }` → `meta: { gateExempt: true }`
+- [x] Open-Redirect-Schutz bleibt erhalten (`startsWith('/') && !startsWith('//')`)
+
+### Verhalten nach Fix
+
+| Route | ohne Gate-Unlock | nach Gate-Unlock |
+|---|---|---|
+| `/` | → Gate | → Landingpage |
+| `/login` | → Gate | → App-Login |
+| `/platform-admin` | → Gate | → App-Auth → App-Login |
+| `/dashboard` | → Gate | → App-Auth → App-Login |
+| `/impressum` | direkt | direkt |
+| `/datenschutz` | direkt | direkt |
+
+### Relevanter Commit
+
+- `e937702` fix: require preview gate before app login direct links
+
+### Checks
+
+- [x] TypeScript-Check (`vue-tsc --noEmit`): keine Fehler
+- [x] Vite-Build: ✅ erfolgreich
+
+### Bewusst nicht umgesetzt
+
+- Kein serverseitiger Gate-State — ausschließlich `sessionStorage` (stateless, kein Session-Overhead)
+- Kein Ablaufdatum für Gate-Unlock (sessionStorage endet beim Tab-Schließen)
+
+---
+
 ## Nächster Sprint: Sprint 11 — Fahrtstatus & Fahrer-App
 
 - Backend: `RideStatusEvent`-Protokoll (driver_on_way / arrived_pickup / passenger_picked_up / arrived_destination / completed / delayed)

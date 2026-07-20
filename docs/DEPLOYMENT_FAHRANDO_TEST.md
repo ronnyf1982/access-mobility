@@ -38,7 +38,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 ALLOWED_ORIGINS=http://localhost:5180
 ```
 
-Für Produktion `ALLOWED_ORIGINS` auf die tatsächliche Domain setzen (z. B. `https://test.fahrando.com`).
+Für Produktion `ALLOWED_ORIGINS` auf die tatsächliche Domain setzen.
+Aktuell produktiv in Railway: `ALLOWED_ORIGINS=https://fahrando.com,https://www.fahrando.com`
 
 ---
 
@@ -50,7 +51,11 @@ Datei `frontend/.env.local` (nie in Git — nur lokal):
 VITE_API_BASE_URL=http://localhost:8010/api/v1
 ```
 
-Für Produktion: `VITE_API_BASE_URL=https://api.test.fahrando.com/api/v1`
+Für Produktion: Datei `frontend/.env.production` anlegen (nicht committen, ist in `.gitignore`):
+
+```env
+VITE_API_BASE_URL=https://fahrando-api-production.up.railway.app/api/v1
+```
 
 ---
 
@@ -160,12 +165,22 @@ Aufruf: `http://localhost:5180`
 
 ## 13. Frontend für Produktion bauen
 
+Voraussetzung: `frontend/.env.production` muss vorhanden sein (siehe Abschnitt 4).
+
 ```powershell
 cd C:\access-mobility\frontend
 npm run build
 ```
 
-Build-Artefakte liegen in `frontend/dist/`. Diese können mit jedem statischen Web-Server ausgeliefert werden (nginx, Caddy, Vercel, Netlify, etc.).
+Build-Artefakte liegen in `frontend/dist/`. Für den Webspace-Upload den Staging-Ordner verwenden (Abschnitt 22).
+
+Prüfen, dass keine lokale URL im Build enthalten ist:
+
+```powershell
+Select-String -Path .\dist\assets\*.js -Pattern "localhost","8010","fahrando-api-production"
+```
+
+Erwartung: `localhost:8010` → nicht gefunden · `fahrando-api-production` → gefunden.
 
 ---
 
@@ -278,12 +293,18 @@ Für Produktivbetrieb: nginx/Caddy übernimmt das Forwarding — kein Proxy im B
 
 ## 18. Gate-Login-Flow
 
-1. Beliebige öffentliche Website-Route direkt aufrufen (z. B. `http://localhost:5180/`) → automatische Weiterleitung zu `/gate?redirect=<Ziel>` (Schutzseite)
-2. Benutzername + Passwort eingeben → „Einloggen"
-3. Bei Erfolg: `sessionStorage.fahrando_preview_unlocked = '1'` gesetzt → Weiterleitung zur ursprünglich angefragten Route (oder `/` als Fallback)
-4. Direktlinks zu beliebigen öffentlichen Website-Routen ebenfalls durch Gate geschützt (Direktlink-Schutz)
-5. `/impressum` und `/datenschutz` sind ohne Gate-Freigabe zugänglich
-6. App-Login weiterhin über `/login` (separates System, JWT-basiert)
+**Variante B (aktiv seit Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1):**
+Alle Routen außer `/gate`, `/impressum`, `/datenschutz` erfordern Gate-Unlock.
+
+1. Beliebige Route direkt aufrufen (z. B. `/`, `/login`, `/platform-admin`) → automatische Weiterleitung zu `/gate?redirect=<Ziel>`
+2. Website-Testzugang (E-Mail + Passwort) eingeben → „Einloggen"
+3. Bei Erfolg: `sessionStorage.fahrando_preview_unlocked = '1'` gesetzt → Weiterleitung zur ursprünglich angefragten Route (Fallback: `/`)
+4. Nach Gate-Unlock:
+   - `/login` → normaler App-Login erscheint
+   - `/platform-admin` → App-Auth-Guard greift → bei nicht App-eingeloggt → `/login`
+   - `/` → Landingpage
+5. `/impressum` und `/datenschutz` sind **ohne** Gate-Freigabe zugänglich (`gateExempt`)
+6. App-Login ist vollständig getrennt vom Gate — kein App-JWT durch Gate
 
 ---
 
@@ -320,10 +341,17 @@ Invoke-WebRequest -Uri "http://localhost:8010/api/v1/platform-admin/users" -Head
 
 ### Voraussetzungen
 
+- `frontend/.env.production` vorhanden mit Railway-URL (nicht committen)
 - Frontend gebaut: `cd C:\access-mobility\frontend && npm run build`
-- Upload-Quelle: `C:\access-mobility\frontend\dist\`
-- `.htaccess` muss im dist-Ordner vorhanden sein (SPA-Fallback, Apache)
-- Kein Backend-Upload, kein Sourcecode, keine `.env`-Dateien, kein `node_modules`, keine Git-Dateien
+- Upload-Staging-Ordner befüllt:
+  ```powershell
+  cd C:\access-mobility
+  Remove-Item .\deploy\fahrando-webspace-upload\* -Recurse -Force -ErrorAction SilentlyContinue
+  Copy-Item .\frontend\dist\* .\deploy\fahrando-webspace-upload\ -Recurse -Force
+  ```
+- **Upload-Quelle: `C:\access-mobility\deploy\fahrando-webspace-upload\`** (nicht `frontend/dist/` direkt)
+- `.htaccess` muss im Upload-Ordner vorhanden sein (SPA-Fallback, Apache)
+- Backend läuft auf Railway — kein Backend-Upload auf Webspace
 
 ### Inhalt von dist (wird hochgeladen)
 
@@ -386,8 +414,8 @@ Vor dem Upload:
 
 **D) Upload**
 
-1. Im linken Panel (lokal) navigieren zu: `C:\access-mobility\frontend\dist\`
-2. Alle Dateien und Ordner **innerhalb** von `dist` markieren (nicht den Ordner `dist` selbst)
+1. Im linken Panel (lokal) navigieren zu: `C:\access-mobility\deploy\fahrando-webspace-upload\`
+2. Alle Dateien und Ordner **innerhalb** des Ordners markieren (nicht den Ordner selbst)
 3. In die Document-Root des Servers ziehen / hochladen
 4. Sicherstellen:
    - `index.html` liegt **direkt** in der Document-Root
@@ -410,8 +438,28 @@ Vor dem Upload:
 ### Wichtiger Hinweis: API / Gate-Login
 
 > Das statische Frontend funktioniert vollständig für Optik, Routing und Direktlinks.
-> **Gate-Login und alle App-Funktionen (Login, Dashboard) funktionieren online erst, wenn das Backend öffentlich erreichbar ist.**
-> Für Produktivbetrieb: `frontend/.env.production` mit öffentlicher Backend-URL anlegen, dann neu bauen.
+> Gate-Login und alle App-Funktionen laufen online gegen die Railway API (`https://fahrando-api-production.up.railway.app`).
+> Voraussetzung: `frontend/.env.production` mit Railway-URL muss vor dem Build vorhanden sein.
+
+---
+
+## 23. Online-Test nach Webspace-Upload
+
+Nach dem Upload auf fahrando.com folgende Tests ausführen (sessionStorage vor jedem Test leeren):
+
+| # | Test | Erwartetes Ergebnis |
+|---|---|---|
+| 1 | `https://fahrando.com/` aufrufen | Gate erscheint (`/gate?redirect=/`) |
+| 2 | Gate-Login (Website-Testzugang) | Weiterleitung zu `/`, Landingpage erscheint |
+| 3 | sessionStorage löschen, `/login` aufrufen | Gate erscheint (`/gate?redirect=/login`) |
+| 4 | Gate-Login | Weiterleitung zu `/login`, normaler App-Login erscheint |
+| 5 | App-Login mit `admin@access.test` / `Access123!` | Weiterleitung zu `/dashboard` oder `/onboarding` |
+| 6 | Platform-Admin → Website-Testzugänge | Liste lädt über Railway API |
+| 7 | Platform-Admin → Benutzerverwaltung | Liste lädt über Railway API |
+| 8 | sessionStorage löschen, `/platform-admin` aufrufen | Gate erscheint |
+| 9 | `/impressum` aufrufen (ohne Gate-Unlock) | Direkt erreichbar, kein Gate |
+| 10 | `/datenschutz` aufrufen (ohne Gate-Unlock) | Direkt erreichbar, kein Gate |
+| 11 | Browser-DevTools → Network → Request an `/api/v1/...` | URL zeigt Railway (`fahrando-api-production.up.railway.app`) |
 
 ---
 
