@@ -196,29 +196,11 @@ Gesamter Teststand liegt hinter dem Preview-Gate — auch `/login` und alle App-
 - `gateExempt`-Flag auf `/impressum` und `/datenschutz` — immer frei erreichbar
 - Open-Redirect-Schutz bleibt erhalten (nur interne Pfade, kein `//`)
 
-## Sprint 11 — Fahrtstatus & Benachrichtigungseinstellungen
+## Sprint 12A — Live-Status für angefragte/geplante Fahrten ✅
 
-Fahrtstatus-Grundlage und Benachrichtigungseinstellungen — Voraussetzung für Live-Tracking.
+Fahrgast sieht den aktuellen Fahrt-Status und -verlauf für **angefragte und disponierte Fahrten** direkt in der App. Vertrauensperson erhält Backend-Zugriff auf Status-Events.
 
-**Fahrtstatus / Fahrer-App:**
-- Backend: `RideStatusEvent`-Protokoll mit Statuswechseln + Zeitstempel + optionalem Standort
-- Statuswerte: `driver_on_way` / `arrived_pickup` / `passenger_picked_up` / `arrived_destination` / `completed` / `delayed`
-- Frontend: Fahrer-App-Ansicht mit Statuswechsel-Buttons (7 Aktionen)
-- Schichtverwaltung: Schicht beginnen / Pause / Schicht beenden (Zeitprotokoll als spätere Arbeitszeitgrundlage)
-- Sprachassistenz: „Fahrgast ist zugestiegen" → Bestätigung → Status setzen
-- Linienverkehr-Ansicht: optimierte Fahrgastliste (Adresse, geplante Zeit, Mobilitätsbedarf, Hinweise)
-
-**Benachrichtigungseinstellungen (Fahrgastprofil):**
-- Vertrauenspersonen mit Kontaktdaten + Berechtigungen (Standort ja/nein, Status ja/nein)
-- Kanäle: In-App, SMS, E-Mail, System-Teilen
-- Ereignisse konfigurierbar: Fahrzeug unterwegs, Fahrgast zugestiegen, angekommen, Verspätung, Stornierung
-
-**Begründung:** Live-Tracking (Sprint 12) benötigt Statusereignisse und Berechtigungsstruktur.
-Beides muss vor Live-Sharing vorhanden sein.
-
-## Sprint 12A — Live-Status für Fahrgast & Vertrauensperson ✅
-
-Fahrgast sieht den aktuellen Fahrt-Status und -verlauf direkt in der App. Vertrauensperson erhält Backend-Zugriff auf Status-Events verknüpfter Fahrten.
+> **Fahrttyp:** Betrifft ausschließlich den Typ „Angefragte/geplante Fahrt" — Fahrten mit Vorlaufzeit, manueller Disposition und Zuweisung. Kein Spontanfahrten-Modus.
 
 - **Backend:** `trusted_person`-Zugriff auf `GET /transport-requests/{id}/status-events` — prüft aktive `TrustedRelationship` mit `can_view_rides=True`
 - **Neuer Service:** `backend/app/services/notification_dispatch.py` — Placeholder `collect_notification_targets_for_status_event()` (liest Präferenzen, kein echter Versand)
@@ -226,32 +208,74 @@ Fahrgast sieht den aktuellen Fahrt-Status und -verlauf direkt in der App. Vertra
 - **Polling:** alle 20 Sekunden für aktiv zugewiesene Fahrten (Interval sauber gestoppt on unmount)
 - **`frontend/src/api/rides.ts`:** eigenständiges API-Modul `getRideStatusEvents()` für Fahrgast-/Vertrauenspersonen-Kontext
 - **`completed`-Status-Badge** + `statusIcon` im Frontend ergänzt
-- **Tests:** 156/165 passed, 9 skipped (Seed-abhängig); Sprint-12A-Tests: TrustedPerson-Zugriff, Sperrung fremder Fahrten, leere Histor, Dispatch-Placeholder
+- **Tests:** 156/165 passed, 9 skipped (Seed-abhängig)
 - **TypeScript-Check:** ✅ | **Build:** ✅ built in 2.63s | **Alembic:** keine neue Migration
-- **Vertrauenspersonen-View:** keine dedizierte View in Sprint 12A — Backend-Fundament gelegt; dedizierte Ansicht folgt in Sprint 12B
-- **Kein echter Dispatch:** kein SMS/E-Mail/Push — Dispatch folgt Sprint 12B
-- **Kein GPS-Tracking:** folgt Sprint 12C / Sprint 13
+- **Bewusst zurückgestellt:** Vertrauenspersonen-View (folgt 12E), echter Dispatch (folgt 12E), GPS-Tracking (folgt 12D)
 
-## Sprint 12B — Vertrauenspersonen-Ansicht & Notification-Dispatch
+## Sprint 12B — Spontane Fahrten: Matching- und Verfügbarkeitsgrundlage
 _geplant_
 
-Dedizierte Vertrauenspersonen-View mit Fahrt-Statusübersicht. Echter Notification-Dispatch (E-Mail) auf Basis der Präferenzen aus Sprint 11.
+Datenbasis und Backend-Logik für den Sofortfahrt-Modus (Uber-artiges Modell).
 
-## Sprint 12C — Live-Status & Standortfreigabe (ursprünglich Sprint 12)
+**Fahrttyp:** Spontane Fahrt — Fahrgast bucht jetzt sofort, ohne Vorlaufzeit oder Disposition.
 
-Fahrtstatus und optionaler Live-Standort mit berechtigten Personen teilen.
+- `ride_request_type`-Feld auf `TransportRequest` ergänzen: `planned` | `spontaneous`
+- Verfügbarkeitsprüfung: Fahrer muss aktive Schicht haben, darf nicht in Pause sein, darf nicht bereits einer aktiven Fahrt zugewiesen sein
+- Fahrzeug darf nicht bereits belegt/reserviert sein
+- Mobilitätsprofil des Fahrgastes als Matching-Kriterium (wie bei geplanten Fahrten)
+- Fahrzeugausstattung und Fahrerqualifikation prüfen (bestehende Matching-Logik wiederverwenden)
+- Entfernungs-/ETA-Modell vorbereiten: zunächst Crow-fly-Distanz ohne externe Maps-API
+- API-Endpoint: passende freie Fahrzeuge/Fahrer für Sofortfahrt finden (`GET /transport-requests/spontaneous/available`)
+- Noch keine GPS-Koordinaten, noch keine Fahrgast-UI, noch keine Echtzeit-Karte
 
-- Backend: `LiveLocationShare`-Modell (share_token, expires_at, revoked_at, share_channel, recipient_*)
-- Datenschutz: Zustimmung, zeitliche Begrenzung auf Fahrtende, Widerruf jederzeit, Protokollierung
-- In-App-Freigabe: Vertrauenspersonen sehen Fahrtstatus + ETA in der App
-- Link-Freigabe: zeitlich begrenzter Token-Link (kein Account erforderlich)
-- System-Teilen: native Browser-Share-API (WhatsApp, SMS, E-Mail)
-- Statusnachrichten: „Fahrt gestartet", „Fahrzeug unterwegs", „Fahrgast abgeholt", „Angekommen", „Verspätung"
-- Sprachassistent: Freigabe nur nach ausdrücklicher Bestätigung
-- Frontend (Fahrgast): Button „Fahrt teilen", Button „Teilen beenden", Anzeige aktiver Freigaben
-- Frontend (Vertrauensperson): Fahrtstatus-Ansicht, ETA, keine med. Details
+**Matching-Kernregeln für spontane Fahrten:**
+- Mobilitätsprofil (Rollstuhl, Rampe, Lift, Einstiegshilfen, med. Bedarf)
+- Fahrzeugtyp und -kapazität
+- Fahrer im Dienst und nicht in Pause
+- Fahrzeug und Fahrer nicht bereits einer aktiven Fahrt zugewiesen
+- Nächstes geeignetes freies Fahrzeug (Entfernung, später echte ETA)
+- Kein automatischer Block — Fahrgast wählt aus Vorschlägen
 
-Referenz: `docs/SOURCE_OF_TRUTH.md` (Abschnitt 7.9), `docs/DECISIONS.md`
+## Sprint 12C — Spontane Fahrten: Fahrgast-UI und Standortfreigabe
+_geplant_
+
+Fahrgast-Oberfläche für den Sofortfahrt-Modus mit browserbasierter Standortabfrage.
+
+- Fahrgast klickt „Jetzt Fahrt buchen" (neuer CTA in der App)
+- **Standortfreigabe:** Browser-Geolocation-API mit klarer Einwilligung (kein Hintergrundtracking)
+- Aktuelle Position als vorausgefüllter Abholort (überschreibbar)
+- Passende freie Fahrzeuge/Fahrer werden geladen und angezeigt
+- Geschätzte Wartezeit je Fahrzeug sichtbar
+- Fahrgast wählt Fahrzeug aus — Anfrage wird gesendet
+- Barrierefreiheit: klare Einwilligungstexte, kein Icon-only, einfache Sprache
+- Datenschutz: Standort nur für diese konkrete Sofortfahrt, keine Hintergrundspeicherung
+
+**GPS-Datenschutz-Grundregeln (verbindlich):**
+- GPS nur nach ausdrücklicher, informierter Zustimmung
+- Standort nur für die konkrete Sofortfahrt — kein Dauertracking
+- Keine Hintergrundüberwachung im MVP
+- Vertrauenspersonen nur gemäß Benachrichtigungseinstellungen (Sprint 11) informiert
+
+## Sprint 12D — Spontane Fahrten: Fahrerannahme und Live-Zufahrt
+_geplant_
+
+Fahrer-App-Erweiterung für spontane Anfragen und sichtbare Zufahrt zum Fahrgast.
+
+- Fahrer bekommt neue spontane Anfrage als Push-ähnliche Benachrichtigung
+- Fahrer kann Anfrage annehmen oder ablehnen (mit Timeout)
+- Bei Annahme: Fahrzeug/Fahrer wird reserviert/als belegt markiert
+- Fahrgast sieht Statuswechsel: „Fahrer hat angenommen" → „Fahrer ist unterwegs"
+- Grundlage für echtes Live-Tracking (GPS-Koordinaten des Fahrers → Folge-Sprint)
+- Fahrer-App bleibt mobile-first, große Buttons, kein Verwaltungsbereich
+
+## Sprint 12E — Vertrauenspersonen-View & echter Notification-Dispatch
+_geplant_
+
+Dedizierte Ansicht für Vertrauenspersonen. Echter Benachrichtigungs-Dispatch.
+
+- Vertrauenspersonen-View: Fahrten des verknüpften Fahrgastes sehen und Status lesen
+- Echter E-Mail/In-App-Dispatch basierend auf `PassengerNotificationPreference` (Sprint 11 Grundlage)
+- Backend-Service `notification_dispatch.py` zu echtem Dispatcher ausbauen
 
 ## Sprint 13 — Online-KI-Berater / ChatGPT-Anbindung
 
@@ -287,11 +311,20 @@ KI-gestützte Routenoptimierung für Disponenten.
 
 ---
 
+## Drei Fahrtarten — fachliche Unterscheidung
+
+| Typ | Beschreibung | Status |
+|---|---|---|
+| **Angefragte/geplante Fahrt** | Fahrgast oder Org stellt Anfrage mit Vorlaufzeit; Disponent weist Fahrzeug + Fahrer zu | ✅ Sprint 6–12A |
+| **Linienfahrt** | Wiederkehrende oder fest geplante Fahrten nach Fahrplan/Route | geplant Sprint 15+ |
+| **Spontane Fahrt** | Sofortfahrt-Modus (Uber-artig): Fahrgast bucht jetzt, GPS-Standort als Abholort, nächstes freies Fahrzeug | geplant Sprint 12B–12D |
+
 ## Bewusst außerhalb des MVP
 
 - Echte Krankenkassenabrechnung
 - Zahlungsintegration
-- Externe APIs (GTFS, Maps)
-- Echtzeit-GPS-Tracking (Live-Positionsdaten vom Fahrzeug) — geplant Sprint 12+
+- Externe Maps-/Routing-API (GTFS, Google Maps, OSM) — Crow-fly-Distanz als MVP-Ersatz
+- Echtzeit-GPS-Tracking (Live-Positionsdaten vom Fahrzeug) — Grundlage Sprint 12D
 - Native Mobile App
-- Push-Notifications
+- Push-Notifications (Web-Push)
+- Automatisches Matching ohne Disponent (Spontanfahrten: halbautomatisch via Sprint 12B)

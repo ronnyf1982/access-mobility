@@ -123,25 +123,23 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint FAHRANDO-DEPLOYMENT-1** | **Railway-Deployment, CORS, API-Base-Fix, Production-Build für fahrando.com** | ✅ abgeschlossen |
 | **Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1** | **Variante B: Gate schützt /login und alle App-Routen** | ✅ abgeschlossen |
 | **Sprint 11** | **Fahrt-Statusereignisse, Fahrer-Statuswechsel, Benachrichtigungseinstellungen** | ✅ abgeschlossen |
+| **Sprint 12A** | **Live-Status für angefragte/geplante Fahrten (Fahrgast + Vertrauensperson-Grundlage)** | ✅ abgeschlossen |
 
 ---
 
 ## 6. Geplante Sprints (Roadmap-Richtung)
 
-| Sprint | Schwerpunkt |
-|---|---|
-| Sprint 8 | Assistant Core: Sprachassistenz-Fundament, barrierefreies Erst-Onboarding |
-| Sprint 9 | Sprachgeführter Mobilitätscheck (offline-fähig) |
-| Sprint 10 | Fahrer-Schichtstart & Fahrzeugwahl |
-| Sprint 11 | Fahrtstatus, Fahrer-App, Benachrichtigungseinstellungen |
-| Sprint 12A | Live-Status für Fahrgast & Vertrauensperson (Polling, kein GPS) |
-| Sprint 12B | Vertrauenspersonen-View, Notification-Dispatch (geplant) |
-| Sprint 12C | Live-Status & Standortfreigabe, GPS (geplant) |
-| Sprint 13 | Online-KI-Berater / ChatGPT-Anbindung (Backend-only) |
-| Sprint 14 | Fahrt per Sprache anfragen |
-| Sprint 15 | Regelmäßige Touren / Serienfahrten |
-| Sprint 16 | Ausfallmanagement |
-| Sprint 17 | Tourenoptimierung |
+| Sprint | Schwerpunkt | Fahrttyp |
+|---|---|---|
+| Sprint 12B | Spontane Fahrten: Matching- und Verfügbarkeitsgrundlage | Spontan |
+| Sprint 12C | Spontane Fahrten: Fahrgast-UI und Standortfreigabe | Spontan |
+| Sprint 12D | Spontane Fahrten: Fahrerannahme und Live-Zufahrt | Spontan |
+| Sprint 12E | Vertrauenspersonen-View, echter Notification-Dispatch | Alle |
+| Sprint 13 | Online-KI-Berater / ChatGPT-Anbindung (Backend-only) | Alle |
+| Sprint 14 | Fahrt per Sprache anfragen | Geplant |
+| Sprint 15 | Linienfahrten / Regelmäßige Touren, Serienfahrten | Linie |
+| Sprint 16 | Ausfallmanagement | Alle |
+| Sprint 17 | Tourenoptimierung | Alle |
 
 ---
 
@@ -254,21 +252,72 @@ Modell `PassengerNotificationPreference` — pro Ereignistyp 4 Flags:
 - API: `GET/PUT /passenger/notification-preferences`
 - **Kein Versand in Sprint 11** — nur Einstellungsgrundlage
 
-**Sprint 12A — Live-Status für Fahrgast & Vertrauensperson (umgesetzt):**
+**Sprint 12A — Live-Status für angefragte/geplante Fahrten (umgesetzt):**
+- Betrifft Fahrttyp: Angefragte/geplante Fahrt (mit Disposition und Zuweisung)
 - Fahrgast sieht Status und Verlauf direkt in der Fahrtenkarte (Polling 20 s, onUnmounted gestoppt)
 - `trusted_person` kann Status-Events für verknüpfte Fahrten lesen (aktive TrustedRelationship + can_view_rides)
 - Placeholder-Service `notification_dispatch.py` — liest Präferenzen, kein echter Versand
 - `frontend/src/api/rides.ts` — separates API-Modul für Fahrgast-Kontext
 
-**Sprint 12B — Vertrauenspersonen-View & echter Versand (geplant):**
-- Dedizierte View für Vertrauenspersonen
-- Echter Benachrichtigungs-Dispatch basierend auf `PassengerNotificationPreference`
+**Sprint 12B — Spontane Fahrten: Matching- und Verfügbarkeitsgrundlage (geplant):**
+- Betrifft Fahrttyp: Spontane Fahrt (Sofortfahrt-Modus)
+- `ride_request_type: planned | spontaneous` auf `TransportRequest`
+- Verfügbarkeitsprüfung: Fahrer im Dienst, nicht in Pause, nicht aktiv zugewiesen
+- Fahrzeug nicht belegt/reserviert
+- Matching: Mobilitätsprofil, Fahrzeugausstattung, Fahrerqualifikation (bestehende Logik)
+- ETA-Näherung: Crow-fly-Distanz (keine externe Maps-API)
+- API: `GET /transport-requests/spontaneous/available`
 
-**Sprint 12C — GPS-Live-Tracking (geplant):**
-- Live-Standortfreigabe des Fahrers (GPS-Koordinaten)
-- Kanäle: In-App, E-Mail (extern), SMS (extern)
+**Sprint 12C — Spontane Fahrten: Fahrgast-UI und Standortfreigabe (geplant):**
+- Browser-Geolocation mit Einwilligung (kein Hintergrundtracking)
+- Passende freie Fahrzeuge anzeigen, Wartezeit schätzen
+- GPS-Datenschutz: nur für konkrete Sofortfahrt, kein Dauertracking, jederzeit widerrufbar
+
+**Sprint 12D — Spontane Fahrten: Fahrerannahme und Live-Zufahrt (geplant):**
+- Fahrer nimmt spontane Anfrage an oder lehnt ab
+- Fahrzeug/Fahrer wird reserviert; Fahrgast sieht Statuswechsel
+- Grundlage für echtes GPS-Live-Tracking (Folge-Sprint)
+
+**Sprint 12E — Vertrauenspersonen-View & echter Dispatch (geplant):**
+- Dedizierte View für Vertrauenspersonen (Fahrtübersicht verknüpfter Fahrgäste)
+- Echter Benachrichtigungs-Dispatch auf Basis `PassengerNotificationPreference`
 
 Details: `docs/DECISIONS.md` (Abschnitt Fahrer-App & Benachrichtigungen)
+
+### 7.11 Drei Fahrtarten — verbindliche fachliche Unterscheidung
+
+Access Mobility unterscheidet drei technisch und fachlich verschiedene Fahrtarten:
+
+#### 1. Angefragte/geplante Fahrt
+- Fahrgast, Organisation oder Koordinator stellt Anfrage mit Vorlaufzeit
+- Status: `draft → requested → assigned → completed / cancelled`
+- Disposition manuell durch Disponenten (Sprint 7), automatisch geplant für Sprint 15+
+- Matching: Snapshot-basiert (Mobilitätsprofil, Fahrzeug, Fahrer)
+- Statusverlauf: `RideStatusEvent`-Protokoll (Sprint 11)
+- Live-Status für Fahrgast: Polling, kein GPS (Sprint 12A)
+- **Implementiert:** Sprint 6–12A ✅
+
+#### 2. Linienfahrt
+- Wiederkehrende oder fest geplante Fahrten mit Fahrplan/Route
+- Disponenten konfigurieren Touren mit Reihenfolge und Zeitplänen
+- Optimierte Fahrgastliste (Adresse, geplante Zeit, Mobilitätsbedarf, Hinweise)
+- Reihenfolge anpassbar durch Disponenten
+- **Geplant:** Sprint 15
+
+#### 3. Spontane Fahrt (Sofortfahrt-Modus)
+- Fahrgast bucht jetzt sofort ohne Vorlaufzeit oder Disposition
+- GPS-Standort des Fahrgastes als Abholort (Browser-Geolocation)
+- System zeigt passende freie Fahrzeuge in der Nähe
+- Fahrer nimmt an oder lehnt ab
+- **Matching-Pflichtkriterien:**
+  - Mobilitätsprofil (Rollstuhl, Rampe, Lift, Einstiegshilfen, med. Bedarf)
+  - Fahrzeugtyp und -kapazität
+  - Fahrer hat aktive Schicht und ist nicht in Pause
+  - Fahrer und Fahrzeug sind keiner aktiven Fahrt zugewiesen
+  - Nächstes geeignetes freies Fahrzeug (Distanz/ETA)
+- Kein Disponent erforderlich — halbautomatisch
+- **Datenschutz:** GPS nur mit ausdrücklicher Zustimmung, nur für diese Fahrt, kein Dauertracking
+- **Geplant:** Sprint 12B (Matching-Grundlage) → 12C (Fahrgast-UI) → 12D (Fahrer-App)
 
 ### 7.10 Live-Standortteilung — Konzeptentscheidung (Sprint 12)
 

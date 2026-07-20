@@ -100,8 +100,13 @@ Erhalten ihre Tagesaufträge digital:
 | **Geführter Mobilitätscheck** | Offline-fähiger sprachgeführter Profil-Assistent | ✅ Sprint 9 |
 | **Verbesserter Sprachassistent** | TTS-Flow, STT-Bestätigung, Tastaturkürzel | ✅ Sprint 9B |
 | **Fahrer-Schichtstart & Fahrzeugwahl** | Schicht beginnen/pausieren/beenden, Standard- + Kennzeichen-Fahrzeugwahl, Auftragsstruktur | ✅ Sprint 10 |
-| **Fahrtstatus / Fahrer-App** | Statusereignisse, RideStatusEvent-Protokoll | Sprint 11 |
-| **Live-Status & Standortfreigabe** | Fahrtstatus + Standort teilen, Link-Freigabe, Widerruf | Sprint 12 |
+| **Fahrtstatus / Fahrer-App** | Statusereignisse, RideStatusEvent-Protokoll | ✅ Sprint 11 |
+| **Live-Status für Fahrgast** | Status + Verlauf für angefragte/geplante Fahrten, Polling | ✅ Sprint 12A |
+| **Spontane Fahrten: Matching** | Verfügbarkeitsprüfung, ETA-Näherung, API | Sprint 12B |
+| **Spontane Fahrten: Fahrgast-UI** | GPS-Standort, freie Fahrzeuge, Barrierefreiheit | Sprint 12C |
+| **Spontane Fahrten: Fahrerannahme** | Anfrage annehmen/ablehnen, Live-Zufahrt-Grundlage | Sprint 12D |
+| **Vertrauenspersonen-View & Dispatch** | Dedizierte View, echter Notification-Dispatch | Sprint 12E |
+| **Live-Standortfreigabe** | GPS-Koordinaten teilen, Link-Freigabe, Widerruf | Sprint 12D+ |
 | **KI-Berater** | Online-ChatGPT-Integration (Backend-only) | Sprint 13 |
 | **Fahrt per Sprache** | Vollständige Sprachführung durch Buchungsprozess | Sprint 14 |
 | **Regelmäßige Touren** | Serienfahrten, RRULE | Sprint 15 |
@@ -181,7 +186,35 @@ Vollständiges Konzept: `docs/Product/VOICE_ASSISTANT_STRATEGY.md`
 - Sprint 9: Sprachgeführter Mobilitätscheck offline
 - Sprint 12: Vollständige Fahrtbuchung per Sprache
 
-### 6a. Live-Status & Standortfreigabe (Sprint 12)
+### 6a. Drei Fahrtarten
+
+Access Mobility unterscheidet drei technisch verschiedene Fahrtarten:
+
+#### Angefragte/geplante Fahrt ✅ implementiert (Sprint 6–12A)
+Fahrgast oder Organisation stellt Anfrage mit Vorlaufzeit. Disponent weist Fahrzeug und Fahrer zu. Status `draft → requested → assigned → completed`. Fahrgast sieht Live-Status per Polling.
+
+#### Linienfahrt (Sprint 15)
+Wiederkehrende oder fest geplante Fahrten mit Fahrplan und Reihenfolge. Disponenten konfigurieren Touren. Optimierte Fahrgastliste für Fahrer.
+
+#### Spontane Fahrt / Sofortfahrt (Sprint 12B–12D)
+Fahrgast bucht jetzt sofort. GPS-Standort als Abholort. System zeigt passende freie Fahrzeuge in der Nähe. Fahrer nimmt an oder lehnt ab. Kein Disponent erforderlich.
+
+**Matching-Pflichtkriterien für Spontanfahrten:**
+- Mobilitätsprofil des Fahrgastes (Rollstuhl, Rampe, Lift, Einstiegshilfen, med. Bedarf)
+- Fahrzeugtyp und -kapazität passend
+- Fahrer hat aktive Schicht, ist nicht in Pause
+- Fahrer und Fahrzeug sind keiner anderen aktiven Fahrt zugewiesen
+- Nächstes geeignetes freies Fahrzeug (Distanz/geschätzte Ankunftszeit)
+
+**GPS-Datenschutz (Spontanfahrten):**
+- Standort nur mit ausdrücklicher Zustimmung
+- Nur für die konkrete Sofortfahrt — kein Hintergrundtracking im MVP
+- Vertrauenspersonen nur gemäß Benachrichtigungseinstellungen informiert
+
+### 6b. Live-Status & Standortfreigabe (Sprint 12A–12D)
+
+Sprint 12A: Fahrgast sieht Status und Verlauf für angefragte/geplante Fahrten per Polling.
+Sprint 12C/12D: Spontanfahrten + GPS-Standort des Fahrzeugs. Freigabe an Vertrauenspersonen.
 
 Während einer aktiven Fahrt kann der Fahrgast seinen Fahrtstatus und optional seinen Standort
 mit berechtigten Personen teilen.
