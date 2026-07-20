@@ -16,6 +16,7 @@ import datetime
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models.driver_profile import DriverProfile
+from app.models.driver_shift import DriverShift, ShiftStatus
 from app.models.membership import OrganizationMembership
 from app.models.mobility_profile import MobilityProfile, WheelchairType
 from app.models.notification_preference import NotificationEventType, PassengerNotificationPreference
@@ -77,6 +78,13 @@ DEMO_USERS = [
         "last_name": "Fahrer",
         "role": UserRole.driver,
         "phone": "+49 30 1234566",
+    },
+    {
+        "email": "driver2@access.test",
+        "first_name": "Maria",
+        "last_name": "Fahr",
+        "role": UserRole.driver,
+        "phone": "+49 30 1234577",
     },
     {
         "email": "admin@access.test",
@@ -157,6 +165,7 @@ def main() -> None:
             (created_users.get("provider@access.test"),    wb,      "Geschäftsführung"),
             (created_users.get("dispatcher@access.test"),  wb,      "Disposition"),
             (created_users.get("driver@access.test"),      wb,      "Fahrer:in"),
+            (created_users.get("driver2@access.test"),     wb,      "Fahrer:in"),
         ]
         for user, org, role_label in memberships:
             if not user or not org:
@@ -678,6 +687,109 @@ def main() -> None:
                     print(f"  +notif {added} Benachrichtigungseinstellungen für passenger@access.test")
                 else:
                     print("  skip  Benachrichtigungseinstellungen passenger@access.test (bereits vorhanden)")
+
+        # ── Sprint 12B: Fahrerprofil für driver2@access.test ───────────────────
+        driver2_user = created_users.get("driver2@access.test")
+        if driver2_user and wb:
+            existing_dp2 = (
+                db.query(DriverProfile)
+                .filter(DriverProfile.user_id == driver2_user.id)
+                .first()
+            )
+            if not existing_dp2:
+                db.add(
+                    DriverProfile(
+                        user_id=driver2_user.id,
+                        organization_id=wb.id,
+                        display_name="Demo Fahrerin 2",
+                        phone="+49 30 1234577",
+                        can_assist_wheelchair=False,
+                        can_secure_wheelchair=False,
+                        can_operate_lift=False,
+                        has_first_aid_training=True,
+                        has_passenger_transport_license=True,
+                    )
+                )
+                db.flush()
+                print("  +drv  driver2@access.test -> WB Fahrdienste GmbH")
+            else:
+                print("  skip  DriverProfile driver2@access.test (bereits vorhanden)")
+
+        # ── Sprint 12B: Schichten mit GPS-Demo-Positionen ───────────────────────
+        # driver@access.test + AM-VAN-1 → aktiv, passende Ausstattung, nahe Berlin-Mitte
+        # driver2@access.test + AM-CAR-1 → pausiert (kein Rollstuhl) → gefiltert
+        driver_user_12b = created_users.get("driver@access.test")
+        driver2_user_12b = created_users.get("driver2@access.test")
+
+        van_vehicle = (
+            db.query(Vehicle).filter(Vehicle.license_plate == "AM-VAN-1").first()
+        )
+        car_vehicle = (
+            db.query(Vehicle).filter(Vehicle.license_plate == "AM-CAR-1").first()
+        )
+
+        if driver_user_12b and van_vehicle:
+            dp1 = db.query(DriverProfile).filter(DriverProfile.user_id == driver_user_12b.id).first()
+            if dp1:
+                existing_shift = (
+                    db.query(DriverShift)
+                    .filter(
+                        DriverShift.driver_profile_id == dp1.id,
+                        DriverShift.vehicle_id == van_vehicle.id,
+                        DriverShift.status == ShiftStatus.active,
+                    )
+                    .first()
+                )
+                if not existing_shift:
+                    db.add(DriverShift(
+                        driver_profile_id=dp1.id,
+                        vehicle_id=van_vehicle.id,
+                        status=ShiftStatus.active,
+                        started_at=datetime.datetime(2026, 7, 20, 7, 0, 0, tzinfo=datetime.timezone.utc),
+                        current_latitude=52.525,
+                        current_longitude=13.402,
+                        notes="Sprint-12B-Demo: aktive Schicht mit GPS-Position (Rollstuhl-Van, passt)",
+                    ))
+                    print("  +shft driver@access.test + AM-VAN-1 (aktiv, lat=52.525, lon=13.402)")
+                else:
+                    # Backfill GPS falls noch nicht gesetzt
+                    if existing_shift.current_latitude is None:
+                        existing_shift.current_latitude = 52.525
+                        existing_shift.current_longitude = 13.402
+                        print("  upd   DriverShift driver@access.test/AM-VAN-1 — GPS ergänzt")
+                    else:
+                        print("  skip  DriverShift driver@access.test/AM-VAN-1 (bereits vorhanden)")
+
+        if driver2_user_12b and car_vehicle:
+            dp2 = db.query(DriverProfile).filter(DriverProfile.user_id == driver2_user_12b.id).first()
+            if dp2:
+                existing_shift2 = (
+                    db.query(DriverShift)
+                    .filter(
+                        DriverShift.driver_profile_id == dp2.id,
+                        DriverShift.vehicle_id == car_vehicle.id,
+                    )
+                    .first()
+                )
+                if not existing_shift2:
+                    db.add(DriverShift(
+                        driver_profile_id=dp2.id,
+                        vehicle_id=car_vehicle.id,
+                        status=ShiftStatus.paused,
+                        started_at=datetime.datetime(2026, 7, 20, 7, 30, 0, tzinfo=datetime.timezone.utc),
+                        break_started_at=datetime.datetime(2026, 7, 20, 12, 0, 0, tzinfo=datetime.timezone.utc),
+                        current_latitude=52.510,
+                        current_longitude=13.395,
+                        notes="Sprint-12B-Demo: Pause (Standard-PKW, kein Rollstuhl) → gefiltert",
+                    ))
+                    print("  +shft driver2@access.test + AM-CAR-1 (pausiert, lat=52.510)")
+                else:
+                    print("  skip  DriverShift driver2@access.test/AM-CAR-1 (bereits vorhanden)")
+
+        # Onboarding-Backfill auch für driver2
+        if driver2_user and driver2_user.onboarding_completed_at is None:
+            driver2_user.onboarding_completed_at = datetime.datetime.now(datetime.timezone.utc)
+            print("  upd   driver2@access.test — onboarding_completed_at gesetzt")
 
         db.commit()
         print("\nDemo-Daten erfolgreich angelegt.")

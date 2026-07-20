@@ -155,6 +155,21 @@
           </RouterLink>
         </section>
 
+        <!-- Spontane Fahrt — nur für Fahrgäste und Vertrauenspersonen -->
+        <section
+          v-if="authStore.role === 'passenger' || authStore.role === 'trusted_person'"
+          class="am-card spontaneous-card"
+          aria-labelledby="spontaneous-heading"
+        >
+          <h3 id="spontaneous-heading" class="widget-title">Spontane Fahrt</h3>
+          <p class="widget-sub">Jetzt verfügbare Fahrzeuge in Ihrer Nähe finden.</p>
+          <RouterLink to="/spontaneous-ride" class="am-btn am-btn-primary spontaneous-btn">
+            <i class="pi pi-map-marker" aria-hidden="true"></i>
+            Spontane Fahrt buchen
+          </RouterLink>
+          <p class="spontaneous-note">Standort wird nur für diese Suche verwendet.</p>
+        </section>
+
         <!-- Buchungsübersicht -->
         <section class="am-card" aria-labelledby="booking-overview-heading">
           <h3 id="booking-overview-heading" class="widget-title">Buchungsübersicht</h3>
@@ -1035,5 +1050,24 @@ const quickActions = [
 .fleet-stat-label {
   font-size: 0.72rem;
   color: var(--am-text-secondary);
+}
+
+.spontaneous-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spontaneous-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.spontaneous-note {
+  font-size: 0.75rem;
+  color: var(--am-text-secondary);
+  margin: 0;
 }
 </style>

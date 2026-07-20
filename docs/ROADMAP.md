@@ -212,43 +212,52 @@ Fahrgast sieht den aktuellen Fahrt-Status und -verlauf für **angefragte und dis
 - **TypeScript-Check:** ✅ | **Build:** ✅ built in 2.63s | **Alembic:** keine neue Migration
 - **Bewusst zurückgestellt:** Vertrauenspersonen-View (folgt 12E), echter Dispatch (folgt 12E), GPS-Tracking (folgt 12D)
 
-## Sprint 12B — Spontane Fahrten: Matching- und Verfügbarkeitsgrundlage
-_geplant_
-
-Datenbasis und Backend-Logik für den Sofortfahrt-Modus (Uber-artiges Modell).
+## Sprint 12B — Spontane Fahrten: Karten-MVP, Standortfreigabe und Matching ✅
 
 **Fahrttyp:** Spontane Fahrt — Fahrgast bucht jetzt sofort, ohne Vorlaufzeit oder Disposition.
 
-- `ride_request_type`-Feld auf `TransportRequest` ergänzen: `planned` | `spontaneous`
-- Verfügbarkeitsprüfung: Fahrer muss aktive Schicht haben, darf nicht in Pause sein, darf nicht bereits einer aktiven Fahrt zugewiesen sein
-- Fahrzeug darf nicht bereits belegt/reserviert sein
-- Mobilitätsprofil des Fahrgastes als Matching-Kriterium (wie bei geplanten Fahrten)
-- Fahrzeugausstattung und Fahrerqualifikation prüfen (bestehende Matching-Logik wiederverwenden)
-- Entfernungs-/ETA-Modell vorbereiten: zunächst Crow-fly-Distanz ohne externe Maps-API
-- API-Endpoint: passende freie Fahrzeuge/Fahrer für Sofortfahrt finden (`GET /transport-requests/spontaneous/available`)
-- Noch keine GPS-Koordinaten, noch keine Fahrgast-UI, noch keine Echtzeit-Karte
+> **Umgesetzt:** Karten-MVP mit Leaflet/OpenStreetMap, Fahrgast-Standortfreigabe per Browser-Geolocation,
+> Backend-Matching mit Haversine-ETA, vollständige Verfügbarkeits- und Capability-Prüfung.
+> Noch keine finale Buchung — folgt Sprint 12C.
 
-**Matching-Kernregeln für spontane Fahrten:**
+**Kartenlösung:** Leaflet + OpenStreetMap-Tiles (kein API-Key, kein externer kostenpflichtiger Dienst, MVP/Preview-Status).
+Für Produktion: OSM-Nutzungsbedingungen, Datenschutz und ggf. eigener Tile-/Routing-Dienst prüfen.
+
+**Backend:**
+- `POST /api/v1/spontaneous-rides/matches` — gibt passende freie Fahrzeuge zurück
+- Haversine-Luftlinien-ETA: `max(3, int(km / 30 * 60))` Minuten
+- Verfügbarkeit: Fahrer mit aktiver Schicht (`status=active`), nicht in Pause, Fahrzeug nicht belegt (`TransportRequest.status=assigned`)
+- Mobilitätsprofil-Capability-Check: Rampe, Lift, Rollstuhlplatz, Elektro-Rollstuhl, Liegendtransport etc.
+- Berechtigung: passenger (nur für sich selbst), trusted_person (für verknüpften Fahrgast), dispatcher/coordinator/admin
+- Fahrerdaten in Response: kein Telefon, keine E-Mail, keine private Adresse
+- Migration: `current_latitude / current_longitude` zu `driver_shifts` ergänzt
+- Seed: Demo-Schicht AM-VAN-1 (aktiv, passt) + AM-CAR-1 (Pause, gefiltert)
+- 13 neue Tests, alle grün
+
+**Frontend:**
+- Route `/spontaneous-ride` → `SpontaneousRideView`
+- Einstieg „Spontane Fahrt buchen" im Dashboard (Fahrgast/Vertrauensperson)
+- Standortfreigabe nur nach Klick, mit verständlichen Fehlerstaaten
+- Leaflet-Karte: Fahrgast-Marker + Fahrzeug-Marker mit Popup (Label, Entfernung, ETA, Ausstattung)
+- Textliste parallel zur Karte (barrierefrei)
+- „Auswählen"-Button deaktiviert mit Hinweis „folgt Sprint 12C"
+
+**Matching-Kernregeln:**
 - Mobilitätsprofil (Rollstuhl, Rampe, Lift, Einstiegshilfen, med. Bedarf)
-- Fahrzeugtyp und -kapazität
 - Fahrer im Dienst und nicht in Pause
 - Fahrzeug und Fahrer nicht bereits einer aktiven Fahrt zugewiesen
-- Nächstes geeignetes freies Fahrzeug (Entfernung, später echte ETA)
+- Sortierung nach Entfernung (Haversine, aufsteigend)
 - Kein automatischer Block — Fahrgast wählt aus Vorschlägen
 
-## Sprint 12C — Spontane Fahrten: Fahrgast-UI und Standortfreigabe
+## Sprint 12C — Spontane Fahrten: Buchung & Fahrerannahme
 _geplant_
 
-Fahrgast-Oberfläche für den Sofortfahrt-Modus mit browserbasierter Standortabfrage.
+Echte Buchung auslösen und Fahrer-Seite implementieren.
 
-- Fahrgast klickt „Jetzt Fahrt buchen" (neuer CTA in der App)
-- **Standortfreigabe:** Browser-Geolocation-API mit klarer Einwilligung (kein Hintergrundtracking)
-- Aktuelle Position als vorausgefüllter Abholort (überschreibbar)
-- Passende freie Fahrzeuge/Fahrer werden geladen und angezeigt
-- Geschätzte Wartezeit je Fahrzeug sichtbar
-- Fahrgast wählt Fahrzeug aus — Anfrage wird gesendet
-- Barrierefreiheit: klare Einwilligungstexte, kein Icon-only, einfache Sprache
-- Datenschutz: Standort nur für diese konkrete Sofortfahrt, keine Hintergrundspeicherung
+- Fahrgast wählt Fahrzeug aus Liste → Buchungsanfrage wird gesendet
+- Fahrzeug und Fahrer werden für diese Fahrt reserviert
+- Fahrer bekommt Anfrage und kann annehmen oder ablehnen
+- Bei Annahme: Status wechselt → Fahrgast sieht „Fahrer hat angenommen"
 
 **GPS-Datenschutz-Grundregeln (verbindlich):**
 - GPS nur nach ausdrücklicher, informierter Zustimmung

@@ -558,6 +558,28 @@ export interface NotificationPreferenceUpsert {
   channel_sms: boolean
 }
 
+// ─── Spontane Fahrten (Sprint 12B) ───────────────────────────────────────────
+
+export interface SpontaneousRideMatchRequest {
+  pickup_latitude: number
+  pickup_longitude: number
+  passenger_user_id?: string | null
+}
+
+export interface SpontaneousRideMatchResult {
+  driver_id: string
+  driver_display_name: string
+  vehicle_id: string
+  vehicle_label: string
+  vehicle_type: string
+  vehicle_latitude: number
+  vehicle_longitude: number
+  distance_km: number
+  estimated_arrival_minutes: number
+  matched_capabilities: string[]
+  can_accept_now: boolean
+}
+
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 
 export interface TransportType {
