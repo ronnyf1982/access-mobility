@@ -51,13 +51,13 @@ const router = createRouter({
       path: '/impressum',
       name: 'impressum',
       component: ImpressumView,
-      meta: { public: true },
+      meta: { gateExempt: true },
     },
     {
       path: '/datenschutz',
       name: 'datenschutz',
       component: DatenschutzView,
-      meta: { public: true },
+      meta: { gateExempt: true },
     },
     // ── Onboarding ──────────────────────────────────────
     {
@@ -108,27 +108,39 @@ router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
   const unlocked = !!sessionStorage.getItem('fahrando_preview_unlocked')
 
-  // Preview-Gate: alle Routen mit requiresPreviewAccess benötigen Gate-Freischaltung
-  if (to.matched.some(r => r.meta.requiresPreviewAccess) && !unlocked) {
-    return next({ path: '/gate', query: { redirect: to.fullPath } })
-  }
-
-  // Bereits freigeschaltet und auf /gate → Ziel oder / weiterleiten
-  if (to.path === '/gate' && unlocked) {
-    const raw = to.query.redirect as string | undefined
-    const target = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
-    return next(target)
-  }
-
-  // Öffentliche Routen (inkl. /gate, /login, /impressum, /datenschutz) und freigegebene Website-Routen
-  if (to.meta.public || to.matched.some(r => r.meta.requiresPreviewAccess)) {
-    if (to.path === '/login' && auth.isAuthenticated) {
-      return next('/dashboard')
+  // /gate selbst: immer erreichbar; bei bereits freigeschaltetem Gate zum Ziel weiterleiten
+  if (to.path === '/gate') {
+    if (unlocked) {
+      const raw = to.query.redirect as string | undefined
+      const target = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+      return next(target)
     }
     return next()
   }
 
-  // Auth-Prüfung für geschützte Routen
+  // Impressum & Datenschutz: immer frei, kein Gate erforderlich
+  if (to.matched.some(r => r.meta.gateExempt)) {
+    return next()
+  }
+
+  // Alles andere: Gate-Freischaltung erforderlich (Variante B)
+  if (!unlocked) {
+    return next({ path: '/gate', query: { redirect: to.fullPath } })
+  }
+
+  // ── Gate freigeschaltet — normale App-Auth-Logik ────────────
+
+  // /login: eingeloggte Nutzer direkt zum Dashboard
+  if (to.path === '/login') {
+    return auth.isAuthenticated ? next('/dashboard') : next()
+  }
+
+  // Routen ohne App-Auth-Pflicht (/, öffentliche Website-Seiten)
+  if (!to.matched.some(r => r.meta.requiresAuth)) {
+    return next()
+  }
+
+  // App-Auth-Prüfung für geschützte Routen
   if (!auth.isAuthenticated) {
     return next('/login')
   }
