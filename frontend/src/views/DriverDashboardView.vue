@@ -258,6 +258,78 @@
               <i class="pi pi-user" aria-hidden="true"></i>
               {{ req.passenger_display_name }}
             </div>
+
+            <!-- ── Statusverlauf ────────────────────────────────────────── -->
+            <div class="ride-status-section">
+              <div v-if="statusEventsLoading[req.id]" class="ride-status-loading">
+                <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Lädt…
+              </div>
+              <template v-else>
+                <!-- Letzter Status -->
+                <div v-if="lastEventFor(req.id)" class="ride-status-current">
+                  <i class="pi pi-clock" aria-hidden="true"></i>
+                  Letzter Status:
+                  <strong>{{ RIDE_STATUS_EVENT_LABELS[lastEventFor(req.id)!.status] }}</strong>
+                  <span class="ride-status-time">
+                    {{ formatTime(lastEventFor(req.id)!.created_at) }}
+                  </span>
+                </div>
+                <div v-else class="ride-status-none">
+                  <i class="pi pi-info-circle" aria-hidden="true"></i>
+                  Noch kein Statusereignis gesetzt.
+                </div>
+
+                <!-- Statusbuttons -->
+                <div class="ride-status-btns" role="group" :aria-label="`Statuswechsel für Fahrt vom ${req.pickup_date ?? ''}`">
+                  <button
+                    v-for="action in STATUS_ACTIONS"
+                    :key="action.status"
+                    class="ride-status-btn"
+                    :disabled="statusActionLoading[req.id]"
+                    :title="action.label"
+                    @click="setStatus(req.id, action.status)"
+                  >
+                    <i :class="['pi', action.icon]" aria-hidden="true"></i>
+                    {{ action.label }}
+                  </button>
+                </div>
+
+                <!-- Problem melden mit Notiz -->
+                <div class="ride-issue-section">
+                  <button
+                    class="ride-status-btn ride-status-btn--issue"
+                    :disabled="statusActionLoading[req.id]"
+                    @click="toggleIssueInput(req.id)"
+                  >
+                    <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                    Problem melden
+                  </button>
+                  <div v-if="issueInputOpen[req.id]" class="ride-issue-input-row">
+                    <input
+                      v-model="issueNotes[req.id]"
+                      class="am-input ride-issue-input"
+                      type="text"
+                      placeholder="Kurze Beschreibung des Problems (optional)"
+                      maxlength="300"
+                    />
+                    <button
+                      class="ride-status-btn ride-status-btn--issue-send"
+                      :disabled="statusActionLoading[req.id]"
+                      @click="reportIssue(req.id)"
+                    >
+                      <i class="pi pi-send" aria-hidden="true"></i>
+                      Senden
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Fehler -->
+                <div v-if="statusError[req.id]" class="ride-status-error" role="alert">
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                  {{ statusError[req.id] }}
+                </div>
+              </template>
+            </div>
           </div>
         </div>
       </section>
@@ -286,9 +358,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { getDriverContext, startShift, endShift, pauseShift, resumeShift, searchVehicles, getDriverAssignments } from '@/api/driver'
-import type { DriverDashboardContext, TransportRequestListItem, VehicleBrief } from '@/types'
-import { VEHICLE_TYPE_LABELS } from '@/types'
+import { getDriverContext, startShift, endShift, pauseShift, resumeShift, searchVehicles, getDriverAssignments, createRideStatusEvent, getRideStatusEvents } from '@/api/driver'
+import type { DriverDashboardContext, RideStatusEvent, RideStatusEventType, TransportRequestListItem, VehicleBrief } from '@/types'
+import { RIDE_STATUS_EVENT_LABELS, VEHICLE_TYPE_LABELS } from '@/types'
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -306,6 +378,80 @@ const searchDone = ref(false)
 const assignmentsLoading = ref(false)
 const confirmEndShift = ref(false)
 const errorMsg = ref<string | null>(null)
+
+// ── Ride Status Events ─────────────────────────────────────────────────────
+
+const statusEventsMap = ref<Record<string, RideStatusEvent[]>>({})
+const statusEventsLoading = ref<Record<string, boolean>>({})
+const statusActionLoading = ref<Record<string, boolean>>({})
+const statusError = ref<Record<string, string | null>>({})
+const issueInputOpen = ref<Record<string, boolean>>({})
+const issueNotes = ref<Record<string, string>>({})
+
+const STATUS_ACTIONS: Array<{ status: RideStatusEventType; label: string; icon: string }> = [
+  { status: 'driver_on_way',       label: 'Ich bin unterwegs',    icon: 'pi-car' },
+  { status: 'driver_arrived',      label: 'Ich bin angekommen',   icon: 'pi-map-marker' },
+  { status: 'passenger_picked_up', label: 'Fahrgast aufgenommen', icon: 'pi-user-plus' },
+  { status: 'ride_started',        label: 'Fahrt gestartet',      icon: 'pi-play' },
+  { status: 'ride_completed',      label: 'Fahrt abgeschlossen',  icon: 'pi-check-circle' },
+]
+
+function lastEventFor(requestId: string): RideStatusEvent | undefined {
+  const events = statusEventsMap.value[requestId]
+  return events && events.length > 0 ? events[events.length - 1] : undefined
+}
+
+async function loadStatusEvents(requestId: string) {
+  statusEventsLoading.value[requestId] = true
+  try {
+    statusEventsMap.value[requestId] = await getRideStatusEvents(requestId)
+  } catch {
+    statusEventsMap.value[requestId] = []
+  } finally {
+    statusEventsLoading.value[requestId] = false
+  }
+}
+
+async function setStatus(requestId: string, eventStatus: RideStatusEventType) {
+  statusActionLoading.value[requestId] = true
+  statusError.value[requestId] = null
+  try {
+    const event = await createRideStatusEvent(requestId, { status: eventStatus })
+    if (!statusEventsMap.value[requestId]) statusEventsMap.value[requestId] = []
+    statusEventsMap.value[requestId].push(event)
+    if (eventStatus === 'ride_completed' || eventStatus === 'ride_cancelled') {
+      await loadAssignments()
+    }
+  } catch (err: unknown) {
+    statusError.value[requestId] = extractError(err)
+  } finally {
+    statusActionLoading.value[requestId] = false
+  }
+}
+
+function toggleIssueInput(requestId: string) {
+  issueInputOpen.value[requestId] = !issueInputOpen.value[requestId]
+  if (!issueNotes.value[requestId]) issueNotes.value[requestId] = ''
+}
+
+async function reportIssue(requestId: string) {
+  statusActionLoading.value[requestId] = true
+  statusError.value[requestId] = null
+  try {
+    const event = await createRideStatusEvent(requestId, {
+      status: 'issue_reported',
+      note: issueNotes.value[requestId] || null,
+    })
+    if (!statusEventsMap.value[requestId]) statusEventsMap.value[requestId] = []
+    statusEventsMap.value[requestId].push(event)
+    issueInputOpen.value[requestId] = false
+    issueNotes.value[requestId] = ''
+  } catch (err: unknown) {
+    statusError.value[requestId] = extractError(err)
+  } finally {
+    statusActionLoading.value[requestId] = false
+  }
+}
 
 // ── Computed ───────────────────────────────────────────────────────────────
 
@@ -358,6 +504,8 @@ async function loadAssignments() {
   assignmentsLoading.value = true
   try {
     assignments.value = await getDriverAssignments()
+    // Statusereignisse für alle Aufträge parallel laden
+    await Promise.all(assignments.value.map((r) => loadStatusEvents(r.id)))
   } catch {
     assignments.value = []
   } finally {
@@ -800,6 +948,131 @@ function extractError(err: unknown): string {
   gap: 6px;
   font-size: 0.8rem;
   color: var(--am-text-secondary);
+}
+
+/* ─── Ride Status Events ─────────────────────────────────────────────────── */
+.ride-status-section {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+  border-top: 1px solid var(--am-border);
+  padding-top: var(--am-space-s);
+  margin-top: var(--am-space-s);
+}
+
+.ride-status-loading {
+  font-size: 0.8rem;
+  color: var(--am-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ride-status-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--am-text-secondary);
+  flex-wrap: wrap;
+}
+
+.ride-status-current strong {
+  color: var(--am-text-primary);
+}
+
+.ride-status-time {
+  font-size: 0.75rem;
+  color: var(--am-text-secondary);
+  margin-left: 4px;
+}
+
+.ride-status-none {
+  font-size: 0.8rem;
+  color: var(--am-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ride-status-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ride-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--am-radius-s);
+  border: 1px solid var(--am-border-strong);
+  background: var(--am-bg-base);
+  color: var(--am-text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 36px;
+  transition: background var(--am-transition), border-color var(--am-transition);
+}
+
+.ride-status-btn:hover:not(:disabled) {
+  background: var(--am-accent-bg);
+  border-color: var(--am-accent);
+}
+
+.ride-status-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ride-status-btn--issue {
+  border-color: var(--am-danger, #dc2626);
+  color: var(--am-danger, #dc2626);
+}
+
+.ride-status-btn--issue:hover:not(:disabled) {
+  background: var(--am-danger-bg, #fef2f2);
+  border-color: var(--am-danger, #dc2626);
+}
+
+.ride-status-btn--issue-send {
+  border-color: var(--am-accent);
+  background: var(--am-accent);
+  color: var(--am-text-on-accent);
+}
+
+.ride-issue-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ride-issue-input-row {
+  display: flex;
+  gap: var(--am-space-s);
+  align-items: center;
+}
+
+.ride-issue-input {
+  flex: 1;
+  font-size: 0.85rem;
+  height: 36px;
+  padding: 0 10px;
+}
+
+.ride-status-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--am-danger, #dc2626);
+  background: var(--am-danger-bg, #fef2f2);
+  padding: 6px 10px;
+  border-radius: var(--am-radius-s);
+  border: 1px solid var(--am-danger, #dc2626);
 }
 
 /* ─── Bestätigungs-Dialog ────────────────────────────────────────────── */

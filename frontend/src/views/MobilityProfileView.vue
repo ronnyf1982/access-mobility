@@ -434,7 +434,99 @@
         </div>
       </section>
 
-      <!-- ── Abschnitt 5: Speichern ──────────────────────────────────────── -->
+      <!-- ── Abschnitt 5: Benachrichtigungseinstellungen ──────────────── -->
+      <section class="mp-section am-card" aria-labelledby="s5-heading">
+        <h2 id="s5-heading" class="mp-section-title">
+          <i class="pi pi-bell" aria-hidden="true"></i>
+          Benachrichtigungseinstellungen
+        </h2>
+        <p class="mp-section-desc">
+          Legen Sie fest, über welche Fahrt-Ereignisse Ihre Vertrauenspersonen informiert werden sollen.
+          <strong>Hinweis:</strong> Der Versand wird in einem späteren Sprint aktiviert.
+        </p>
+
+        <div v-if="notifLoading" class="mp-loading" role="status">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+          Einstellungen werden geladen …
+        </div>
+
+        <div v-else class="notif-table" role="table" aria-label="Benachrichtigungseinstellungen">
+          <!-- Kopfzeile -->
+          <div class="notif-row notif-row--head" role="row">
+            <div class="notif-cell notif-cell--event" role="columnheader">Ereignis</div>
+            <div class="notif-cell notif-cell--chan" role="columnheader" title="Vertrauensperson informieren">Vertrauensperson</div>
+            <div class="notif-cell notif-cell--chan" role="columnheader" title="In-App-Benachrichtigung">In-App</div>
+            <div class="notif-cell notif-cell--chan" role="columnheader" title="E-Mail">E-Mail</div>
+            <div class="notif-cell notif-cell--chan" role="columnheader" title="SMS">SMS</div>
+          </div>
+
+          <div
+            v-for="pref in notifPrefs"
+            :key="pref.event_type"
+            class="notif-row"
+            role="row"
+          >
+            <div class="notif-cell notif-cell--event" role="cell">
+              {{ NOTIFICATION_EVENT_LABELS[pref.event_type] }}
+            </div>
+            <div class="notif-cell notif-cell--chan" role="cell">
+              <input
+                type="checkbox"
+                class="notif-check"
+                v-model="pref.notify_trusted_persons"
+                :aria-label="`Vertrauensperson bei '${NOTIFICATION_EVENT_LABELS[pref.event_type]}' informieren`"
+              />
+            </div>
+            <div class="notif-cell notif-cell--chan" role="cell">
+              <input
+                type="checkbox"
+                class="notif-check"
+                v-model="pref.channel_in_app"
+                :aria-label="`In-App bei '${NOTIFICATION_EVENT_LABELS[pref.event_type]}'`"
+              />
+            </div>
+            <div class="notif-cell notif-cell--chan" role="cell">
+              <input
+                type="checkbox"
+                class="notif-check"
+                v-model="pref.channel_email"
+                :aria-label="`E-Mail bei '${NOTIFICATION_EVENT_LABELS[pref.event_type]}'`"
+              />
+            </div>
+            <div class="notif-cell notif-cell--chan" role="cell">
+              <input
+                type="checkbox"
+                class="notif-check"
+                v-model="pref.channel_sms"
+                :aria-label="`SMS bei '${NOTIFICATION_EVENT_LABELS[pref.event_type]}'`"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div v-if="notifSaveSuccess" class="mp-alert mp-alert--success" role="alert">
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          Benachrichtigungseinstellungen gespeichert.
+        </div>
+        <div v-if="notifSaveError" class="mp-alert mp-alert--error" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          {{ notifSaveError }}
+        </div>
+
+        <button
+          type="button"
+          class="am-btn am-btn-primary mp-save-btn"
+          :disabled="notifSaving"
+          :aria-busy="notifSaving"
+          @click="handleNotifSave"
+        >
+          <i v-if="notifSaving" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+          <i v-else class="pi pi-save" aria-hidden="true"></i>
+          {{ notifSaving ? 'Wird gespeichert …' : 'Einstellungen speichern' }}
+        </button>
+      </section>
+
+      <!-- ── Abschnitt 6: Speichern ──────────────────────────────────────── -->
       <div class="mp-save-bar">
         <button
           type="submit"
@@ -457,7 +549,9 @@ import { reactive, ref, watch, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useMobilityProfileStore } from '@/stores/mobilityProfile'
 import { getTransportOptions } from '@/api/transportOptions'
-import type { MobilityProfile, WheelchairType, AttendantType, TransportType } from '@/types'
+import { getNotificationPreferences, saveNotificationPreferences } from '@/api/notificationPreferences'
+import type { MobilityProfile, NotificationEventType, WheelchairType, AttendantType, TransportType } from '@/types'
+import { NOTIFICATION_EVENT_LABELS } from '@/types'
 
 type NeedKey =
   | 'uses_wheelchair'
@@ -492,6 +586,90 @@ const saveSuccess = ref(false)
 const saveError = ref('')
 const selectedTransportType = ref<string | null>(null)
 const TRANSPORT_TYPES = ref<TransportType[]>([])
+
+// ── Benachrichtigungseinstellungen ─────────────────────────────────────────
+
+const ALL_NOTIFICATION_EVENTS: NotificationEventType[] = [
+  'driver_on_way',
+  'driver_arrived',
+  'passenger_picked_up',
+  'ride_started',
+  'ride_completed',
+  'ride_cancelled',
+  'issue_reported',
+]
+
+interface EditableNotifPref {
+  event_type: NotificationEventType
+  notify_trusted_persons: boolean
+  channel_in_app: boolean
+  channel_email: boolean
+  channel_sms: boolean
+}
+
+const notifPrefs = ref<EditableNotifPref[]>([])
+const notifLoading = ref(false)
+const notifSaving = ref(false)
+const notifSaveSuccess = ref(false)
+const notifSaveError = ref('')
+
+function buildDefaultNotifPrefs(): EditableNotifPref[] {
+  return ALL_NOTIFICATION_EVENTS.map((evt) => ({
+    event_type: evt,
+    notify_trusted_persons: true,
+    channel_in_app: true,
+    channel_email: false,
+    channel_sms: false,
+  }))
+}
+
+async function loadNotifPrefs() {
+  notifLoading.value = true
+  try {
+    const saved = await getNotificationPreferences()
+    if (saved.length === 0) {
+      notifPrefs.value = buildDefaultNotifPrefs()
+    } else {
+      notifPrefs.value = ALL_NOTIFICATION_EVENTS.map((evt) => {
+        const found = saved.find((p) => p.event_type === evt)
+        return found
+          ? {
+              event_type: evt,
+              notify_trusted_persons: found.notify_trusted_persons,
+              channel_in_app: found.channel_in_app,
+              channel_email: found.channel_email,
+              channel_sms: found.channel_sms,
+            }
+          : {
+              event_type: evt,
+              notify_trusted_persons: true,
+              channel_in_app: true,
+              channel_email: false,
+              channel_sms: false,
+            }
+      })
+    }
+  } catch {
+    notifPrefs.value = buildDefaultNotifPrefs()
+  } finally {
+    notifLoading.value = false
+  }
+}
+
+async function handleNotifSave() {
+  notifSaving.value = true
+  notifSaveSuccess.value = false
+  notifSaveError.value = ''
+  try {
+    await saveNotificationPreferences(notifPrefs.value)
+    notifSaveSuccess.value = true
+    setTimeout(() => (notifSaveSuccess.value = false), 5000)
+  } catch {
+    notifSaveError.value = 'Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.'
+  } finally {
+    notifSaving.value = false
+  }
+}
 
 const wheelchairTypeOptions = [
   { value: 'manual' as WheelchairType, label: 'Manueller Rollstuhl' },
@@ -705,6 +883,7 @@ onMounted(async () => {
   ])
   TRANSPORT_TYPES.value = typesResult.status === 'fulfilled' ? typesResult.value : []
   syncFormFromStore()
+  await loadNotifPrefs()
 })
 
 // Store-Profil-Änderungen ins Formular übernehmen (z. B. nach erstem Load)
@@ -1307,5 +1486,62 @@ watch(() => store.profile, syncFormFromStore)
   gap: var(--am-space-s);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* ── Benachrichtigungseinstellungen ──────────────────────────────────────── */
+.notif-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.notif-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px 80px 80px;
+  align-items: center;
+  gap: var(--am-space-s);
+  padding: 8px var(--am-space-s);
+  border-radius: var(--am-radius-s);
+}
+
+.notif-row:nth-child(even) {
+  background: var(--am-bg-raised);
+}
+
+.notif-row--head {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--am-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--am-border);
+  padding-bottom: var(--am-space-s);
+}
+
+.notif-cell--event {
+  font-size: 0.875rem;
+  color: var(--am-text-primary);
+}
+
+.notif-cell--chan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-check {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--am-accent);
+  cursor: pointer;
+}
+
+@media (max-width: 540px) {
+  .notif-row {
+    grid-template-columns: 1fr 72px 60px 60px 60px;
+    font-size: 0.8rem;
+  }
 }
 </style>

@@ -18,7 +18,9 @@ from app.db.session import SessionLocal
 from app.models.driver_profile import DriverProfile
 from app.models.membership import OrganizationMembership
 from app.models.mobility_profile import MobilityProfile, WheelchairType
+from app.models.notification_preference import NotificationEventType, PassengerNotificationPreference
 from app.models.organization import Organization, OrganizationType
+from app.models.ride_status_event import RideStatusEvent, RideStatusEventType
 from app.models.transport_request import TransportRequest, TransportRequestStatus
 from app.models.trusted_relationship import TrustedRelationship, TrustStatus
 from app.models.user import User, UserRole
@@ -572,6 +574,110 @@ def main() -> None:
                 print(f"  upd   {email} — onboarding_completed_at gesetzt (Staff-Rolle)")
         if _backfilled == 0:
             print("  ok    Onboarding-Backfill: alle Staff-Nutzer bereits gesetzt")
+
+        # ── Sprint 11: Zugewiesene Fahrt für Fahrer-Statuswechsel Demo ──────────
+        driver_user = created_users.get("driver@access.test")
+        if passenger_user and driver_user:
+            existing_dp = (
+                db.query(DriverProfile)
+                .filter(DriverProfile.user_id == driver_user.id)
+                .first()
+            )
+            default_vehicle = (
+                db.query(Vehicle)
+                .filter(Vehicle.license_plate == "AM-BUS-1")
+                .first()
+            )
+            assigned_req_address = "Hauptstraße 5, 10827 Berlin"
+            existing_assigned = (
+                db.query(TransportRequest)
+                .filter(
+                    TransportRequest.passenger_user_id == passenger_user.id,
+                    TransportRequest.pickup_address == assigned_req_address,
+                )
+                .first()
+            )
+            if not existing_assigned and existing_dp and default_vehicle:
+                assigned_req = TransportRequest(
+                    requester_user_id=passenger_user.id,
+                    passenger_user_id=passenger_user.id,
+                    transport_type_id="accessible_ride",
+                    status=TransportRequestStatus.assigned,
+                    pickup_address=assigned_req_address,
+                    pickup_details="EG, Klingel Muster",
+                    destination_address="Vivantes Klinikum Spandau, Neue Bergstraße 6, 13585 Berlin",
+                    destination_details="Eingang Haus A",
+                    pickup_date=datetime.date(2026, 7, 21),
+                    pickup_time=datetime.time(10, 0),
+                    is_round_trip=False,
+                    return_time_known=False,
+                    mobility_profile_snapshot={
+                        "uses_wheelchair": True,
+                        "wheelchair_type": "manual",
+                        "needs_ramp": True,
+                        "requires_wheelchair_space": True,
+                    },
+                    notes="Sprint-11-Demo: zugewiesene Fahrt für Fahrer-Statuswechsel",
+                    assigned_vehicle_id=default_vehicle.id,
+                    assigned_driver_profile_id=existing_dp.id,
+                    assigned_by_user_id=created_users.get("dispatcher@access.test", passenger_user).id,
+                    assigned_at=datetime.datetime(2026, 7, 20, 8, 0, 0, tzinfo=datetime.timezone.utc),
+                    submitted_at=datetime.datetime(2026, 7, 19, 18, 0, 0, tzinfo=datetime.timezone.utc),
+                )
+                db.add(assigned_req)
+                db.flush()
+                # Initiales Statusereignis
+                db.add(RideStatusEvent(
+                    transport_request_id=assigned_req.id,
+                    status=RideStatusEventType.driver_on_way,
+                    note="Automatisch gesetzt durch Seed (Demo)",
+                    created_by_user_id=driver_user.id,
+                ))
+                print("  +req  Zugewiesene Fahrt für driver@access.test (Sprint 11 Demo)")
+            else:
+                print("  skip  Zugewiesene Sprint-11-Demo-Fahrt (bereits vorhanden oder Profil fehlt)")
+
+        # ── Sprint 11: Benachrichtigungseinstellungen für passenger@access.test ─
+        if passenger_user:
+            passenger_mp = (
+                db.query(MobilityProfile)
+                .filter(MobilityProfile.user_id == passenger_user.id)
+                .first()
+            )
+            if passenger_mp:
+                _default_notif_prefs = [
+                    (NotificationEventType.driver_on_way,       True,  True,  False, False),
+                    (NotificationEventType.driver_arrived,       True,  True,  False, False),
+                    (NotificationEventType.passenger_picked_up,  True,  True,  False, False),
+                    (NotificationEventType.ride_started,         False, True,  False, False),
+                    (NotificationEventType.ride_completed,       True,  True,  True,  False),
+                    (NotificationEventType.ride_cancelled,       True,  True,  True,  False),
+                    (NotificationEventType.issue_reported,       True,  True,  True,  True),
+                ]
+                added = 0
+                for event_type, notify_tp, ch_app, ch_email, ch_sms in _default_notif_prefs:
+                    exists = (
+                        db.query(PassengerNotificationPreference)
+                        .filter(
+                            PassengerNotificationPreference.mobility_profile_id == passenger_mp.id,
+                            PassengerNotificationPreference.event_type == event_type,
+                        )
+                        .first()
+                    )
+                    if not exists:
+                        db.add(PassengerNotificationPreference(
+                            mobility_profile_id=passenger_mp.id,
+                            event_type=event_type,
+                            notify_trusted_persons=notify_tp,
+                            channel_in_app=ch_app,
+                            channel_email=ch_email,
+                            channel_sms=ch_sms,
+                        ))
+                        added += 1
+                if added:
+                    print(f"  +notif {added} Benachrichtigungseinstellungen für passenger@access.test")
+                else:
+                    print("  skip  Benachrichtigungseinstellungen passenger@access.test (bereits vorhanden)")
 
         db.commit()
         print("\nDemo-Daten erfolgreich angelegt.")

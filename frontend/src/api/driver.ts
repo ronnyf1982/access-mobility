@@ -3,6 +3,8 @@ import type {
   DriverShift,
   DriverShiftStartRequest,
   DriverShiftWithVehicle,
+  RideStatusEvent,
+  RideStatusEventCreate,
   TransportRequestListItem,
   VehicleBrief,
 } from '@/types'
@@ -47,5 +49,23 @@ export async function searchVehicles(licensePlate: string): Promise<VehicleBrief
 
 export async function getDriverAssignments(): Promise<TransportRequestListItem[]> {
   const { data } = await apiClient.get<TransportRequestListItem[]>('/driver/assignments')
+  return data
+}
+
+export async function createRideStatusEvent(
+  requestId: string,
+  payload: RideStatusEventCreate,
+): Promise<RideStatusEvent> {
+  const { data } = await apiClient.post<RideStatusEvent>(
+    `/driver/transport-requests/${requestId}/status-events`,
+    payload,
+  )
+  return data
+}
+
+export async function getRideStatusEvents(requestId: string): Promise<RideStatusEvent[]> {
+  const { data } = await apiClient.get<RideStatusEvent[]>(
+    `/transport-requests/${requestId}/status-events`,
+  )
   return data
 }

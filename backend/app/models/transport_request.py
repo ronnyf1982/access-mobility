@@ -13,6 +13,7 @@ class TransportRequestStatus(str, Enum):
     draft = "draft"
     requested = "requested"
     assigned = "assigned"
+    completed = "completed"
     cancelled = "cancelled"
 
 

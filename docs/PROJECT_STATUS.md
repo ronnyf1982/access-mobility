@@ -561,8 +561,63 @@ Der Gate-Guard prüfte ausschließlich `to.path === '/'`. Direktlinks zu beliebi
 
 ---
 
-## Nächster Sprint: Sprint 11 — Fahrtstatus & Fahrer-App
+## Sprint 11 — Fahrt-Statusereignisse & Benachrichtigungseinstellungen ✅
 
-- Backend: `RideStatusEvent`-Protokoll (driver_on_way / arrived_pickup / passenger_picked_up / arrived_destination / completed / delayed)
-- Frontend: Statuswechsel-Buttons in Fahrer-App
-- Benachrichtigungseinstellungen im Fahrgastprofil (Vertrauenspersonen, Kanäle, Ereignisse)
+**Abgeschlossen:** 2026-07-20
+
+### Backend
+
+- [x] `backend/app/models/ride_status_event.py` — `RideStatusEvent`-Modell (7 Ereignistypen: driver_on_way, driver_arrived, passenger_picked_up, ride_started, ride_completed, ride_cancelled, issue_reported)
+- [x] `backend/app/models/notification_preference.py` — `PassengerNotificationPreference`-Modell (4 Kanal-Flags pro Ereignistyp)
+- [x] `backend/app/models/transport_request.py` — `TransportRequestStatus` um `completed` erweitert
+- [x] `backend/app/db/base.py` — neue Modelle registriert
+- [x] `backend/app/schemas/ride_status_event.py` — `RideStatusEventCreate`, `RideStatusEventRead`
+- [x] `backend/app/schemas/notification_preference.py` — `NotificationPreferenceRead`, `NotificationPreferenceUpsert`
+- [x] `backend/app/crud/crud_ride_status_event.py` — `create_event` (mit Status-Spiegel auf TransportRequest), `list_events`
+- [x] `backend/app/crud/crud_notification_preference.py` — `get_preferences`, `upsert_preference`
+- [x] `backend/app/api/v1/endpoints/ride_status_events.py` — `POST /driver/transport-requests/{id}/status-events`, `GET /transport-requests/{id}/status-events`
+- [x] `backend/app/api/v1/endpoints/notification_preferences.py` — `GET/PUT /passenger/notification-preferences`
+- [x] `backend/app/api/v1/router.py` — neue Endpoints registriert
+- [x] `backend/alembic/versions/20260720_0011-f7a8b9c0d1e2_sprint11_ride_status_events.py` — Migration für beide neuen Tabellen + completed-Enum-Wert
+
+### Frontend
+
+- [x] `frontend/src/types/index.ts` — `RideStatusEvent`, `RideStatusEventCreate`, `NotificationPreference`, `NotificationPreferenceUpsert`, Labels + Konstanten
+- [x] `frontend/src/api/driver.ts` — `createRideStatusEvent`, `getRideStatusEvents`
+- [x] `frontend/src/api/notificationPreferences.ts` — `getNotificationPreferences`, `saveNotificationPreferences`
+- [x] `frontend/src/views/DriverDashboardView.vue` — Statusbuttons (5 + Problem melden mit optionaler Notiz) pro Auftragskarte; letzter Status + Uhrzeit; Ladezustand, Fehlermeldung
+- [x] `frontend/src/views/MobilityProfileView.vue` — Neuer Abschnitt „Benachrichtigungseinstellungen" mit Ereignistabelle × 4 Kanäle; Speichern-Button; Erfolg-/Fehlermeldung
+
+### Seed
+
+- [x] Zugewiesene Demo-Fahrt für driver@access.test (Hauptstraße 5 → Vivantes Spandau, 2026-07-21, AM-BUS-1) + initiales status_event
+- [x] 7 Benachrichtigungseinstellungen für passenger@access.test (alle Ereignisse, sinnvolle Defaults)
+- [x] Idempotent
+
+### Checks
+
+- [x] `alembic upgrade head`: ✅
+- [x] `pytest` (158/158 passed): ✅
+- [x] TypeScript-Check (`vue-tsc --noEmit`): ✅ keine Fehler
+- [x] Vite-Build (`npm run build`): ✅
+
+### Sicherheitslogik
+
+- Fahrer kann Statusereignisse nur für eigene zugewiesene Fahrten setzen (403 sonst)
+- Fahrgast kann Statushistorie nur für eigene Fahrten lesen
+- Notification Preferences: nur Fahrgäste (403 für alle anderen Rollen)
+- Ungültige Statuswerte: 422
+
+### Bewusst nicht umgesetzt (Sprint 11)
+
+- Kein echtes SMS/E-Mail/Push-Versand — nur Einstellungsgrundlage
+- Keine Statusreihenfolge-Validierung (Fahrer kann beliebige Reihenfolge setzen)
+- Keine Live-GPS-Koordinaten (Sprint 12)
+
+---
+
+## Nächster Sprint: Sprint 12 — Live-Tracking & echter Benachrichtigungs-Dispatch
+
+- GPS-Koordinatenfreigabe durch Fahrer
+- Echter Benachrichtigungs-Dispatch basierend auf `PassengerNotificationPreference`
+- WebSocket oder Polling für Echtzeit-Statusupdates im Fahrgast-Frontend

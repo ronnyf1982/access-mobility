@@ -122,6 +122,7 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint FAHRANDO-PREVIEW-GATE-DIREKTLINK-SCHUTZ-1** | **Direktlink-Schutz für öffentliche Website-Routen** | ✅ abgeschlossen |
 | **Sprint FAHRANDO-DEPLOYMENT-1** | **Railway-Deployment, CORS, API-Base-Fix, Production-Build für fahrando.com** | ✅ abgeschlossen |
 | **Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1** | **Variante B: Gate schützt /login und alle App-Routen** | ✅ abgeschlossen |
+| **Sprint 11** | **Fahrt-Statusereignisse, Fahrer-Statuswechsel, Benachrichtigungseinstellungen** | ✅ abgeschlossen |
 
 ---
 
@@ -227,7 +228,7 @@ Fahrzeuge und Fahrer sind historisch relevante Entitäten.
 
 ### 7.9 Fahrer-App, Linienverkehr & Benachrichtigungen — Konzept (Sprint 10–12)
 
-**Fahrer-App (Sprint 10–11):**
+**Fahrer-App (Sprint 10 ✅ / Sprint 11 ✅):**
 - Fahrer startet Schicht — wählt Fahrzeug primär über Kennzeichen.
 - Fahrer kann Pause starten/beenden und Schicht beenden.
 - Schicht- und Pausenzeiten werden als Ereignisse protokolliert — mögliche spätere Grundlage für Arbeitszeiterfassung. Keine Lohnabrechnung im MVP.
@@ -235,18 +236,26 @@ Fahrzeuge und Fahrer sind historisch relevante Entitäten.
 - Linienverkehr: optimierte Fahrgastliste mit Reihenfolge, Adresse, Einstiegszeit, Mobilitätsbedarf, Abholhinweisen. Reihenfolge ist vom Disponenten anpassbar.
 - Spontanfahrten: Einzelne zugewiesene Fahrten außerhalb des Linienverkehrs.
 
-**Statusbuttons Fahrer (Sprint 11):**
-`Schicht beginnen` · `Pause beginnen` · `Pause beenden` · `Fahrgast zugestiegen` · `Fahrgast ausgestiegen` · `Fahrt abgeschlossen` · `Problem melden` · `Schicht beenden`
+**Statusereignisse (Sprint 11 ✅ implementiert):**
+Modell `RideStatusEvent` — 7 Typen: `driver_on_way` · `driver_arrived` · `passenger_picked_up` · `ride_started` · `ride_completed` · `ride_cancelled` · `issue_reported`
 
-Sicherheitskritische Aktionen (z. B. „Fahrgast zugestiegen") erfordern im Sprachassistenten immer Bestätigung.
+API: `POST /driver/transport-requests/{id}/status-events` (nur Fahrer, nur zugewiesene Fahrten)
+`GET /transport-requests/{id}/status-events` (Fahrer, Fahrgast, Staff-Rollen)
 
-**Benachrichtigungseinstellungen im Fahrgastprofil (Sprint 12):**
-- Fahrgast legt Vertrauenspersonen mit Kontaktdaten fest.
-- Je Vertrauensperson: Telefon, E-Mail, ob App-Nutzer.
-- Berechtigungen: darf Live-Standort sehen (ja/nein), darf Statusmeldungen erhalten (ja/nein).
-- Kanäle: In-App, SMS/Nachrichten, E-Mail, System-Teilen (WhatsApp).
-- Benachrichtigungsereignisse: Schicht begonnen, Fahrzeug unterwegs, bald da, Fahrgast zugestiegen, Fahrgast angekommen, Verspätung, Fahrt storniert, Problem gemeldet.
-- Datenschutz: Benachrichtigungen nur, wenn Fahrgast dies explizit aktiviert hat. Medizinische Details nie in Nachrichten. Vertrauenspersonen sehen nur ihren Fahrgast.
+`ride_completed` → setzt TransportRequest.status auf `completed`
+`ride_cancelled` → setzt TransportRequest.status auf `cancelled`
+
+**Benachrichtigungseinstellungen im Fahrgastprofil (Sprint 11 ✅ Grundlage):**
+Modell `PassengerNotificationPreference` — pro Ereignistyp 4 Flags:
+- `notify_trusted_persons`, `channel_in_app`, `channel_email`, `channel_sms`
+- UI: Tabelle im Fahrgastprofil mit Checkboxen
+- API: `GET/PUT /passenger/notification-preferences`
+- **Kein Versand in Sprint 11** — nur Einstellungsgrundlage
+
+**Sprint 12 — Live-Tracking & echter Versand:**
+- Live-Standortfreigabe des Fahrers (GPS-Koordinaten)
+- Echter Benachrichtigungs-Dispatch basierend auf `PassengerNotificationPreference`
+- Kanäle: In-App, E-Mail (extern), SMS (extern)
 
 Details: `docs/DECISIONS.md` (Abschnitt Fahrer-App & Benachrichtigungen)
 

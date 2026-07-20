@@ -117,6 +117,26 @@ Fahrer startet Schicht, wählt Fahrzeug (Standardfahrzeug oder per Kennzeichen),
 - **Tests:** 20/20 passed, TypeScript-Check ✅, Vite-Build ✅
 - **Noch nicht:** STT/Spracheingabe, Live-GPS, Push-Notifications, Statusbuttons zugestiegen/ausgestiegen
 
+## Sprint 11 — Fahrt-Statusereignisse & Benachrichtigungseinstellungen ✅
+
+Fahrten erhalten einen nachvollziehbaren Statusverlauf. Fahrer setzen Statusereignisse. Fahrgäste konfigurieren Benachrichtigungseinstellungen.
+
+- **Neues Modell `RideStatusEvent`:** 7 Ereignistypen (driver_on_way, driver_arrived, passenger_picked_up, ride_started, ride_completed, ride_cancelled, issue_reported), verknüpft mit TransportRequest + auslösendem User
+- **TransportRequestStatus** um `completed` erweitert; wird automatisch gesetzt wenn `ride_completed`-Ereignis erstellt wird (`ride_cancelled` → `cancelled`)
+- **Neues Modell `PassengerNotificationPreference`:** pro Ereignistyp 4 Flags (notify_trusted_persons, channel_in_app, channel_email, channel_sms); noch kein Versand — nur Einstellungsgrundlage
+- **Alembic-Migration `f7a8b9c0d1e2`:** `ridestatuseventtype`- + `notificationeventtype`-Enums, `ride_status_events`- + `passenger_notification_preferences`-Tabellen, `completed` zu `transportrequeststatus` hinzugefügt
+- **API-Endpoints:**
+  - `POST /driver/transport-requests/{id}/status-events` — Fahrer setzt Status (nur eigene zugewiesene Fahrten)
+  - `GET /transport-requests/{id}/status-events` — Fahrer (eigene), Fahrgast (eigene), Staff-Rollen
+  - `GET /passenger/notification-preferences` — eigene Einstellungen lesen
+  - `PUT /passenger/notification-preferences` — Upsert aller Einstellungen
+- **Fahrer-App:** Jede zugewiesene Fahrt zeigt 5 Statusbuttons + „Problem melden" mit optionaler Notiz; letzter Status + Uhrzeit sichtbar; Ladezustand + Fehlermeldung
+- **Fahrgastprofil:** Neuer Abschnitt „Benachrichtigungseinstellungen" mit Tabelle aller Ereignistypen × 4 Kanäle als Checkboxen; Speichern-Button mit Erfolg-/Fehlermeldung
+- **Seed:** Zugewiesene Demo-Fahrt für driver@access.test + 7 Benachrichtigungseinstellungen für passenger@access.test (idempotent)
+- **Tests:** 158/158 passed, TypeScript-Check ✅, Vite-Build ✅
+- **Keine echten Notifications:** Kein SMS/E-Mail/Push-Versand in Sprint 11 — nur Einstellungsgrundlage
+- **Grundlage für Sprint 12:** Live-Tracking, GPS, echte Notification-Dispatch-Logik
+
 ## Sprint FAHRANDO-2 — Gate-Schutzseite & Website-Testzugänge ✅
 
 Separate Passwortschutzseite (`/gate`) mit DB-basierten Testzugängen — vollständig unabhängig vom App-Login.

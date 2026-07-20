@@ -477,6 +477,87 @@ export interface DriverDashboardContext {
   active_shift: DriverShiftWithVehicle | null
 }
 
+// ─── TransportRequestStatus (erweitert um completed) ────────────────────────
+
+// (TransportRequestStatus ist weiter oben als Type alias definiert)
+// Wir exportieren das Label für 'completed' hier
+export const TRANSPORT_REQUEST_STATUS_LABELS_EXTENDED: Record<string, string> = {
+  draft: 'Entwurf',
+  requested: 'Anfrage gestellt',
+  assigned: 'Zugewiesen',
+  completed: 'Abgeschlossen',
+  cancelled: 'Storniert',
+}
+
+// ─── Fahrten-Statusereignisse ─────────────────────────────────────────────────
+
+export type RideStatusEventType =
+  | 'driver_on_way'
+  | 'driver_arrived'
+  | 'passenger_picked_up'
+  | 'ride_started'
+  | 'ride_completed'
+  | 'ride_cancelled'
+  | 'issue_reported'
+
+export const RIDE_STATUS_EVENT_LABELS: Record<RideStatusEventType, string> = {
+  driver_on_way:       'Fahrer ist unterwegs',
+  driver_arrived:      'Fahrer ist angekommen',
+  passenger_picked_up: 'Fahrgast aufgenommen',
+  ride_started:        'Fahrt gestartet',
+  ride_completed:      'Fahrt abgeschlossen',
+  ride_cancelled:      'Fahrt storniert',
+  issue_reported:      'Problem gemeldet',
+}
+
+export interface RideStatusEvent {
+  id: string
+  transport_request_id: string
+  status: RideStatusEventType
+  note: string | null
+  created_by_user_id: string | null
+  created_at: string
+}
+
+export interface RideStatusEventCreate {
+  status: RideStatusEventType
+  note?: string | null
+}
+
+// ─── Benachrichtigungseinstellungen ──────────────────────────────────────────
+
+export type NotificationEventType = RideStatusEventType
+
+export const NOTIFICATION_EVENT_LABELS: Record<NotificationEventType, string> = {
+  driver_on_way:       'Fahrer ist unterwegs',
+  driver_arrived:      'Fahrer ist angekommen',
+  passenger_picked_up: 'Fahrgast wurde aufgenommen',
+  ride_started:        'Fahrt gestartet',
+  ride_completed:      'Fahrt abgeschlossen',
+  ride_cancelled:      'Fahrt storniert',
+  issue_reported:      'Problem gemeldet',
+}
+
+export interface NotificationPreference {
+  id: string
+  mobility_profile_id: string
+  event_type: NotificationEventType
+  notify_trusted_persons: boolean
+  channel_in_app: boolean
+  channel_email: boolean
+  channel_sms: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface NotificationPreferenceUpsert {
+  event_type: NotificationEventType
+  notify_trusted_persons: boolean
+  channel_in_app: boolean
+  channel_email: boolean
+  channel_sms: boolean
+}
+
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 
 export interface TransportType {
