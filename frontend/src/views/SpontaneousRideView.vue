@@ -150,13 +150,13 @@
       <!-- Tracking-Detailkarte (Text) -->
       <div v-if="trackingData" class="sr-view__tracking-card">
         <dl class="sr-view__tracking-details">
-          <div v-if="bookingResult" class="sr-view__tracking-row">
+          <div v-if="vehicleLabel" class="sr-view__tracking-row">
             <dt><span class="pi pi-truck" aria-hidden="true"></span> Fahrzeug</dt>
-            <dd>{{ bookingResult.vehicle_label }}</dd>
+            <dd>{{ vehicleLabel }}</dd>
           </div>
-          <div v-if="bookingResult" class="sr-view__tracking-row">
+          <div v-if="driverDisplayName" class="sr-view__tracking-row">
             <dt><span class="pi pi-user" aria-hidden="true"></span> Fahrer</dt>
-            <dd>{{ bookingResult.driver_display_name }}</dd>
+            <dd>{{ driverDisplayName }}</dd>
           </div>
           <div v-if="trackingData.distance_km != null" class="sr-view__tracking-row">
             <dt><span class="pi pi-arrows-h" aria-hidden="true"></span> Entfernung</dt>
@@ -179,6 +179,7 @@
         <span>Statusabruf unterbrochen. Nächster Versuch in Kürze.</span>
       </div>
 
+      <!-- Terminal: abgelehnt oder storniert → erneut suchen -->
       <button
         v-if="trackingData?.status === 'driver_declined' || trackingData?.status === 'cancelled'"
         class="sr-view__btn sr-view__btn--primary"
@@ -187,17 +188,34 @@
         <span class="pi pi-search" aria-hidden="true"></span>
         Erneut suchen
       </button>
-      <button v-else class="sr-view__btn sr-view__btn--secondary" @click="reset">
-        Abbrechen / Neue Suche
+
+      <!-- Abgeschlossen → neue Suche -->
+      <button
+        v-else-if="trackingData?.status === 'completed'"
+        class="sr-view__btn sr-view__btn--secondary"
+        @click="reset"
+      >
+        <span class="pi pi-search" aria-hidden="true"></span>
+        Neue Suche starten
+      </button>
+
+      <!-- Aktive Fahrt → Abbrechen noch nicht implementiert -->
+      <button
+        v-else
+        class="sr-view__btn sr-view__btn--secondary sr-view__btn--disabled"
+        disabled
+      >
+        Abbrechen (folgt später)
       </button>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SpontaneousRideMap from '@/components/SpontaneousRideMap.vue'
 import { findSpontaneousMatches, bookSpontaneousRide, getTrackingStatus } from '@/api/spontaneous'
+import { getTransportRequests } from '@/api/transportRequests'
 import type { SpontaneousRideBookResponse, SpontaneousRideMatchResult, SpontaneousRideTracking } from '@/types'
 import { VEHICLE_TYPE_LABELS } from '@/types'
 
@@ -205,6 +223,7 @@ type Phase = 'idle' | 'locating' | 'geo-error' | 'searching' | 'results' | 'book
 
 const TRACKING_POLL_INTERVAL_MS = 15_000
 const TERMINAL_STATUSES = new Set(['driver_declined', 'completed', 'cancelled'])
+const ACTIVE_SPONTANEOUS_STATUSES = new Set(['spontaneous_requested', 'assigned'])
 
 const phase = ref<Phase>('idle')
 const pickupLat = ref<number | null>(null)
@@ -215,12 +234,31 @@ const searchError = ref('')
 const bookingLoading = ref<Record<string, boolean>>({})
 const bookingError = ref<string | null>(null)
 const bookingResult = ref<SpontaneousRideBookResponse | null>(null)
+const activeRequestId = ref<string | null>(null)
 
 // Tracking state
 const trackingData = ref<SpontaneousRideTracking | null>(null)
 const trackingLoading = ref(false)
 const trackingError = ref(false)
 let trackingInterval: ReturnType<typeof setInterval> | null = null
+
+// ── Aktive spontane Fahrt beim Mount wiederherstellen ────────────────────────
+
+async function restoreActiveSpontaneousRide(): Promise<void> {
+  try {
+    const rides = await getTransportRequests()
+    const active = rides.find(r => r.is_spontaneous && ACTIVE_SPONTANEOUS_STATUSES.has(r.status))
+    if (!active) return
+    activeRequestId.value = active.id
+    pickupLat.value = active.pickup_latitude ?? null
+    pickupLon.value = active.pickup_longitude ?? null
+    phase.value = 'booked'
+  } catch {
+    // Silently ignore — user sees idle state on restore failure
+  }
+}
+
+onMounted(() => restoreActiveSpontaneousRide())
 
 // ── Tracking-Polling ──────────────────────────────────────────────────────────
 
@@ -237,7 +275,7 @@ function stopTracking(): void {
 }
 
 async function pollTracking(): Promise<void> {
-  const requestId = bookingResult.value?.request_id
+  const requestId = activeRequestId.value
   if (!requestId) return
   trackingLoading.value = true
   trackingError.value = false
@@ -290,6 +328,14 @@ const trackingStatusIcon = computed<string>(() => {
   return 'pi-spin pi-spinner'
 })
 
+// Fahrzeug- und Fahreranzeige: bei Wiederherstellung aus trackingData, bei Buchung aus bookingResult
+const vehicleLabel = computed<string | null>(
+  () => bookingResult.value?.vehicle_label ?? trackingData.value?.vehicle_label ?? null,
+)
+const driverDisplayName = computed<string | null>(
+  () => bookingResult.value?.driver_display_name ?? trackingData.value?.driver_display_name ?? null,
+)
+
 // ── Helfer ────────────────────────────────────────────────────────────────────
 
 function vehicleTypeLabel(type: string): string {
@@ -311,6 +357,7 @@ function reset(): void {
   bookingLoading.value = {}
   bookingError.value = null
   bookingResult.value = null
+  activeRequestId.value = null
   trackingData.value = null
   trackingError.value = false
   trackingLoading.value = false
@@ -328,6 +375,7 @@ async function bookRide(match: SpontaneousRideMatchResult): Promise<void> {
       pickup_longitude: pickupLon.value,
     })
     bookingResult.value = result
+    activeRequestId.value = result.request_id
     phase.value = 'booked'
   } catch (err: unknown) {
     const e = err as { response?: { data?: { detail?: string } } }
@@ -437,9 +485,19 @@ function requestLocation(): void {
 }
 
 .sr-view__btn--secondary {
-  background: var(--p-surface-100, #f1f5f9);
-  color: var(--p-text-color, #1e293b);
-  border: 1px solid var(--p-surface-border, #dee2e6);
+  background: rgba(255, 255, 255, 0.08);
+  color: #d4d4d4;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sr-view__btn--secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.sr-view__btn--disabled,
+.sr-view__btn--secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .sr-view__btn-link {
@@ -457,24 +515,24 @@ function requestLocation(): void {
   display: flex;
   gap: 0.5rem;
   align-items: flex-start;
-  background: var(--p-red-50, #fef2f2);
-  border: 1px solid var(--p-red-200, #fecaca);
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
   border-radius: 6px;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
-  color: var(--p-red-700, #b91c1c);
+  color: #fca5a5;
 }
 
 .sr-view__warning {
   display: flex;
   gap: 0.5rem;
   align-items: flex-start;
-  background: var(--p-yellow-50, #fefce8);
-  border: 1px solid var(--p-yellow-200, #fde68a);
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.35);
   border-radius: 6px;
   padding: 0.6rem 1rem;
   margin-bottom: 1rem;
-  color: var(--p-yellow-800, #92400e);
+  color: #fde68a;
   font-size: 0.85rem;
 }
 
@@ -590,32 +648,32 @@ function requestLocation(): void {
 }
 
 .sr-view__tracking-status--waiting {
-  background: var(--p-blue-50, #eff6ff);
-  border-color: var(--p-blue-200, #bfdbfe);
-  color: var(--p-blue-700, #1d4ed8);
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #93c5fd;
 }
 
 .sr-view__tracking-status--active {
-  background: var(--p-green-50, #f0fdf4);
-  border-color: var(--p-green-300, #86efac);
-  color: var(--p-green-700, #15803d);
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #86efac;
 }
 
 .sr-view__tracking-status--error {
-  background: var(--p-red-50, #fef2f2);
-  border-color: var(--p-red-200, #fecaca);
-  color: var(--p-red-700, #b91c1c);
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
 }
 
 .sr-view__tracking-status--done {
-  background: var(--p-surface-100, #f1f5f9);
-  border-color: var(--p-surface-border, #dee2e6);
-  color: var(--p-text-color, #1e293b);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #d4d4d4;
 }
 
 .sr-view__tracking-card {
-  background: var(--p-surface-0, #fff);
-  border: 1px solid var(--p-surface-border, #dee2e6);
+  background: #1f1f1f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -639,12 +697,13 @@ function requestLocation(): void {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: #b8b8b8;
   min-width: 11rem;
 }
 
 .sr-view__tracking-row dd {
   margin: 0;
   font-weight: 500;
+  color: #f5f5f5;
 }
 </style>

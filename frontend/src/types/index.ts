@@ -264,13 +264,23 @@ export const MOBILITY_NEED_KEYS: Array<keyof MobilityProfile> = [
 
 // ─── Transportanfragen ───────────────────────────────────────────────────────
 
-export type TransportRequestStatus = 'draft' | 'requested' | 'assigned' | 'cancelled'
+export type TransportRequestStatus =
+  | 'draft'
+  | 'requested'
+  | 'assigned'
+  | 'completed'
+  | 'cancelled'
+  | 'spontaneous_requested'
+  | 'driver_declined'
 
 export const TRANSPORT_REQUEST_STATUS_LABELS: Record<TransportRequestStatus, string> = {
   draft: 'Entwurf',
   requested: 'Anfrage gestellt',
   assigned: 'Zugewiesen',
+  completed: 'Abgeschlossen',
   cancelled: 'Storniert',
+  spontaneous_requested: 'Sofortfahrt angefragt',
+  driver_declined: 'Fahrer abgelehnt',
 }
 
 export interface RequirementSnapshot {
