@@ -134,7 +134,9 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | Sprint 9 | Sprachgeführter Mobilitätscheck (offline-fähig) |
 | Sprint 10 | Fahrer-Schichtstart & Fahrzeugwahl |
 | Sprint 11 | Fahrtstatus, Fahrer-App, Benachrichtigungseinstellungen |
-| Sprint 12 | Live-Status & Standortfreigabe |
+| Sprint 12A | Live-Status für Fahrgast & Vertrauensperson (Polling, kein GPS) |
+| Sprint 12B | Vertrauenspersonen-View, Notification-Dispatch (geplant) |
+| Sprint 12C | Live-Status & Standortfreigabe, GPS (geplant) |
 | Sprint 13 | Online-KI-Berater / ChatGPT-Anbindung (Backend-only) |
 | Sprint 14 | Fahrt per Sprache anfragen |
 | Sprint 15 | Regelmäßige Touren / Serienfahrten |
@@ -240,7 +242,7 @@ Fahrzeuge und Fahrer sind historisch relevante Entitäten.
 Modell `RideStatusEvent` — 7 Typen: `driver_on_way` · `driver_arrived` · `passenger_picked_up` · `ride_started` · `ride_completed` · `ride_cancelled` · `issue_reported`
 
 API: `POST /driver/transport-requests/{id}/status-events` (nur Fahrer, nur zugewiesene Fahrten)
-`GET /transport-requests/{id}/status-events` (Fahrer, Fahrgast, Staff-Rollen)
+`GET /transport-requests/{id}/status-events` (Fahrer, Fahrgast, Vertrauensperson [aktive can_view_rides-Beziehung], Staff-Rollen)
 
 `ride_completed` → setzt TransportRequest.status auf `completed`
 `ride_cancelled` → setzt TransportRequest.status auf `cancelled`
@@ -252,9 +254,18 @@ Modell `PassengerNotificationPreference` — pro Ereignistyp 4 Flags:
 - API: `GET/PUT /passenger/notification-preferences`
 - **Kein Versand in Sprint 11** — nur Einstellungsgrundlage
 
-**Sprint 12 — Live-Tracking & echter Versand:**
-- Live-Standortfreigabe des Fahrers (GPS-Koordinaten)
+**Sprint 12A — Live-Status für Fahrgast & Vertrauensperson (umgesetzt):**
+- Fahrgast sieht Status und Verlauf direkt in der Fahrtenkarte (Polling 20 s, onUnmounted gestoppt)
+- `trusted_person` kann Status-Events für verknüpfte Fahrten lesen (aktive TrustedRelationship + can_view_rides)
+- Placeholder-Service `notification_dispatch.py` — liest Präferenzen, kein echter Versand
+- `frontend/src/api/rides.ts` — separates API-Modul für Fahrgast-Kontext
+
+**Sprint 12B — Vertrauenspersonen-View & echter Versand (geplant):**
+- Dedizierte View für Vertrauenspersonen
 - Echter Benachrichtigungs-Dispatch basierend auf `PassengerNotificationPreference`
+
+**Sprint 12C — GPS-Live-Tracking (geplant):**
+- Live-Standortfreigabe des Fahrers (GPS-Koordinaten)
 - Kanäle: In-App, E-Mail (extern), SMS (extern)
 
 Details: `docs/DECISIONS.md` (Abschnitt Fahrer-App & Benachrichtigungen)

@@ -67,3 +67,13 @@ def driver_token(client: TestClient) -> str:
 @pytest.fixture(scope="session")
 def driver_headers(driver_token: str) -> dict:
     return {"Authorization": f"Bearer {driver_token}"}
+
+
+@pytest.fixture(scope="session")
+def trusted_person_token(client: TestClient) -> str:
+    return _login(client, "relative@access.test")
+
+
+@pytest.fixture(scope="session")
+def trusted_person_headers(trusted_person_token: str) -> dict:
+    return {"Authorization": f"Bearer {trusted_person_token}"}

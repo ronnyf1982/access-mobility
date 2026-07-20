@@ -7,6 +7,7 @@ from app.api.deps import get_current_user, get_db
 from app.crud import crud_ride_status_event
 from app.crud.crud_driver_shift import get_driver_profile_for_user
 from app.models.transport_request import TransportRequest, TransportRequestStatus
+from app.models.trusted_relationship import TrustedRelationship, TrustStatus
 from app.models.user import User, UserRole
 from app.schemas.ride_status_event import RideStatusEventCreate, RideStatusEventRead
 
@@ -86,6 +87,20 @@ def list_status_events(
     # Fahrgast: nur eigene Fahrten
     elif current_user.role == UserRole.passenger:
         if tr.passenger_user_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
+    # Vertrauensperson: nur Fahrten des verknüpften Fahrgasts (can_view_rides + active)
+    elif current_user.role == UserRole.trusted_person:
+        rel = (
+            db.query(TrustedRelationship)
+            .filter(
+                TrustedRelationship.trusted_user_id == current_user.id,
+                TrustedRelationship.passenger_user_id == tr.passenger_user_id,
+                TrustedRelationship.can_view_rides.is_(True),
+                TrustedRelationship.status == TrustStatus.active,
+            )
+            .first()
+        )
+        if not rel:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
     # Staff-Rollen
     elif current_user.role not in _READ_ROLES:

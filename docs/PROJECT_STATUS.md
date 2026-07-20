@@ -616,8 +616,56 @@ Der Gate-Guard prüfte ausschließlich `to.path === '/'`. Direktlinks zu beliebi
 
 ---
 
-## Nächster Sprint: Sprint 12 — Live-Tracking & echter Benachrichtigungs-Dispatch
+## Sprint 12A — Live-Status für Fahrgast & Vertrauensperson ✅
 
-- GPS-Koordinatenfreigabe durch Fahrer
-- Echter Benachrichtigungs-Dispatch basierend auf `PassengerNotificationPreference`
-- WebSocket oder Polling für Echtzeit-Statusupdates im Fahrgast-Frontend
+**Abgeschlossen:** 2026-07-20
+
+### Ziel
+
+Fahrgast sieht Fahrtstatus und -verlauf direkt in der App. Vertrauensperson erhält Backend-Zugriff auf Status-Events. Notification-Dispatch als Placeholder vorbereitet.
+
+### Backend
+
+- [x] `backend/app/api/v1/endpoints/ride_status_events.py` — `trusted_person`-Rolle in `GET /transport-requests/{id}/status-events` ergänzt; prüft aktive `TrustedRelationship` mit `can_view_rides=True`
+- [x] `backend/app/services/notification_dispatch.py` — neuer Placeholder-Service `collect_notification_targets_for_status_event()`: liest `PassengerNotificationPreference`, gibt `NotificationTarget`-Deskriptoren zurück, kein echter Versand
+- [x] `backend/tests/conftest.py` — Fixtures `trusted_person_token` + `trusted_person_headers` für `relative@access.test`
+- [x] `backend/tests/api/test_sprint12a_live_status.py` — 7 neue Tests: Fahrgast liest eigenen Status, leere Histor → [], TrustedPerson mit Beziehung kann lesen, TrustedPerson ohne Beziehung → 403, TrustedPerson kann kein Status-Event erstellen → 403, Dispatch-Placeholder Unit-Tests
+
+### Frontend
+
+- [x] `frontend/src/api/rides.ts` — neues Modul `getRideStatusEvents()` für Fahrgast-/Vertrauenspersonen-Kontext (getrennt von `driver.ts`)
+- [x] `frontend/src/views/TransportRequestView.vue`:
+  - Live-Status-Abschnitt in Fahrgastkarten für `assigned`/`completed`/`cancelled`-Fahrten
+  - Zeigt: aktueller Status (letztes Event), letzter Zeitstempel, Statusverlauf (ältere Events darunter), Notiz bei `issue_reported`
+  - Leere Historie: verständlicher Hinweis statt Fehler
+  - Polling: alle 20 Sekunden für zugewiesene Fahrten (onMounted → onUnmounted sauber gestoppt)
+  - `completed`-Status-Badge (grün) + `statusIcon` ergänzt
+  - `formatDateTime()` für Datum+Uhrzeit (de-DE)
+
+### Checks
+
+- [x] `alembic upgrade head`: ✅ (keine neue Migration — nur Logik-Änderungen)
+- [x] `pytest` (156/165 passed, 9 skipped): ✅
+- [x] TypeScript-Check (`vue-tsc --noEmit`): ✅
+- [x] Vite-Build (`npm run build`): ✅ built in 2.63s
+
+### Sicherheitslogik
+
+- Vertrauensperson: Zugriff auf Status-Events nur wenn `TrustedRelationship.status = active` + `can_view_rides = True`
+- Vertrauensperson kann keine Status-Events erstellen (403 — nur Fahrer)
+- Fahrgast sieht nur eigene Fahrten (unverändert aus Sprint 11)
+
+### Bewusst nicht umgesetzt (Sprint 12A)
+
+- Keine dedizierte Vertrauenspersonen-View — Backend-Fundament gelegt; View folgt Sprint 12B
+- Kein echter Notification-Dispatch — Placeholder liefert Zieldeskriptoren; Versand folgt Sprint 12B
+- Kein GPS-Live-Tracking — folgt Sprint 12C
+- Polling statt WebSocket — ausreichend für MVP; WebSocket kann optional in Sprint 12C ergänzt werden
+
+---
+
+## Nächster Sprint: Sprint 12B — Vertrauenspersonen-View & Notification-Dispatch
+
+- Dedizierte Ansicht für Vertrauenspersonen: Fahrten des verknüpften Fahrgasts sehen + Status lesen
+- Echter E-Mail/In-App-Dispatch basierend auf `PassengerNotificationPreference`
+- GPS-Koordinatenfreigabe folgt Sprint 12C

@@ -216,7 +216,28 @@ Fahrtstatus-Grundlage und Benachrichtigungseinstellungen — Voraussetzung für 
 **Begründung:** Live-Tracking (Sprint 12) benötigt Statusereignisse und Berechtigungsstruktur.
 Beides muss vor Live-Sharing vorhanden sein.
 
-## Sprint 12 — Live-Status & Standortfreigabe
+## Sprint 12A — Live-Status für Fahrgast & Vertrauensperson ✅
+
+Fahrgast sieht den aktuellen Fahrt-Status und -verlauf direkt in der App. Vertrauensperson erhält Backend-Zugriff auf Status-Events verknüpfter Fahrten.
+
+- **Backend:** `trusted_person`-Zugriff auf `GET /transport-requests/{id}/status-events` — prüft aktive `TrustedRelationship` mit `can_view_rides=True`
+- **Neuer Service:** `backend/app/services/notification_dispatch.py` — Placeholder `collect_notification_targets_for_status_event()` (liest Präferenzen, kein echter Versand)
+- **Frontend (`TransportRequestView.vue`):** Fahrgastkarten zeigen Live-Status-Abschnitt für `assigned`/`completed`/`cancelled`-Fahrten — aktueller Status, letzter Zeitstempel, Statusverlauf (neueste zuerst)
+- **Polling:** alle 20 Sekunden für aktiv zugewiesene Fahrten (Interval sauber gestoppt on unmount)
+- **`frontend/src/api/rides.ts`:** eigenständiges API-Modul `getRideStatusEvents()` für Fahrgast-/Vertrauenspersonen-Kontext
+- **`completed`-Status-Badge** + `statusIcon` im Frontend ergänzt
+- **Tests:** 156/165 passed, 9 skipped (Seed-abhängig); Sprint-12A-Tests: TrustedPerson-Zugriff, Sperrung fremder Fahrten, leere Histor, Dispatch-Placeholder
+- **TypeScript-Check:** ✅ | **Build:** ✅ built in 2.63s | **Alembic:** keine neue Migration
+- **Vertrauenspersonen-View:** keine dedizierte View in Sprint 12A — Backend-Fundament gelegt; dedizierte Ansicht folgt in Sprint 12B
+- **Kein echter Dispatch:** kein SMS/E-Mail/Push — Dispatch folgt Sprint 12B
+- **Kein GPS-Tracking:** folgt Sprint 12C / Sprint 13
+
+## Sprint 12B — Vertrauenspersonen-Ansicht & Notification-Dispatch
+_geplant_
+
+Dedizierte Vertrauenspersonen-View mit Fahrt-Statusübersicht. Echter Notification-Dispatch (E-Mail) auf Basis der Präferenzen aus Sprint 11.
+
+## Sprint 12C — Live-Status & Standortfreigabe (ursprünglich Sprint 12)
 
 Fahrtstatus und optionaler Live-Standort mit berechtigten Personen teilen.
 

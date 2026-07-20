@@ -126,6 +126,49 @@
             </span>
           </div>
 
+          <!-- Live-Status: sichtbar für Fahrgäste bei zugewiesenen/abgeschlossenen/stornierten Fahrten -->
+          <div
+            v-if="isPassengerRequestUser && LIVE_STATUS_APPLICABLE.includes(req.status)"
+            class="tr-live-status"
+            role="region"
+            :aria-label="`Fahrt-Status für Anfrage vom ${formatDate(req.pickup_date)}`"
+          >
+            <div v-if="statusEventsLoading[req.id]" class="tr-live-status-loading" role="status" aria-live="polite">
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              <span>Status wird geladen …</span>
+            </div>
+            <template v-else>
+              <div v-if="latestEvent(req.id)" class="tr-live-status-current">
+                <i class="pi pi-clock tr-live-status-icon" aria-hidden="true"></i>
+                <div class="tr-live-status-body">
+                  <span class="tr-live-status-label">{{ RIDE_STATUS_EVENT_LABELS[latestEvent(req.id)!.status] }}</span>
+                  <span class="tr-live-status-time">{{ formatDateTime(latestEvent(req.id)!.created_at) }}</span>
+                  <span v-if="latestEvent(req.id)!.note" class="tr-live-status-note">{{ latestEvent(req.id)!.note }}</span>
+                </div>
+              </div>
+              <div v-else class="tr-live-status-empty">
+                <i class="pi pi-circle tr-live-status-icon" aria-hidden="true"></i>
+                <span>Noch kein Fahrt-Status gemeldet</span>
+              </div>
+              <!-- Statusverlauf: ältere Ereignisse (neuestes zuerst, ohne das aktuellste) -->
+              <div
+                v-if="(statusEventsMap[req.id] || []).length > 1"
+                class="tr-live-status-history"
+                aria-label="Statusverlauf"
+              >
+                <div
+                  v-for="evt in [...(statusEventsMap[req.id] || [])].reverse().slice(1)"
+                  :key="evt.id"
+                  class="tr-live-status-history-item"
+                >
+                  <span class="tr-live-status-history-label">{{ RIDE_STATUS_EVENT_LABELS[evt.status] }}</span>
+                  <span class="tr-live-status-history-time">{{ formatDateTime(evt.created_at) }}</span>
+                  <span v-if="evt.note" class="tr-live-status-history-note">{{ evt.note }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+
           <div class="tr-card-actions">
             <!-- Bearbeiten: nur Fahrgast-Modus -->
             <button
@@ -761,13 +804,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTransportRequestStore } from '@/stores/transportRequests'
 import { useMobilityProfileStore } from '@/stores/mobilityProfile'
 import { useAuthStore } from '@/stores/auth'
 import { getTransportOptions } from '@/api/transportOptions'
-import type { TransportType, TransportRequestCreate, MobilityProfileSnapshot, RequirementSnapshot, TransportRequestStatus, MatchStatus } from '@/types'
-import { TRANSPORT_REQUEST_STATUS_LABELS, MATCH_STATUS_LABELS } from '@/types'
+import { getRideStatusEvents } from '@/api/rides'
+import type { TransportType, TransportRequestCreate, MobilityProfileSnapshot, RequirementSnapshot, TransportRequestStatus, MatchStatus, RideStatusEvent } from '@/types'
+import { TRANSPORT_REQUEST_STATUS_LABELS, MATCH_STATUS_LABELS, RIDE_STATUS_EVENT_LABELS } from '@/types'
 
 const store = useTransportRequestStore()
 const profileStore = useMobilityProfileStore()
@@ -786,6 +830,50 @@ const transportTypes = ref<TransportType[]>([])
 const selectedVehicleId = ref<string | null>(null)
 const selectedDriverId = ref<string | null>(null)
 const assignNotes = ref('')
+
+// ─── Live-Status ────────────────────────────────────────────────────────────
+const statusEventsMap = reactive<Record<string, RideStatusEvent[]>>({})
+const statusEventsLoading = reactive<Record<string, boolean>>({})
+let pollingTimer: ReturnType<typeof setInterval> | null = null
+
+const LIVE_STATUS_APPLICABLE = ['assigned', 'completed', 'cancelled']
+
+function latestEvent(requestId: string): RideStatusEvent | null {
+  const events = statusEventsMap[requestId]
+  if (!events || events.length === 0) return null
+  return events[events.length - 1]
+}
+
+async function loadStatusEventsForRequest(requestId: string): Promise<void> {
+  statusEventsLoading[requestId] = true
+  try {
+    statusEventsMap[requestId] = await getRideStatusEvents(requestId)
+  } catch {
+    // Status-Events sind ergänzende Info — bei Fehler leer lassen
+    if (!statusEventsMap[requestId]) statusEventsMap[requestId] = []
+  } finally {
+    statusEventsLoading[requestId] = false
+  }
+}
+
+async function loadAllStatusEvents(): Promise<void> {
+  const relevant = store.requests.filter(r => LIVE_STATUS_APPLICABLE.includes(r.status))
+  await Promise.allSettled(relevant.map(r => loadStatusEventsForRequest(r.id)))
+}
+
+function formatDateTime(val: string | null | undefined): string {
+  if (!val) return '—'
+  try {
+    return new Date(val).toLocaleString('de-DE', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+  } catch {
+    return val
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 const BLANK_FORM: TransportRequestCreate = {
   transport_type_id: null,
@@ -833,6 +921,7 @@ function statusIcon(status: string): string {
   if (status === 'draft') return 'pi-pencil'
   if (status === 'requested') return 'pi-send'
   if (status === 'assigned') return 'pi-check-circle'
+  if (status === 'completed') return 'pi-flag'
   if (status === 'cancelled') return 'pi-times-circle'
   return 'pi-circle'
 }
@@ -1130,6 +1219,21 @@ onMounted(async () => {
   ])
   if (typesResult.status === 'fulfilled') transportTypes.value = typesResult.value
   if (!profileStore.profile) await profileStore.load().catch(() => {})
+
+  if (isPassengerRequestUser.value) {
+    await loadAllStatusEvents()
+    pollingTimer = setInterval(async () => {
+      const assignedRides = store.requests.filter(r => r.status === 'assigned')
+      if (assignedRides.length > 0) {
+        await store.load().catch(() => {})
+        await Promise.allSettled(assignedRides.map(r => loadStatusEventsForRequest(r.id)))
+      }
+    }, 20_000)
+  }
+})
+
+onUnmounted(() => {
+  if (pollingTimer !== null) clearInterval(pollingTimer)
 })
 </script>
 
@@ -1251,6 +1355,12 @@ onMounted(async () => {
   background: var(--am-danger-bg);
   color: var(--am-danger);
   border: 1px solid var(--am-danger);
+}
+
+.tr-status-badge--completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--am-success);
+  border: 1px solid var(--am-success);
 }
 
 .tr-card-type {
@@ -2009,6 +2119,102 @@ onMounted(async () => {
   border: 1px solid var(--am-border);
   font-size: 0.72rem;
   color: var(--am-text-secondary);
+}
+
+/* Live Fahrt-Status */
+.tr-live-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--am-space-s) var(--am-space-m);
+  background: var(--am-bg-base);
+  border: 1px solid var(--am-border);
+  border-radius: var(--am-radius-s);
+  font-size: 0.875rem;
+}
+
+.tr-live-status-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--am-text-secondary);
+}
+
+.tr-live-status-icon {
+  font-size: 0.85rem;
+  color: var(--am-text-secondary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tr-live-status-current {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--am-space-s);
+}
+
+.tr-live-status-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tr-live-status-label {
+  font-weight: 600;
+  color: var(--am-text-primary);
+}
+
+.tr-live-status-time {
+  font-size: 0.75rem;
+  color: var(--am-text-secondary);
+}
+
+.tr-live-status-note {
+  font-size: 0.75rem;
+  color: var(--am-danger);
+  font-style: italic;
+}
+
+.tr-live-status-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  font-size: 0.82rem;
+  color: var(--am-text-secondary);
+  font-style: italic;
+}
+
+.tr-live-status-history {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 6px;
+  border-top: 1px solid var(--am-border);
+}
+
+.tr-live-status-history-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--am-space-s);
+  font-size: 0.78rem;
+  color: var(--am-text-secondary);
+  flex-wrap: wrap;
+}
+
+.tr-live-status-history-label {
+  color: var(--am-text-secondary);
+}
+
+.tr-live-status-history-time {
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.tr-live-status-history-note {
+  font-size: 0.72rem;
+  color: var(--am-danger);
+  font-style: italic;
 }
 
 /* Save bar */
