@@ -121,6 +121,13 @@
         </div>
       </div>
 
+      <!-- Hinweis: Fahrt auch unter Aktive Fahrten auffindbar -->
+      <div class="sr-view__active-hint">
+        <span class="pi pi-info-circle" aria-hidden="true"></span>
+        Diese Fahrt finden Sie auch unter
+        <RouterLink to="/active-rides" class="sr-view__hint-link">Aktive Fahrten</RouterLink>.
+      </div>
+
       <!-- Karte (sobald Fahrerposition bekannt) -->
       <template v-if="trackingData?.can_track && trackingData.driver_latitude != null && pickupLat !== null && pickupLon !== null">
         <SpontaneousRideMap
@@ -705,5 +712,20 @@ function requestLocation(): void {
   margin: 0;
   font-weight: 500;
   color: #f5f5f5;
+}
+
+.sr-view__active-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.84rem;
+  color: #b8b8b8;
+  margin-bottom: 0.75rem;
+}
+
+.sr-view__hint-link {
+  color: #93c5fd;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 </style>

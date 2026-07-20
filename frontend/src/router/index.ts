@@ -18,6 +18,7 @@ import PlatformAdminTestAccessView from '@/views/platform_admin/PlatformAdminTes
 import ImpressumView from '@/views/ImpressumView.vue'
 import DatenschutzView from '@/views/DatenschutzView.vue'
 import SpontaneousRideView from '@/views/SpontaneousRideView.vue'
+import ActiveRidesView from '@/views/ActiveRidesView.vue'
 
 const ONBOARDING_BYPASS = new Set(['/onboarding', '/login', '/'])
 
@@ -80,6 +81,7 @@ const router = createRouter({
         { path: '/drivers', name: 'drivers', component: DriversView },
         { path: '/transport-requests', name: 'transport-requests', component: TransportRequestView },
         { path: '/spontaneous-ride', name: 'spontaneous-ride', component: SpontaneousRideView },
+        { path: '/active-rides', name: 'active-rides', component: ActiveRidesView },
         { path: '/driver', name: 'driver-dashboard', component: DriverDashboardView },
       ],
     },

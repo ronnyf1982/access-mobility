@@ -96,6 +96,7 @@ const navItems = computed<NavItem[]>(() => {
   if (PASSENGER_ROLES.has(role)) {
     return [
       { label: 'Dashboard',        icon: 'pi-th-large', to: '/dashboard' },
+      { label: 'Aktive Fahrten',   icon: 'pi-route',    to: '/active-rides' },
       { label: 'Fahrten anfragen', icon: 'pi-car',      to: '/transport-requests' },
       { label: 'Mobilitätsprofil', icon: 'pi-heart',    to: '/mobility-profile' },
     ]

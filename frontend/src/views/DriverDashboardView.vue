@@ -310,7 +310,12 @@
             <div class="assignment-route">
               <div class="assignment-address">
                 <i class="pi pi-map-marker" aria-hidden="true"></i>
-                {{ req.pickup_address ?? 'Abholadresse nicht angegeben' }}
+                <span v-if="req.pickup_address">{{ req.pickup_address }}</span>
+                <span v-else-if="req.pickup_latitude != null" class="pickup-coords">
+                  Aktueller Standort des Fahrgasts
+                  <small>{{ req.pickup_latitude.toFixed(4) }}, {{ req.pickup_longitude?.toFixed(4) ?? '' }}</small>
+                </span>
+                <span v-else>Abholadresse nicht angegeben</span>
               </div>
               <div class="assignment-arrow" aria-hidden="true">↓</div>
               <div class="assignment-address">
@@ -1142,8 +1147,17 @@ function extractError(err: unknown): string {
 }
 .assignment-address {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+}
+.pickup-coords {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.pickup-coords small {
+  font-size: 0.76em;
+  opacity: 0.7;
 }
 .assignment-arrow {
   padding-left: 8px;

@@ -832,6 +832,29 @@ Fahrgast bucht ein passendes Fahrzeug aus der Match-Liste. Fahrer nimmt die Anfr
 
 ---
 
+## Hotfix Sprint 12D-B — Abholort-Anzeige + Aktive-Fahrten-Navigation ✅
+
+**Abgeschlossen:** 2026-07-20
+
+### Problem 1: Fahrer-Dashboard zeigt "Abholadresse nicht angegeben"
+Bei Spontanfahrten ist `pickup_address` immer `null` — GPS-Koordinaten (`pickup_latitude`/`pickup_longitude`) wurden ignoriert.
+
+**Fix:** `DriverDashboardView.vue` — Assignments-Abschnitt zeigt jetzt "Aktueller Standort des Fahrgasts" + Koordinaten als Fallback.
+
+### Problem 2: Fahrgast hatte keinen Navigationspunkt für aktive Fahrten
+`/spontaneous-ride` war nur per direktem Link erreichbar; nach Seitenreload kein Wiederfinden.
+
+**Fix:**
+- `ActiveRidesView.vue` — neue View unter `/active-rides`; filtert `GET /transport-requests` nach aktiven Statuses client-seitig; spontane Fahrten zeigen Koordinaten + "Tracking öffnen"-Link; geplante Fahrten zeigen Adresse + Datum
+- `AppSidebar.vue` — Fahrgast-Navigation enthält jetzt "Aktive Fahrten" (pi-route)
+- `router/index.ts` — Route `/active-rides` im Portal registriert
+- `SpontaneousRideView.vue` — Hinweis im Tracking-Bereich: "Diese Fahrt finden Sie auch unter Aktive Fahrten"
+
+### Kein Backend-Aufwand
+`GET /api/v1/transport-requests` liefert bereits alle Felder (`is_spontaneous`, `pickup_latitude`, `pickup_longitude`). Kein neues Datenbankschema.
+
+---
+
 ## Nächster Sprint: Sprint 12E — Vertrauenspersonen-View & Notification-Dispatch
 
 - Vertrauensperson kann Fahrt-Status live verfolgen
