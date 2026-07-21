@@ -133,6 +133,21 @@ def book_spontaneous_ride(
             detail="Fahrer hat keine aktive Schicht mit diesem Fahrzeug.",
         )
 
+    driver_active = (
+        db.query(TransportRequest.id)
+        .filter(
+            TransportRequest.assigned_driver_profile_id == driver_profile.id,
+            TransportRequest.is_spontaneous.is_(True),
+            TransportRequest.status == TransportRequestStatus.assigned,
+        )
+        .first()
+    )
+    if driver_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Dieser Fahrer hat bereits eine aktive Fahrt.",
+        )
+
     conflict = (
         db.query(TransportRequest.id)
         .filter(

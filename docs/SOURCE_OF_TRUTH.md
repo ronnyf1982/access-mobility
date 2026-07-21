@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-21 · Sprint 12H abgeschlossen · Fahrgast-Fahrtverlauf implementiert
+Letzte Aktualisierung: 2026-07-21 · Sprint 12I abgeschlossen · Fahrer-Verfügbarkeit und Parallelschutz implementiert
 
 ---
 

@@ -112,6 +112,18 @@ def find_matches(
         .all()
     }
 
+    # Fahrer mit angenommener spontaner Fahrt sind nicht verfügbar
+    blocked_driver_profile_ids: set[uuid.UUID] = {
+        row[0]
+        for row in db.query(TransportRequest.assigned_driver_profile_id)
+        .filter(
+            TransportRequest.assigned_driver_profile_id.isnot(None),
+            TransportRequest.is_spontaneous.is_(True),
+            TransportRequest.status == TransportRequestStatus.assigned,
+        )
+        .all()
+    }
+
     # Mobilitätsprofil des Fahrgasts
     profile: MobilityProfile | None = (
         db.query(MobilityProfile)
@@ -134,6 +146,8 @@ def find_matches(
 
     for shift in active_shifts:
         if shift.vehicle_id in blocked_vehicle_ids:
+            continue
+        if shift.driver_profile_id in blocked_driver_profile_ids:
             continue
 
         vehicle = db.get(Vehicle, shift.vehicle_id)

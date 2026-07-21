@@ -39,6 +39,19 @@ def _require_driver(current_user: User) -> None:
         )
 
 
+def _has_active_spontaneous_ride(db: Session, driver_profile_id: uuid.UUID) -> bool:
+    """True wenn der Fahrer eine angenommene spontane Fahrt hat, die noch nicht abgeschlossen ist."""
+    return (
+        db.query(TransportRequest.id)
+        .filter(
+            TransportRequest.assigned_driver_profile_id == driver_profile_id,
+            TransportRequest.is_spontaneous.is_(True),
+            TransportRequest.status == TransportRequestStatus.assigned,
+        )
+        .first()
+    ) is not None
+
+
 def _get_driver_profile_or_404(db: Session, user_id):
     profile = crud_driver_shift.get_driver_profile_for_user(db, user_id)
     if not profile:
@@ -284,6 +297,8 @@ def get_spontaneous_ride_requests(
 ) -> list[SpontaneousRideRequestItem]:
     _require_driver(current_user)
     profile = _get_driver_profile_or_404(db, current_user.id)
+    if _has_active_spontaneous_ride(db, profile.id):
+        return []
     requests = (
         db.query(TransportRequest)
         .filter(
@@ -314,6 +329,11 @@ def accept_spontaneous_ride_request(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Diese Anfrage gehört nicht zu Ihrem Profil.")
     if req.status != TransportRequestStatus.spontaneous_requested:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Anfrage ist nicht mehr ausstehend.")
+    if _has_active_spontaneous_ride(db, profile.id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Sie haben bereits eine aktive Fahrt.",
+        )
     req.status = TransportRequestStatus.assigned
     req.assigned_at = datetime.now(timezone.utc)
     db.commit()

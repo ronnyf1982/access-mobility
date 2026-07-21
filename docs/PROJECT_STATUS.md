@@ -946,3 +946,27 @@ Fahrgast sieht aktive und vergangene (abgeschlossene, stornierte) Fahrten in ein
 - vue-tsc --noEmit: ✅
 - npm run build: ✅ (3.79s)
 - git diff --check: EXIT:0
+
+---
+
+## Sprint 12I — Fahrer-Verfügbarkeit und parallele spontane Fahrten absichern ✅
+
+**Abgeschlossen:** 2026-07-21
+
+### Ziel
+Fahrer mit aktiver spontaner Fahrt darf keine weitere Anfrage annehmen. Matching zeigt gebundene Fahrer nicht an. Nach Fahrtabschluss wird Fahrer sofort wieder verfügbar. Dashboard blendet offene Anfragen bei aktiver Fahrt aus.
+
+### Backend
+- [x] `backend/app/api/v1/endpoints/driver.py` — `_has_active_spontaneous_ride()` Hilfsfunktion; `get_spontaneous_ride_requests` gibt leere Liste zurück wenn Fahrer aktive Fahrt hat; `accept_spontaneous_ride_request` prüft vor Annahme auf aktive Fahrt → 409 "Sie haben bereits eine aktive Fahrt."
+- [x] `backend/app/api/v1/endpoints/spontaneous_rides.py` — `book_spontaneous_ride` prüft ob Fahrerprofil bereits aktive spontane Fahrt hat → 409 "Dieser Fahrer hat bereits eine aktive Fahrt."
+- [x] `backend/app/services/spontaneous_matching.py` — `find_matches` filtert Fahrprofile mit aktiver Fahrt (status=assigned, is_spontaneous=True) aus Matching-Ergebnissen
+- [x] `backend/tests/api/test_sprint12i_driver_availability.py` — 11 Tests: freier Fahrer kann annehmen, aktiver Fahrer bekommt 409, keine offenen Anfragen bei aktiver Fahrt, Verfügbarkeit nach Abschluss, Buchungsendpoint blockt aktiven Fahrer, Matching exkludiert aktiven Fahrer, Ablehnen funktioniert weiter, Adressen im Response vorhanden
+
+### Frontend
+- [x] `frontend/src/views/DriverDashboardView.vue` — `hasActiveSpontaneousRide` computed (prüft assignments auf is_spontaneous + status=assigned); Spontane-Anfragen-Sektion zeigt Hinweismeldung statt Liste wenn Fahrer aktiv; `loadSpontaneousRequests()` wird nach ride_completed/ride_cancelled aufgerufen
+
+### Keine Änderungen an
+- Datenbankmodellen (keine Migration nötig — keine neuen Felder)
+- Statuswerte (bestehende Werte genutzt: assigned, completed)
+- Fahrgast-Buchungsflow
+- Statusfluss 12G / Fahrgast-Historie 12H

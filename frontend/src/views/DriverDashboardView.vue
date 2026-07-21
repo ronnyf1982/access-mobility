@@ -220,7 +220,11 @@
           </div>
         </div>
 
-        <div v-if="spontaneousLoading" class="section-loading" aria-live="polite">
+        <div v-if="hasActiveSpontaneousRide" class="active-ride-hint" role="status">
+          <i class="pi pi-car" aria-hidden="true"></i>
+          Sie haben aktuell eine aktive Fahrt. Neue Anfragen erscheinen nach Abschluss wieder.
+        </div>
+        <div v-else-if="spontaneousLoading" class="section-loading" aria-live="polite">
           <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Lädt…
         </div>
         <div v-else-if="spontaneousRequests.length === 0" class="section-placeholder">
@@ -675,6 +679,7 @@ async function setStatus(requestId: string, eventStatus: RideStatusEventType) {
     statusEventsMap.value[requestId].push(event)
     if (eventStatus === 'ride_completed' || eventStatus === 'ride_cancelled') {
       await loadAssignments()
+      await loadSpontaneousRequests()
     }
   } catch (err: unknown) {
     statusError.value[requestId] = extractError(err)
@@ -708,6 +713,10 @@ async function reportIssue(requestId: string) {
 }
 
 // ── Computed ───────────────────────────────────────────────────────────────
+
+const hasActiveSpontaneousRide = computed(() =>
+  assignments.value.some(r => r.is_spontaneous && r.status === 'assigned'),
+)
 
 const statusTitle = computed(() => {
   const s = context.value?.active_shift?.shift.status
@@ -1489,6 +1498,19 @@ function extractError(err: unknown): string {
   font-size: 0.75rem;
   color: var(--am-text-secondary);
   opacity: 0.7;
+}
+
+/* ─── Aktive Fahrt Hinweis ───────────────────────────────────────────── */
+.active-ride-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  font-size: 0.875rem;
+  color: var(--am-accent);
+  background: var(--am-accent-bg, rgba(99,102,241,0.08));
+  border: 1px solid var(--am-accent);
+  border-radius: var(--am-radius-s);
+  padding: var(--am-space-m);
 }
 
 /* ─── Spontane Fahrtanfragen ─────────────────────────────────────────── */

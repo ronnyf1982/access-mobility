@@ -196,7 +196,7 @@ Fahrgast oder Organisation stellt Anfrage mit Vorlaufzeit. Disponent weist Fahrz
 #### Linienfahrt (Sprint 15)
 Wiederkehrende oder fest geplante Fahrten mit Fahrplan und Reihenfolge. Disponenten konfigurieren Touren. Optimierte Fahrgastliste für Fahrer.
 
-#### Spontane Fahrt / Sofortfahrt (Sprint 12B–12D, Hotfix 12F-A)
+#### Spontane Fahrt / Sofortfahrt (Sprint 12B–12D, Hotfix 12F-A, Sprint 12I)
 Fahrgast bucht jetzt sofort. GPS-Standort als Abholort (Reverse-Geocoding). System zeigt passende freie Fahrzeuge in der Nähe. Fahrer nimmt an oder lehnt ab. Kein Disponent erforderlich.
 
 **Adressauswahl (Sprint 12F + Hotfix 12F-A):**
@@ -210,7 +210,15 @@ Fahrgast bucht jetzt sofort. GPS-Standort als Abholort (Reverse-Geocoding). Syst
 - Fahrzeugtyp und -kapazität passend
 - Fahrer hat aktive Schicht, ist nicht in Pause
 - Fahrer und Fahrzeug sind keiner anderen aktiven Fahrt zugewiesen
+- Fahrer hat keine bereits angenommene (assigned) spontane Fahrt — Sprint 12I
 - Nächstes geeignetes freies Fahrzeug (Distanz/geschätzte Ankunftszeit)
+
+**Fahrer-Verfügbarkeit (Sprint 12I):**
+- Fahrer mit `assigned` spontaner Fahrt kann keine weitere Anfrage annehmen → 409 Conflict
+- Buchungsendpoint prüft ebenfalls ob Fahrer bereits aktive Fahrt hat
+- Matching exkludiert Fahrer mit aktiver Fahrt aus Ergebnisliste
+- Nach `ride_completed` wird Fahrer sofort wieder als verfügbar betrachtet
+- Dashboard zeigt Hinweismeldung statt offener Anfragen, solange Fahrer gebunden ist
 
 **GPS-Datenschutz (Spontanfahrten):**
 - Standort nur mit ausdrücklicher Zustimmung
