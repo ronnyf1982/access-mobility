@@ -115,6 +115,8 @@ class TransportRequestListItem(BaseModel):
     passenger_display_name: Optional[str] = None
     passenger_email: Optional[str] = None
     passenger_phone: Optional[str] = None
+    # Letztes Statusereignis (befüllt in Endpoint, nicht aus ORM)
+    last_status_label: Optional[str] = None
 
 
 # ── Matching ─────────────────────────────────────────────────────────────────

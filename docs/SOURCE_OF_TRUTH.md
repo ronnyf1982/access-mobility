@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-20 · Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1 abgeschlossen · Sprint 11 geplant
+Letzte Aktualisierung: 2026-07-21 · Sprint 12H abgeschlossen · Fahrgast-Fahrtverlauf implementiert
 
 ---
 
@@ -128,6 +128,8 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint 12E** | **Notfallkontakte, Cleanup, Kontakt-CRUD-Hotfixes** | ✅ abgeschlossen |
 | **Sprint 12F** | **Gespeicherte Fahrgast-Adressen (CRUD), Geburtsdatum im Mobilitätsprofil** | ✅ abgeschlossen |
 | **Hotfix 12F-A** | **Zieladresse bei spontanen Fahrten (Selektor + Freitext, Backend-Speicherung)** | ✅ abgeschlossen |
+| **Sprint 12G** | **Fahrer-Statusfluss: Nur nächste Statusbutton, Tracking-Label, 409 nach Abschluss** | ✅ abgeschlossen |
+| **Sprint 12H** | **Fahrgast-Fahrtverlauf: Aktive + vergangene Fahrten, letzter Statuslabel, Adressen** | ✅ abgeschlossen |
 
 ---
 

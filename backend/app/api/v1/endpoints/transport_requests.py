@@ -7,6 +7,7 @@ from app.api.deps import get_current_user, get_db
 from app.crud import crud_transport_request
 from app.models.driver_profile import DriverProfile
 from app.models.mobility_profile import MobilityProfile
+from app.models.ride_status_event import RideStatusEvent, RideStatusEventType
 from app.models.transport_request import TransportRequest, TransportRequestStatus
 from app.models.user import User, UserRole
 from app.models.vehicle import Vehicle
@@ -22,6 +23,16 @@ from app.services import manual_matching
 
 router = APIRouter(prefix="/transport-requests", tags=["transport-requests"])
 
+_RIDE_EVENT_LABELS: dict[RideStatusEventType, str] = {
+    RideStatusEventType.driver_on_way:       "Fahrer ist unterwegs",
+    RideStatusEventType.driver_arrived:      "Fahrer ist angekommen",
+    RideStatusEventType.passenger_picked_up: "Fahrgast aufgenommen",
+    RideStatusEventType.ride_started:        "Fahrt gestartet",
+    RideStatusEventType.ride_completed:      "Fahrt abgeschlossen",
+    RideStatusEventType.ride_cancelled:      "Fahrt storniert",
+    RideStatusEventType.issue_reported:      "Problem gemeldet",
+}
+
 _SUBMIT_REQUIRED_FIELDS = [
     "passenger_user_id",
     "transport_type_id",
@@ -35,24 +46,43 @@ _DISPOSITION_ROLES = {UserRole.dispatcher, UserRole.provider_admin, UserRole.pla
 
 
 def _enrich_list_items(items: list[TransportRequest], db: Session) -> list[TransportRequestListItem]:
-    """Ergänzt Fahrgast-Kontaktfelder in der Listenansicht (Batch-Query, kein N+1)."""
+    """Ergänzt Fahrgast-Kontaktfelder und letztes Statusereignis (Batch-Queries, kein N+1)."""
     if not items:
         return []
+
     passenger_ids = {req.passenger_user_id for req in items}
     users: dict = {
         u.id: u
         for u in db.query(User).filter(User.id.in_(passenger_ids)).all()
     }
+
+    # Letztes RideStatusEvent pro Fahrt (ordered, in Python dedupliziert)
+    request_ids = [req.id for req in items]
+    all_events = (
+        db.query(RideStatusEvent)
+        .filter(RideStatusEvent.transport_request_id.in_(request_ids))
+        .order_by(RideStatusEvent.transport_request_id, RideStatusEvent.created_at.desc())
+        .all()
+    )
+    latest_events: dict = {}
+    for e in all_events:
+        if e.transport_request_id not in latest_events:
+            latest_events[e.transport_request_id] = e
+
     result = []
     for req in items:
         item = TransportRequestListItem.model_validate(req)
+        update: dict = {}
         user = users.get(req.passenger_user_id)
         if user:
-            item = item.model_copy(update={
-                "passenger_display_name": f"{user.first_name} {user.last_name}".strip(),
-                "passenger_email": user.email,
-                "passenger_phone": user.phone,
-            })
+            update["passenger_display_name"] = f"{user.first_name} {user.last_name}".strip()
+            update["passenger_email"] = user.email
+            update["passenger_phone"] = user.phone
+        event = latest_events.get(req.id)
+        if event:
+            update["last_status_label"] = _RIDE_EVENT_LABELS.get(event.status)
+        if update:
+            item = item.model_copy(update=update)
         result.append(item)
     return result
 

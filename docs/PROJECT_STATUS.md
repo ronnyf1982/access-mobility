@@ -888,3 +888,61 @@ Sprint 12F hat gespeicherte Adressen eingeführt, aber nur als Abholadresse. Zie
 - vue-tsc --noEmit: ✅
 - npm run build: ✅
 - git diff --check: EXIT:0
+
+---
+
+## Sprint 12G — Fahrer-Statusfluss & Fahrer-Dashboard aufräumen ✅
+
+**Abgeschlossen:** 2026-07-21
+
+### Ziel
+Fahrer-Dashboard zeigt nur den jeweils nächsten logischen Statusbutton. Tracking-Label wird aus dem letzten RideStatusEvent befüllt. Statusereignisse nach Fahrtabschluss werden abgewiesen.
+
+### Backend
+- [x] `backend/app/api/v1/endpoints/ride_status_events.py` — 409 wenn `tr.status != assigned` (kein Event nach Abschluss)
+- [x] `backend/app/api/v1/endpoints/spontaneous_rides.py` — `_RIDE_EVENT_LABELS` + letztes Event-Query in `get_spontaneous_ride_tracking()` → Label-Override
+- [x] `backend/tests/api/test_sprint12g_driver_status_flow.py` — 15 Tests: Auth-Guards, voller Statusfluss driver_on_way→ride_completed, Tracking-Label-Verifikation, can_track=False nach Abschluss, 409 nach Abschluss
+
+### Frontend
+- [x] `frontend/src/views/DriverDashboardView.vue` — `nextActionFor()` zeigt nur nächste Aktion; grüne Abgeschlossen-Box statt Button; Button `.ride-status-btn--next` Akzentfarbe
+
+### Checks
+- 309 passed, 9 skipped
+- vue-tsc --noEmit: ✅
+- npm run build: ✅
+- git diff --check: EXIT:0
+
+---
+
+## Sprint 12H — Fahrgast-Fahrtverlauf & Fahrtabschluss ✅
+
+**Abgeschlossen:** 2026-07-21
+
+### Ziel
+Fahrgast sieht aktive und vergangene (abgeschlossene, stornierte) Fahrten in einer gemeinsamen Ansicht. Spontane Fahrten zeigen Abholadresse statt Koordinaten. Letztes Statusereignis erscheint als lesbares Label.
+
+### Backend
+- [x] `backend/app/schemas/transport_request.py` — `TransportRequestListItem` um `last_status_label: Optional[str] = None` erweitert
+- [x] `backend/app/api/v1/endpoints/transport_requests.py` — `_RIDE_EVENT_LABELS` + Batch-Query letztes `RideStatusEvent` pro Fahrt in `_enrich_list_items()` (kein N+1); import `RideStatusEvent`, `RideStatusEventType`
+- [x] `backend/tests/api/test_sprint12h_passenger_history.py` — 8 Tests: Unauthentifiziert 401, Fahrgast sieht abgeschlossene Spontanfahrt, `pickup_address` + `destination_address` gesetzt, `last_status_label = "Fahrt abgeschlossen"`, `last_status_label`-Feld in allen List-Items vorhanden, Status-Events lesbar für abgeschlossene Fahrt, Fahrer sieht keine Fahrgast-Fahrten
+
+### Frontend
+- [x] `frontend/src/types/index.ts` — `TransportRequestListItem` um `last_status_label?: string | null` erweitert
+- [x] `frontend/src/views/ActiveRidesView.vue` — komplett überarbeitet zu **"Meine Fahrten"**:
+  - Zwei Sektionen: "Aktive Fahrten" + "Vergangene Fahrten"
+  - Spontane Fahrten: `pickup_address` bevorzugt (GPS-Koordinaten nur als Fallback)
+  - `destination_address` bei spontanen Fahrten jetzt sichtbar
+  - `last_status_label` in vergangenen Fahrten angezeigt
+  - Neue Status-Badges: `--completed` (grün) + `--cancelled` (grau)
+  - Status-Icons für completed (`pi-check-circle`) und cancelled/driver_declined (`pi-times-circle`)
+
+### Keine Änderungen an
+- Backend-Migrationsdateien (keine neue Migration nötig)
+- Router (Route `/active-rides` existiert bereits)
+- Sidebar (Navigation zu "Meine Fahrten" existiert bereits als "Aktive Fahrten")
+
+### Checks
+- 313 passed, 9 skipped
+- vue-tsc --noEmit: ✅
+- npm run build: ✅ (3.79s)
+- git diff --check: EXIT:0

@@ -1,6 +1,6 @@
 <template>
   <div class="ar-view">
-    <h1 class="ar-view__title">Aktive Fahrten</h1>
+    <h1 class="ar-view__title">Meine Fahrten</h1>
 
     <!-- Laden -->
     <div v-if="loading" class="ar-view__loading" aria-live="polite">
@@ -14,78 +14,135 @@
       {{ loadError }}
     </div>
 
-    <!-- Keine aktiven Fahrten -->
-    <div v-else-if="activeRides.length === 0" class="ar-view__empty" role="status">
-      <span class="pi pi-check-circle ar-view__empty-icon" aria-hidden="true"></span>
-      <p>Derzeit haben Sie keine aktiven Fahrten.</p>
-      <RouterLink to="/spontaneous-ride" class="ar-view__cta">
-        <span class="pi pi-bolt" aria-hidden="true"></span>
-        Spontane Fahrt buchen
-      </RouterLink>
-    </div>
+    <template v-else>
 
-    <!-- Liste aktiver Fahrten -->
-    <ul v-else class="ar-view__list">
-      <li v-for="ride in activeRides" :key="ride.id" class="ar-view__card">
+      <!-- ── Aktive Fahrten ────────────────────────────────────────────────── -->
+      <section class="ar-view__section">
+        <h2 class="ar-view__section-title">Aktive Fahrten</h2>
 
-        <!-- Status-Zeile -->
-        <div class="ar-view__status-row">
-          <span class="ar-view__status-badge" :class="statusBadgeClass(ride.status)">
-            <span class="pi" :class="statusBadgeIcon(ride.status)" aria-hidden="true"></span>
-            {{ TRANSPORT_REQUEST_STATUS_LABELS[ride.status] ?? ride.status }}
-          </span>
-          <span v-if="ride.is_spontaneous" class="ar-view__type-chip">
+        <div v-if="activeRides.length === 0" class="ar-view__empty" role="status">
+          <span class="pi pi-check-circle ar-view__empty-icon" aria-hidden="true"></span>
+          <p>Derzeit haben Sie keine aktiven Fahrten.</p>
+          <RouterLink to="/spontaneous-ride" class="ar-view__cta">
             <span class="pi pi-bolt" aria-hidden="true"></span>
-            Spontan
-          </span>
+            Spontane Fahrt buchen
+          </RouterLink>
         </div>
 
-        <!-- Spontane Fahrt -->
-        <template v-if="ride.is_spontaneous">
-          <div class="ar-view__pickup">
-            <span class="pi pi-map-marker" aria-hidden="true"></span>
-            <span v-if="ride.pickup_latitude != null" class="ar-view__coords">
-              Aktueller Standort des Fahrgasts
-              <small>{{ ride.pickup_latitude.toFixed(4) }}, {{ ride.pickup_longitude?.toFixed(4) ?? '' }}</small>
-            </span>
-            <span v-else-if="ride.pickup_address">{{ ride.pickup_address }}</span>
-            <span v-else>Standort nicht angegeben</span>
-          </div>
-          <div class="ar-view__meta">
-            <span class="pi pi-clock" aria-hidden="true"></span>
-            Angefragt: {{ formatDateTime(ride.created_at) }}
-          </div>
-          <RouterLink to="/spontaneous-ride" class="ar-view__btn ar-view__btn--primary">
-            <span class="pi pi-map" aria-hidden="true"></span>
-            Tracking öffnen
-          </RouterLink>
-        </template>
+        <ul v-else class="ar-view__list">
+          <li v-for="ride in activeRides" :key="ride.id" class="ar-view__card">
 
-        <!-- Geplante Fahrt -->
-        <template v-else>
-          <div class="ar-view__route">
-            <div class="ar-view__pickup">
-              <span class="pi pi-map-marker" aria-hidden="true"></span>
-              {{ ride.pickup_address ?? 'Abholadresse nicht angegeben' }}
+            <div class="ar-view__status-row">
+              <span class="ar-view__status-badge" :class="statusBadgeClass(ride.status)">
+                <span class="pi" :class="statusBadgeIcon(ride.status)" aria-hidden="true"></span>
+                {{ TRANSPORT_REQUEST_STATUS_LABELS[ride.status] ?? ride.status }}
+              </span>
+              <span v-if="ride.is_spontaneous" class="ar-view__type-chip">
+                <span class="pi pi-bolt" aria-hidden="true"></span>
+                Spontan
+              </span>
             </div>
-            <div v-if="ride.destination_address" class="ar-view__destination">
-              <span class="pi pi-flag" aria-hidden="true"></span>
-              {{ ride.destination_address }}
-            </div>
-          </div>
-          <div v-if="ride.pickup_date" class="ar-view__meta">
-            <span class="pi pi-calendar" aria-hidden="true"></span>
-            {{ formatDate(ride.pickup_date) }}
-            <span v-if="ride.pickup_time"> · {{ ride.pickup_time }}</span>
-          </div>
-          <RouterLink to="/transport-requests" class="ar-view__btn ar-view__btn--secondary">
-            <span class="pi pi-arrow-right" aria-hidden="true"></span>
-            Details anzeigen
-          </RouterLink>
-        </template>
 
-      </li>
-    </ul>
+            <!-- Spontane Fahrt -->
+            <template v-if="ride.is_spontaneous">
+              <div class="ar-view__pickup">
+                <span class="pi pi-map-marker" aria-hidden="true"></span>
+                <span v-if="ride.pickup_address">{{ ride.pickup_address }}</span>
+                <span v-else-if="ride.pickup_latitude != null" class="ar-view__coords">
+                  Aktueller Standort des Fahrgasts
+                  <small>{{ ride.pickup_latitude.toFixed(4) }}, {{ ride.pickup_longitude?.toFixed(4) ?? '' }}</small>
+                </span>
+                <span v-else>Standort nicht angegeben</span>
+              </div>
+              <div v-if="ride.destination_address" class="ar-view__destination">
+                <span class="pi pi-flag" aria-hidden="true"></span>
+                {{ ride.destination_address }}
+              </div>
+              <div class="ar-view__meta">
+                <span class="pi pi-clock" aria-hidden="true"></span>
+                Angefragt: {{ formatDateTime(ride.created_at) }}
+              </div>
+              <RouterLink to="/spontaneous-ride" class="ar-view__btn ar-view__btn--primary">
+                <span class="pi pi-map" aria-hidden="true"></span>
+                Tracking öffnen
+              </RouterLink>
+            </template>
+
+            <!-- Geplante Fahrt -->
+            <template v-else>
+              <div class="ar-view__route">
+                <div class="ar-view__pickup">
+                  <span class="pi pi-map-marker" aria-hidden="true"></span>
+                  {{ ride.pickup_address ?? 'Abholadresse nicht angegeben' }}
+                </div>
+                <div v-if="ride.destination_address" class="ar-view__destination">
+                  <span class="pi pi-flag" aria-hidden="true"></span>
+                  {{ ride.destination_address }}
+                </div>
+              </div>
+              <div v-if="ride.pickup_date" class="ar-view__meta">
+                <span class="pi pi-calendar" aria-hidden="true"></span>
+                {{ formatDate(ride.pickup_date) }}
+                <span v-if="ride.pickup_time"> · {{ ride.pickup_time }}</span>
+              </div>
+              <RouterLink to="/transport-requests" class="ar-view__btn ar-view__btn--secondary">
+                <span class="pi pi-arrow-right" aria-hidden="true"></span>
+                Details anzeigen
+              </RouterLink>
+            </template>
+
+          </li>
+        </ul>
+      </section>
+
+      <!-- ── Vergangene Fahrten ─────────────────────────────────────────────── -->
+      <section v-if="pastRides.length > 0" class="ar-view__section ar-view__section--past">
+        <h2 class="ar-view__section-title">Vergangene Fahrten</h2>
+
+        <ul class="ar-view__list">
+          <li v-for="ride in pastRides" :key="ride.id" class="ar-view__card ar-view__card--past">
+
+            <div class="ar-view__status-row">
+              <span class="ar-view__status-badge" :class="statusBadgeClass(ride.status)">
+                <span class="pi" :class="statusBadgeIcon(ride.status)" aria-hidden="true"></span>
+                {{ TRANSPORT_REQUEST_STATUS_LABELS[ride.status] ?? ride.status }}
+              </span>
+              <span v-if="ride.is_spontaneous" class="ar-view__type-chip">
+                <span class="pi pi-bolt" aria-hidden="true"></span>
+                Spontan
+              </span>
+            </div>
+
+            <div v-if="ride.last_status_label" class="ar-view__last-status">
+              <span class="pi pi-info-circle" aria-hidden="true"></span>
+              {{ ride.last_status_label }}
+            </div>
+
+            <div class="ar-view__route">
+              <div class="ar-view__pickup">
+                <span class="pi pi-map-marker" aria-hidden="true"></span>
+                <span v-if="ride.pickup_address">{{ ride.pickup_address }}</span>
+                <span v-else-if="ride.pickup_latitude != null" class="ar-view__coords">
+                  GPS: {{ ride.pickup_latitude.toFixed(4) }}, {{ ride.pickup_longitude?.toFixed(4) ?? '' }}
+                </span>
+                <span v-else>Abholadresse nicht angegeben</span>
+              </div>
+              <div v-if="ride.destination_address" class="ar-view__destination">
+                <span class="pi pi-flag" aria-hidden="true"></span>
+                {{ ride.destination_address }}
+              </div>
+            </div>
+
+            <div class="ar-view__meta">
+              <span class="pi pi-calendar" aria-hidden="true"></span>
+              {{ formatDateTime(ride.created_at) }}
+            </div>
+
+          </li>
+        </ul>
+      </section>
+
+    </template>
   </div>
 </template>
 
@@ -101,12 +158,22 @@ const ACTIVE_STATUSES = new Set<TransportRequestStatus>([
   'requested',
 ])
 
+const PAST_STATUSES = new Set<TransportRequestStatus>([
+  'completed',
+  'cancelled',
+  'driver_declined',
+])
+
 const allRides = ref<TransportRequestListItem[]>([])
 const loading = ref(true)
 const loadError = ref<string | null>(null)
 
 const activeRides = computed(() =>
   allRides.value.filter(r => ACTIVE_STATUSES.has(r.status as TransportRequestStatus))
+)
+
+const pastRides = computed(() =>
+  allRides.value.filter(r => PAST_STATUSES.has(r.status as TransportRequestStatus))
 )
 
 onMounted(async () => {
@@ -122,6 +189,8 @@ onMounted(async () => {
 function statusBadgeClass(status: string): string {
   if (status === 'assigned') return 'ar-view__status-badge--active'
   if (status === 'spontaneous_requested' || status === 'requested') return 'ar-view__status-badge--waiting'
+  if (status === 'completed') return 'ar-view__status-badge--completed'
+  if (status === 'cancelled' || status === 'driver_declined') return 'ar-view__status-badge--cancelled'
   return ''
 }
 
@@ -129,6 +198,8 @@ function statusBadgeIcon(status: string): string {
   if (status === 'assigned') return 'pi-car'
   if (status === 'spontaneous_requested') return 'pi-spin pi-spinner'
   if (status === 'requested') return 'pi-clock'
+  if (status === 'completed') return 'pi-check-circle'
+  if (status === 'cancelled' || status === 'driver_declined') return 'pi-times-circle'
   return 'pi-circle'
 }
 
@@ -175,12 +246,32 @@ function formatDateTime(iso: string): string {
   color: #fca5a5;
 }
 
+/* Abschnitte */
+.ar-view__section {
+  margin-bottom: 2rem;
+}
+
+.ar-view__section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--am-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.ar-view__section--past {
+  border-top: 1px solid var(--am-border);
+  padding-top: 1.5rem;
+}
+
+/* Leer-Zustände */
 .ar-view__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
-  padding: 3rem 0;
+  padding: 2.5rem 0;
   text-align: center;
   color: var(--am-text-secondary);
 }
@@ -205,6 +296,7 @@ function formatDateTime(iso: string): string {
   margin-top: 0.5rem;
 }
 
+/* Liste */
 .ar-view__list {
   list-style: none;
   padding: 0;
@@ -222,6 +314,10 @@ function formatDateTime(iso: string): string {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+}
+
+.ar-view__card--past {
+  opacity: 0.82;
 }
 
 /* Status-Zeile */
@@ -257,6 +353,18 @@ function formatDateTime(iso: string): string {
   color: #86efac;
 }
 
+.ar-view__status-badge--completed {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+}
+
+.ar-view__status-badge--cancelled {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a3a3a3;
+}
+
 .ar-view__type-chip {
   display: inline-flex;
   align-items: center;
@@ -268,6 +376,16 @@ function formatDateTime(iso: string): string {
   border: 1px solid rgba(251, 191, 36, 0.35);
   color: #fde68a;
   font-weight: 600;
+}
+
+/* Letzter Status */
+.ar-view__last-status {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--am-text-secondary);
+  font-style: italic;
 }
 
 /* Abholpunkt / Route */

@@ -393,6 +393,7 @@ export interface TransportRequestListItem extends Pick<
   is_spontaneous: boolean
   pickup_latitude: number | null
   pickup_longitude: number | null
+  last_status_label?: string | null
 }
 
 export interface TransportRequestCreate {
