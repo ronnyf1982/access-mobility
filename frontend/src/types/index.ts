@@ -820,6 +820,62 @@ export interface EmergencyFileResponse {
   medical_disclaimer: string
 }
 
+// ─── Gespeicherte Fahrgast-Adressen ──────────────────────────────────────────
+
+export type AddressType = 'home' | 'school' | 'work_workshop' | 'daycare' | 'doctor' | 'other'
+
+export const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
+  home: 'Zuhause',
+  school: 'Schule',
+  work_workshop: 'Arbeit / Werkstatt',
+  daycare: 'Tagesstätte / Tagespflege',
+  doctor: 'Arztpraxis',
+  other: 'Sonstiges',
+}
+
+export interface PassengerSavedAddress {
+  id: string
+  mobility_profile_id: string
+  label: string
+  address_type: AddressType
+  street_address: string
+  postal_code: string
+  city: string
+  additional_info: string | null
+  note: string | null
+  is_default_pickup: boolean
+  is_default_destination: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PassengerSavedAddressCreate {
+  label: string
+  address_type?: AddressType
+  street_address: string
+  postal_code: string
+  city: string
+  additional_info?: string | null
+  note?: string | null
+  is_default_pickup?: boolean
+  is_default_destination?: boolean
+  is_active?: boolean
+}
+
+export interface PassengerSavedAddressUpdate {
+  label?: string
+  address_type?: AddressType
+  street_address?: string
+  postal_code?: string
+  city?: string
+  additional_info?: string | null
+  note?: string | null
+  is_default_pickup?: boolean
+  is_default_destination?: boolean
+  is_active?: boolean
+}
+
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 
 export interface TransportType {

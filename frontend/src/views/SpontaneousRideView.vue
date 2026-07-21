@@ -45,6 +45,21 @@
         <button class="sr-view__btn-link" @click="reset">Neue Suche</button>
       </div>
 
+      <!-- Gespeicherte Adressen Schnellauswahl -->
+      <div v-if="savedAddresses.length > 0" class="sr-view__address-field">
+        <label for="saved-address-select" class="sr-view__label">Gespeicherte Adresse wählen</label>
+        <select
+          id="saved-address-select"
+          v-model="selectedSavedAddressId"
+          class="sr-view__select"
+        >
+          <option :value="null">– Adresse manuell eingeben –</option>
+          <option v-for="a in savedAddresses" :key="a.id" :value="a.id">
+            {{ a.label }} – {{ a.street_address }}, {{ a.postal_code }} {{ a.city }}
+          </option>
+        </select>
+      </div>
+
       <!-- Abholadresse -->
       <div class="sr-view__address-field">
         <label for="pickup-address" class="sr-view__label">
@@ -275,7 +290,8 @@ import SpontaneousRideMap from '@/components/SpontaneousRideMap.vue'
 import { findSpontaneousMatches, bookSpontaneousRide, getTrackingStatus } from '@/api/spontaneous'
 import { reverseGeocode } from '@/api/geocoding'
 import { getTransportRequests } from '@/api/transportRequests'
-import type { SpontaneousRideBookResponse, SpontaneousRideMatchResult, SpontaneousRideTracking } from '@/types'
+import { listAddresses } from '@/api/passengerSavedAddresses'
+import type { SpontaneousRideBookResponse, SpontaneousRideMatchResult, SpontaneousRideTracking, PassengerSavedAddress } from '@/types'
 import { VEHICLE_TYPE_LABELS } from '@/types'
 
 type Phase = 'idle' | 'locating' | 'geo-error' | 'searching' | 'results' | 'booked'
@@ -310,6 +326,27 @@ const trackingLoading = ref(false)
 const trackingError = ref(false)
 let trackingInterval: ReturnType<typeof setInterval> | null = null
 
+// ── Gespeicherte Adressen ────────────────────────────────────────────────────
+
+const savedAddresses = ref<PassengerSavedAddress[]>([])
+const selectedSavedAddressId = ref<string | null>(null)
+
+async function loadSavedAddresses(): Promise<void> {
+  try {
+    savedAddresses.value = await listAddresses()
+  } catch {
+    savedAddresses.value = []
+  }
+}
+
+watch(selectedSavedAddressId, (id) => {
+  if (!id) return
+  const addr = savedAddresses.value.find((a) => a.id === id)
+  if (addr) {
+    pickupAddress.value = `${addr.street_address}, ${addr.postal_code} ${addr.city}`
+  }
+})
+
 // ── Aktive spontane Fahrt beim Mount wiederherstellen ────────────────────────
 
 async function restoreActiveSpontaneousRide(): Promise<void> {
@@ -328,7 +365,10 @@ async function restoreActiveSpontaneousRide(): Promise<void> {
   }
 }
 
-onMounted(() => restoreActiveSpontaneousRide())
+onMounted(() => {
+  restoreActiveSpontaneousRide()
+  loadSavedAddresses()
+})
 
 // ── Reverse Geocoding ─────────────────────────────────────────────────────────
 
@@ -858,6 +898,23 @@ function requestLocation(): void {
 }
 
 .sr-view__input:focus {
+  outline: none;
+  border-color: var(--p-primary-color, #3b82f6);
+}
+
+.sr-view__select {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--p-content-background, #1e293b);
+  color: var(--p-text-color, #e2e8f0);
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.sr-view__select:focus {
   outline: none;
   border-color: var(--p-primary-color, #3b82f6);
 }

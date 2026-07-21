@@ -648,12 +648,18 @@
           </div>
           <div class="mp-field-row">
             <div class="mp-field">
+              <label for="ef-dob" class="mp-label">Geburtsdatum <span class="mp-optional-badge">freiwillig</span></label>
+              <input id="ef-dob" v-model="form.date_of_birth" type="date" class="mp-input" />
+            </div>
+            <div class="mp-field">
               <label for="ef-gender" class="mp-label">Geschlecht</label>
               <select id="ef-gender" v-model="form.gender" class="mp-input mp-select">
                 <option value="">– keine Angabe –</option>
                 <option v-for="opt in GENDER_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </div>
+          </div>
+          <div class="mp-field-row">
             <div class="mp-field">
               <label for="ef-height" class="mp-label">Körpergröße (cm)</label>
               <input id="ef-height" v-model.number="form.body_height_cm" type="number" min="50" max="250" class="mp-input" placeholder="z. B. 172" />
@@ -808,7 +814,137 @@
         </div>
       </section>
 
-      <!-- ── Abschnitt 8: Speichern ──────────────────────────────────────── -->
+      <!-- ── Abschnitt 8: Feste Adressen ──────────────────────────────────── -->
+      <section class="mp-section am-card" aria-labelledby="s8-heading">
+        <h2 id="s8-heading" class="mp-section-title">
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          Feste Adressen
+          <span class="mp-optional-badge">freiwillig</span>
+        </h2>
+        <p class="mp-section-desc">
+          Speichern Sie häufig genutzte Adressen (z. B. Zuhause, Schule, Werkstatt). Sie können diese beim Buchen einer Spontanfahrt schnell auswählen.
+        </p>
+
+        <div v-if="addressesLoading" class="mp-loading" role="status">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Adressen werden geladen …
+        </div>
+
+        <p v-if="addressesError" class="mp-error" role="alert">{{ addressesError }}</p>
+
+        <!-- Adress-Liste -->
+        <div v-if="!addressesLoading && savedAddresses.length > 0" class="contact-list">
+          <div v-for="addr in savedAddresses" :key="addr.id" class="contact-card">
+            <div class="contact-card-main">
+              <div class="contact-name">{{ addr.label }}</div>
+              <div class="contact-meta">
+                <span class="contact-type-badge">{{ ADDRESS_TYPE_LABELS[addr.address_type] }}</span>
+                <span>{{ addr.street_address }}, {{ addr.postal_code }} {{ addr.city }}</span>
+              </div>
+              <div v-if="addr.additional_info" class="contact-meta">{{ addr.additional_info }}</div>
+              <div v-if="addr.note" class="contact-meta" style="font-style:italic">{{ addr.note }}</div>
+              <div class="contact-flags-display">
+                <span v-if="addr.is_default_pickup" class="contact-flag-chip">Standard-Abholung</span>
+                <span v-if="addr.is_default_destination" class="contact-flag-chip">Standard-Ziel</span>
+                <span v-if="!addr.is_active" class="contact-flag-chip contact-flag-chip--inactive">Inaktiv</span>
+              </div>
+            </div>
+            <div class="contact-card-actions">
+              <button type="button" class="am-btn am-btn-secondary am-btn-sm" @click="openEditAddress(addr)">
+                <i class="pi pi-pencil" aria-hidden="true"></i> Bearbeiten
+              </button>
+              <button type="button" class="am-btn am-btn-danger am-btn-sm" @click="handleAddressDelete(addr.id)">
+                <i class="pi pi-trash" aria-hidden="true"></i> Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="!addressesLoading && savedAddresses.length === 0 && !addressesError" class="mp-empty-hint">
+          Noch keine festen Adressen gespeichert.
+        </p>
+
+        <button type="button" class="am-btn am-btn-secondary" style="margin-top: var(--am-space-m)" @click="openAddAddress">
+          <i class="pi pi-plus" aria-hidden="true"></i> Adresse hinzufügen
+        </button>
+
+        <!-- Adress-Formular -->
+        <div v-if="showAddressForm" class="contact-form-box" style="margin-top: var(--am-space-m)">
+          <h3 class="contact-form-title">{{ editingAddressId ? 'Adresse bearbeiten' : 'Neue Adresse' }}</h3>
+
+          <p v-if="addressFormError" class="mp-error" role="alert">{{ addressFormError }}</p>
+
+          <div class="mp-field">
+            <label for="af-label" class="mp-label">Bezeichnung <span class="mp-required-badge">*</span></label>
+            <input id="af-label" v-model="addressForm.label" type="text" class="mp-input" placeholder="z. B. Zuhause" maxlength="200" />
+          </div>
+
+          <div class="mp-field">
+            <label for="af-type" class="mp-label">Typ</label>
+            <select id="af-type" v-model="addressForm.address_type" class="mp-input mp-select">
+              <option v-for="opt in ADDRESS_TYPE_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+
+          <div class="mp-field">
+            <label for="af-street" class="mp-label">Straße und Hausnummer <span class="mp-required-badge">*</span></label>
+            <input id="af-street" v-model="addressForm.street_address" type="text" class="mp-input" placeholder="Musterstraße 12" maxlength="500" />
+          </div>
+
+          <div class="mp-field-row">
+            <div class="mp-field" style="flex:0 0 140px">
+              <label for="af-plz" class="mp-label">PLZ <span class="mp-required-badge">*</span></label>
+              <input id="af-plz" v-model="addressForm.postal_code" type="text" class="mp-input" placeholder="10115" maxlength="20" />
+            </div>
+            <div class="mp-field">
+              <label for="af-city" class="mp-label">Ort <span class="mp-required-badge">*</span></label>
+              <input id="af-city" v-model="addressForm.city" type="text" class="mp-input" placeholder="Berlin" maxlength="200" />
+            </div>
+          </div>
+
+          <div class="mp-field">
+            <label for="af-info" class="mp-label">Zusatzinfo <span class="mp-optional-badge">freiwillig</span></label>
+            <input id="af-info" v-model="addressForm.additional_info" type="text" class="mp-input" placeholder="z. B. Hintereingang, 2. Stock" maxlength="500" />
+          </div>
+
+          <div class="mp-field">
+            <label for="af-note" class="mp-label">Notiz <span class="mp-optional-badge">freiwillig</span></label>
+            <textarea id="af-note" v-model="addressForm.note" class="mp-textarea" rows="2" placeholder="Weitere Hinweise zu dieser Adresse"></textarea>
+          </div>
+
+          <div class="contact-flags">
+            <label class="contact-flag">
+              <input type="checkbox" v-model="addressForm.is_default_pickup" class="contact-flag-check" />
+              <span>Standard-Abholadresse</span>
+            </label>
+            <label class="contact-flag">
+              <input type="checkbox" v-model="addressForm.is_default_destination" class="contact-flag-check" />
+              <span>Standard-Zieladresse</span>
+            </label>
+            <label class="contact-flag">
+              <input type="checkbox" v-model="addressForm.is_active" class="contact-flag-check" />
+              <span>Aktiv</span>
+            </label>
+          </div>
+
+          <div class="contact-form-actions">
+            <button
+              type="button"
+              class="am-btn am-btn-primary"
+              :disabled="addressFormSaving || !safeStr(addressForm.label).trim() || !safeStr(addressForm.street_address).trim() || !safeStr(addressForm.postal_code).trim() || !safeStr(addressForm.city).trim()"
+              @click="handleAddressSave"
+            >
+              <i v-if="addressFormSaving" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              <i v-else class="pi pi-save" aria-hidden="true"></i>
+              {{ addressFormSaving ? 'Wird gespeichert …' : 'Speichern' }}
+            </button>
+            <button type="button" class="am-btn am-btn-secondary" @click="showAddressForm = false; resetAddressForm()">
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Abschnitt 9: Speichern ──────────────────────────────────────── -->
       <div class="mp-save-bar">
         <button
           type="submit"
@@ -833,8 +969,9 @@ import { useMobilityProfileStore } from '@/stores/mobilityProfile'
 import { getTransportOptions } from '@/api/transportOptions'
 import { getNotificationPreferences, saveNotificationPreferences } from '@/api/notificationPreferences'
 import { listContacts, createContact, updateContact, deleteContact } from '@/api/passengerContacts'
-import type { MobilityProfile, NotificationEventType, WheelchairType, AttendantType, TransportType, PassengerContact, PassengerContactCreate, ContactType } from '@/types'
-import { NOTIFICATION_EVENT_LABELS, CONTACT_TYPE_LABELS } from '@/types'
+import { listAddresses, createAddress as createSavedAddress, updateAddress as updateSavedAddress, deleteAddress as deleteSavedAddress } from '@/api/passengerSavedAddresses'
+import type { MobilityProfile, NotificationEventType, WheelchairType, AttendantType, TransportType, PassengerContact, PassengerContactCreate, ContactType, PassengerSavedAddress, PassengerSavedAddressCreate, AddressType } from '@/types'
+import { NOTIFICATION_EVENT_LABELS, CONTACT_TYPE_LABELS, ADDRESS_TYPE_LABELS } from '@/types'
 
 type NeedKey =
   | 'uses_wheelchair'
@@ -1126,6 +1263,134 @@ async function handleContactDelete(id: string) {
   }
 }
 
+// ── Gespeicherte Adressen (Sprint 12F) ────────────────────────────────────────
+
+const savedAddresses = ref<PassengerSavedAddress[]>([])
+const addressesLoading = ref(false)
+const addressesError = ref('')
+const showAddressForm = ref(false)
+const addressFormSaving = ref(false)
+const addressFormError = ref('')
+const editingAddressId = ref<string | null>(null)
+
+const ADDRESS_TYPE_OPTIONS: Array<{ value: AddressType; label: string }> = [
+  { value: 'home',          label: ADDRESS_TYPE_LABELS.home },
+  { value: 'school',        label: ADDRESS_TYPE_LABELS.school },
+  { value: 'work_workshop', label: ADDRESS_TYPE_LABELS.work_workshop },
+  { value: 'daycare',       label: ADDRESS_TYPE_LABELS.daycare },
+  { value: 'doctor',        label: ADDRESS_TYPE_LABELS.doctor },
+  { value: 'other',         label: ADDRESS_TYPE_LABELS.other },
+]
+
+const addressForm = reactive<PassengerSavedAddressCreate>({
+  label: '',
+  address_type: 'other',
+  street_address: '',
+  postal_code: '',
+  city: '',
+  additional_info: null,
+  note: null,
+  is_default_pickup: false,
+  is_default_destination: false,
+  is_active: true,
+})
+
+function resetAddressForm() {
+  addressForm.label = ''
+  addressForm.address_type = 'other'
+  addressForm.street_address = ''
+  addressForm.postal_code = ''
+  addressForm.city = ''
+  addressForm.additional_info = null
+  addressForm.note = null
+  addressForm.is_default_pickup = false
+  addressForm.is_default_destination = false
+  addressForm.is_active = true
+  editingAddressId.value = null
+  addressFormError.value = ''
+}
+
+function openAddAddress() {
+  resetAddressForm()
+  showAddressForm.value = true
+}
+
+function openEditAddress(a: PassengerSavedAddress) {
+  addressForm.label = a.label
+  addressForm.address_type = a.address_type
+  addressForm.street_address = a.street_address
+  addressForm.postal_code = a.postal_code
+  addressForm.city = a.city
+  addressForm.additional_info = a.additional_info
+  addressForm.note = a.note
+  addressForm.is_default_pickup = a.is_default_pickup
+  addressForm.is_default_destination = a.is_default_destination
+  addressForm.is_active = a.is_active
+  editingAddressId.value = a.id
+  showAddressForm.value = true
+}
+
+async function loadAddresses() {
+  addressesLoading.value = true
+  addressesError.value = ''
+  try {
+    savedAddresses.value = await listAddresses()
+  } catch (err: unknown) {
+    const resp = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+    if (resp?.status === 403) {
+      savedAddresses.value = []
+    } else {
+      addressesError.value = resp
+        ? `Adressen konnten nicht geladen werden: ${resp.status ?? ''} ${resp.data?.detail ?? ''}`.trim()
+        : 'Adressen konnten nicht geladen werden.'
+    }
+  } finally {
+    addressesLoading.value = false
+  }
+}
+
+async function handleAddressSave() {
+  if (!safeStr(addressForm.label).trim() || !safeStr(addressForm.street_address).trim() || !safeStr(addressForm.postal_code).trim() || !safeStr(addressForm.city).trim()) {
+    addressFormError.value = 'Bitte Label, Straße, PLZ und Ort ausfüllen.'
+    return
+  }
+  addressFormSaving.value = true
+  addressFormError.value = ''
+  try {
+    if (editingAddressId.value) {
+      await updateSavedAddress(editingAddressId.value, { ...addressForm })
+    } else {
+      await createSavedAddress({ ...addressForm })
+    }
+    showAddressForm.value = false
+    resetAddressForm()
+    await loadAddresses()
+  } catch (err: unknown) {
+    const resp = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+    addressFormError.value = resp
+      ? `Speichern fehlgeschlagen: ${resp.status ?? ''} ${resp.data?.detail ?? ''}`.trim()
+      : 'Speichern fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung.'
+  } finally {
+    addressFormSaving.value = false
+  }
+}
+
+async function handleAddressDelete(id: string) {
+  if (!id) {
+    addressesError.value = 'Adresse ohne gültige ID.'
+    return
+  }
+  try {
+    await deleteSavedAddress(id)
+    await loadAddresses()
+  } catch (err: unknown) {
+    const resp = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+    addressesError.value = resp
+      ? `Löschen fehlgeschlagen: ${resp.status ?? ''} ${resp.data?.detail ?? ''}`.trim()
+      : 'Löschen fehlgeschlagen.'
+  }
+}
+
 // Lokales Formular-State — wird beim Laden aus dem Store befüllt
 const form = reactive<Partial<MobilityProfile>>({
   emergency_contact_name: null,
@@ -1188,6 +1453,8 @@ const form = reactive<Partial<MobilityProfile>>({
   show_body_data_in_emergency: false,
   show_contacts_to_driver: false,
   show_contacts_in_emergency: false,
+  // Sprint 12F
+  date_of_birth: null,
 })
 
 function syncFormFromStore() {
@@ -1254,6 +1521,8 @@ function syncFormFromStore() {
     show_body_data_in_emergency: p.show_body_data_in_emergency ?? false,
     show_contacts_to_driver: p.show_contacts_to_driver ?? false,
     show_contacts_in_emergency: p.show_contacts_in_emergency ?? false,
+    // Sprint 12F
+    date_of_birth: p.date_of_birth ?? null,
   })
 }
 
@@ -1329,8 +1598,10 @@ function applyTransportType(tt: TransportType) {
 async function handleSave() {
   saveSuccess.value = false
   saveError.value = ''
+  const payload = { ...form }
+  if (payload.date_of_birth === '') payload.date_of_birth = null
   try {
-    await store.save({ ...form })
+    await store.save(payload)
     saveSuccess.value = true
     toast.add({
       severity: 'success',
@@ -1355,6 +1626,7 @@ onMounted(async () => {
   syncFormFromStore()
   await loadNotifPrefs()
   await loadContacts()
+  await loadAddresses()
 })
 
 // Store-Profil-Änderungen ins Formular übernehmen (z. B. nach erstem Load)
