@@ -248,6 +248,11 @@
                 </span>
                 <span v-else>Abholort nicht angegeben</span>
               </div>
+              <div class="assignment-arrow" aria-hidden="true">↓</div>
+              <div class="assignment-address">
+                <i class="pi pi-flag" aria-hidden="true"></i>
+                {{ req.destination_address ?? 'Zieladresse nicht angegeben' }}
+              </div>
             </div>
             <div class="spontan-req-actions">
               <button

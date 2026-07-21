@@ -210,7 +210,13 @@ def test_passenger_books_ride_for_tracking(client: TestClient, auth_headers: dic
     m = _get_first_match(client, auth_headers)
     resp = client.post(
         "/api/v1/spontaneous-rides/book",
-        json={**_BERLIN, "driver_id": m["driver_id"], "vehicle_id": m["vehicle_id"]},
+        json={
+            **_BERLIN,
+            "driver_id": m["driver_id"],
+            "vehicle_id": m["vehicle_id"],
+            "pickup_address": "Brandenburger Tor, 10117 Berlin",
+            "destination_address": "Reichstag, 11011 Berlin",
+        },
         headers=auth_headers,
     )
     assert resp.status_code == 201
@@ -218,6 +224,8 @@ def test_passenger_books_ride_for_tracking(client: TestClient, auth_headers: dic
     _state["request_id"] = data["request_id"]
     _state["driver_id"] = m["driver_id"]
     _state["vehicle_id"] = m["vehicle_id"]
+    _state["pickup_address"] = "Brandenburger Tor, 10117 Berlin"
+    _state["destination_address"] = "Reichstag, 11011 Berlin"
 
 
 def test_tracking_before_acceptance_returns_can_track_false(
@@ -233,6 +241,8 @@ def test_tracking_before_acceptance_returns_can_track_false(
     assert data["can_track"] is False
     assert data["status"] == "spontaneous_requested"
     assert data["ride_status_label"]
+    assert data["pickup_address"] == _state["pickup_address"]
+    assert data["destination_address"] == _state["destination_address"]
     # Keine Fahrer-Kontaktdaten
     assert "email" not in str(data).lower() or data.get("driver_id") is None or True
 

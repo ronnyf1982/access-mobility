@@ -190,7 +190,13 @@ def test_book_success_returns_201(client: TestClient, auth_headers: dict) -> Non
     driver_id, vehicle_id = _get_driver_and_vehicle(client, auth_headers)
     resp = client.post(
         "/api/v1/spontaneous-rides/book",
-        json={**_BERLIN_CENTER, "driver_id": driver_id, "vehicle_id": vehicle_id},
+        json={
+            **_BERLIN_CENTER,
+            "driver_id": driver_id,
+            "vehicle_id": vehicle_id,
+            "pickup_address": "Unter den Linden 1, 10117 Berlin",
+            "destination_address": "Alexanderplatz 1, 10178 Berlin",
+        },
         headers=auth_headers,
     )
     assert resp.status_code == 201
@@ -204,6 +210,8 @@ def test_book_success_returns_201(client: TestClient, auth_headers: dict) -> Non
     _booked["request_id"] = data["request_id"]
     _booked["driver_id"] = driver_id
     _booked["vehicle_id"] = vehicle_id
+    _booked["pickup_address"] = "Unter den Linden 1, 10117 Berlin"
+    _booked["destination_address"] = "Alexanderplatz 1, 10178 Berlin"
 
 
 # ── 7. Double booking → 409 ───────────────────────────────────────────────────
@@ -234,6 +242,8 @@ def test_driver_sees_pending_spontaneous_request(
     assert item["status"] == "spontaneous_requested"
     assert item["pickup_latitude"] is not None
     assert item["pickup_longitude"] is not None
+    assert item["pickup_address"] == _booked["pickup_address"]
+    assert item["destination_address"] == _booked["destination_address"]
 
 
 # ── 9. Driver2 cannot accept another driver's request ─────────────────────────

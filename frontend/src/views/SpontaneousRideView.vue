@@ -412,6 +412,7 @@ async function restoreActiveSpontaneousRide(): Promise<void> {
     pickupLat.value = active.pickup_latitude ?? null
     pickupLon.value = active.pickup_longitude ?? null
     pickupAddress.value = active.pickup_address ?? ''
+    destinationAddress.value = active.destination_address ?? ''
     geocodingStatus.value = active.pickup_address ? 'success' : 'idle'
     phase.value = 'booked'
   } catch {
