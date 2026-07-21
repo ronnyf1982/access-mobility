@@ -855,8 +855,36 @@ Bei Spontanfahrten ist `pickup_address` immer `null` — GPS-Koordinaten (`picku
 
 ---
 
-## Nächster Sprint: Sprint 12E — Vertrauenspersonen-View & Notification-Dispatch
+## Hotfix Sprint 12F-A — Zieladresse bei spontanen Fahrten ✅
 
-- Vertrauensperson kann Fahrt-Status live verfolgen
-- Echter Dispatch (E-Mail/Push-Grundlage)
-- Fahrtabschluss-Flow für spontane Fahrten
+**Abgeschlossen:** 2026-07-21
+
+### Problem
+Sprint 12F hat gespeicherte Adressen eingeführt, aber nur als Abholadresse. Zieladresse fehlte komplett im Buchungsflow.
+
+### Umgesetzt
+
+**Backend (keine Migration — `destination_address` existierte bereits im Modell):**
+- `backend/app/schemas/spontaneous_ride.py` — `SpontaneousRideBookRequest`, `SpontaneousRideRequestItem` und `SpontaneousRideTracking` um `destination_address: str | None` erweitert; `SpontaneousRideTracking` auch um `pickup_address`
+- `backend/app/api/v1/endpoints/spontaneous_rides.py` — `book_spontaneous_ride`: speichert `destination_address` auf `TransportRequest`; `get_spontaneous_ride_tracking`: gibt `pickup_address` + `destination_address` zurück
+- `backend/app/api/v1/endpoints/driver.py` — `_build_spontaneous_request_item`: gibt `destination_address` mit zurück
+
+**Frontend:**
+- `frontend/src/types/index.ts` — `SpontaneousRideBookRequest`, `SpontaneousRideRequestItem`, `SpontaneousRideTracking` um `destination_address` + `pickup_address` erweitert
+- `frontend/src/views/SpontaneousRideView.vue`:
+  - `destinationAddress ref` + `selectedSavedDestinationId ref` + Watcher
+  - `destinationWarning` computed
+  - `reset()` räumt destination-State auf
+  - `bookRide()` sendet `destination_address`
+  - Template: Abholadresse-Dropdown mit Label "Aktuellen Standort verwenden" als Default; Zieladresse-Dropdown + freies Textfeld (immer sichtbar); Button-Disabled wenn `destinationAddress` leer; Tracking-Karte zeigt Abhol- + Zieladresse
+
+### Verhalten
+- Abholadresse: Standard GPS/Reverse-Geocoding; gespeicherte Adresse optional wählbar; freier Text immer editierbar
+- Zieladresse: gespeicherte Adresse optional wählbar; freies Textfeld immer sichtbar; Buchung ohne Zieladresse nicht möglich
+- Fahrer sieht `destination_address` im Dashboard (war bereits vorbereitet)
+
+### Tests / Checks
+- 294 passed, 0 failed
+- vue-tsc --noEmit: ✅
+- npm run build: ✅
+- git diff --check: EXIT:0

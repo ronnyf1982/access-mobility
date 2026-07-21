@@ -628,6 +628,7 @@ export interface SpontaneousRideBookRequest {
   pickup_latitude: number
   pickup_longitude: number
   pickup_address?: string | null
+  destination_address?: string | null
   passenger_user_id?: string | null
 }
 
@@ -646,6 +647,7 @@ export interface SpontaneousRideRequestItem {
   pickup_latitude: number
   pickup_longitude: number
   pickup_address: string | null
+  destination_address: string | null
   status: string
   created_at: string
 }
@@ -670,6 +672,8 @@ export interface SpontaneousRideTracking {
   driver_longitude: number | null
   pickup_latitude: number | null
   pickup_longitude: number | null
+  pickup_address: string | null
+  destination_address: string | null
   distance_km: number | null
   estimated_arrival_minutes: number | null
   last_location_update: string | null

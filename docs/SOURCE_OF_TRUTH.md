@@ -124,6 +124,10 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint FAHRANDO-GATE-PROTECTS-LOGIN-DIRECTLINK-1** | **Variante B: Gate schützt /login und alle App-Routen** | ✅ abgeschlossen |
 | **Sprint 11** | **Fahrt-Statusereignisse, Fahrer-Statuswechsel, Benachrichtigungseinstellungen** | ✅ abgeschlossen |
 | **Sprint 12A** | **Live-Status für angefragte/geplante Fahrten (Fahrgast + Vertrauensperson-Grundlage)** | ✅ abgeschlossen |
+| **Sprint 12B–12D** | **Spontane Fahrten: Matching, Buchung, Fahrerannahme, Live-Tracking** | ✅ abgeschlossen |
+| **Sprint 12E** | **Notfallkontakte, Cleanup, Kontakt-CRUD-Hotfixes** | ✅ abgeschlossen |
+| **Sprint 12F** | **Gespeicherte Fahrgast-Adressen (CRUD), Geburtsdatum im Mobilitätsprofil** | ✅ abgeschlossen |
+| **Hotfix 12F-A** | **Zieladresse bei spontanen Fahrten (Selektor + Freitext, Backend-Speicherung)** | ✅ abgeschlossen |
 
 ---
 

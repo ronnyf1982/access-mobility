@@ -271,6 +271,7 @@ def _build_spontaneous_request_item(req: TransportRequest, db: Session) -> Spont
         pickup_latitude=req.pickup_latitude or 0.0,
         pickup_longitude=req.pickup_longitude or 0.0,
         pickup_address=req.pickup_address,
+        destination_address=req.destination_address,
         status=req.status,
         created_at=req.created_at,
     )

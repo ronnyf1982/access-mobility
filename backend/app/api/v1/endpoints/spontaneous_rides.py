@@ -168,6 +168,7 @@ def book_spontaneous_ride(
         pickup_latitude=body.pickup_latitude,
         pickup_longitude=body.pickup_longitude,
         pickup_address=body.pickup_address,
+        destination_address=body.destination_address,
         assigned_driver_profile_id=driver_profile.id,
         assigned_vehicle_id=body.vehicle_id,
         assigned_at=now,
@@ -242,6 +243,8 @@ def get_spontaneous_ride_tracking(
             can_track=False,
             pickup_latitude=tr.pickup_latitude,
             pickup_longitude=tr.pickup_longitude,
+            pickup_address=tr.pickup_address,
+            destination_address=tr.destination_address,
             ride_status_label=label,
         )
 
@@ -289,6 +292,8 @@ def get_spontaneous_ride_tracking(
         driver_longitude=driver_lon,
         pickup_latitude=tr.pickup_latitude,
         pickup_longitude=tr.pickup_longitude,
+        pickup_address=tr.pickup_address,
+        destination_address=tr.destination_address,
         distance_km=distance_km,
         estimated_arrival_minutes=eta,
         last_location_update=last_update,

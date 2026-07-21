@@ -45,19 +45,20 @@
         <button class="sr-view__btn-link" @click="reset">Neue Suche</button>
       </div>
 
-      <!-- Gespeicherte Adressen Schnellauswahl -->
+      <!-- Abholadresse: gespeicherte Adresse wählen -->
       <div v-if="savedAddresses.length > 0" class="sr-view__address-field">
-        <label for="saved-address-select" class="sr-view__label">Gespeicherte Adresse wählen</label>
+        <label for="saved-pickup-select" class="sr-view__label">Gespeicherte Abholadresse wählen</label>
         <select
-          id="saved-address-select"
+          id="saved-pickup-select"
           v-model="selectedSavedAddressId"
           class="sr-view__select"
         >
-          <option :value="null">– Adresse manuell eingeben –</option>
+          <option :value="null">– Aktuellen Standort verwenden –</option>
           <option v-for="a in savedAddresses" :key="a.id" :value="a.id">
             {{ a.label }} – {{ a.street_address }}, {{ a.postal_code }} {{ a.city }}
           </option>
         </select>
+        <small class="sr-view__hint">Standardmäßig verwenden wir Ihren aktuellen Standort. Sie können eine gespeicherte Adresse auswählen oder die Adresse unten manuell korrigieren.</small>
       </div>
 
       <!-- Abholadresse -->
@@ -107,6 +108,41 @@
         <span>Bitte Abholadresse ergänzen.</span>
       </div>
 
+      <!-- Zieladresse: gespeicherte Adresse wählen -->
+      <div v-if="savedAddresses.length > 0" class="sr-view__address-field">
+        <label for="saved-dest-select" class="sr-view__label">Gespeicherte Zieladresse wählen</label>
+        <select
+          id="saved-dest-select"
+          v-model="selectedSavedDestinationId"
+          class="sr-view__select"
+        >
+          <option :value="null">– Bitte wählen –</option>
+          <option v-for="a in savedAddresses" :key="a.id" :value="a.id">
+            {{ a.label }} – {{ a.street_address }}, {{ a.postal_code }} {{ a.city }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Zieladresse: freies Textfeld -->
+      <div class="sr-view__address-field">
+        <label for="destination-address" class="sr-view__label">
+          Zieladresse <span class="sr-view__required" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="destination-address"
+          v-model="destinationAddress"
+          class="sr-view__input"
+          type="text"
+          placeholder="Straße, Hausnummer, PLZ Ort"
+          maxlength="200"
+        />
+        <small class="sr-view__hint">Wählen Sie eine gespeicherte Adresse oder geben Sie das Ziel manuell ein.</small>
+      </div>
+      <div v-if="destinationWarning" class="sr-view__warning" role="status">
+        <span class="pi pi-exclamation-circle" aria-hidden="true"></span>
+        <span>Bitte Zieladresse eingeben.</span>
+      </div>
+
       <!-- Karte -->
       <SpontaneousRideMap
         v-if="pickupLat !== null && pickupLon !== null"
@@ -154,7 +190,7 @@
             </dl>
             <button
               class="sr-view__btn sr-view__btn--primary"
-              :disabled="!!bookingLoading[m.vehicle_id] || !pickupAddress.trim() || geocodingStatus === 'loading'"
+              :disabled="!!bookingLoading[m.vehicle_id] || !pickupAddress.trim() || !destinationAddress.trim() || geocodingStatus === 'loading'"
               @click="bookRide(m)"
             >
               <span v-if="bookingLoading[m.vehicle_id]" class="pi pi-spin pi-spinner" aria-hidden="true"></span>
@@ -219,9 +255,13 @@
       <!-- Tracking-Detailkarte (Text) -->
       <div v-if="trackingData" class="sr-view__tracking-card">
         <dl class="sr-view__tracking-details">
-          <div v-if="pickupAddress" class="sr-view__tracking-row">
+          <div v-if="pickupAddress || trackingData.pickup_address" class="sr-view__tracking-row">
             <dt><span class="pi pi-map-marker" aria-hidden="true"></span> Abholadresse</dt>
-            <dd>{{ pickupAddress }}</dd>
+            <dd>{{ pickupAddress || trackingData.pickup_address }}</dd>
+          </div>
+          <div class="sr-view__tracking-row">
+            <dt><span class="pi pi-flag" aria-hidden="true"></span> Zieladresse</dt>
+            <dd>{{ (trackingData.destination_address ?? destinationAddress) || 'Nicht angegeben' }}</dd>
           </div>
           <div v-if="vehicleLabel" class="sr-view__tracking-row">
             <dt><span class="pi pi-truck" aria-hidden="true"></span> Fahrzeug</dt>
@@ -320,6 +360,10 @@ const addressWarning = computed<boolean>(
   () => phase.value === 'results' && matches.value.length > 0 && !pickupAddress.value.trim() && geocodingStatus.value !== 'loading',
 )
 
+const destinationWarning = computed<boolean>(
+  () => phase.value === 'results' && matches.value.length > 0 && !destinationAddress.value.trim(),
+)
+
 // Tracking state
 const trackingData = ref<SpontaneousRideTracking | null>(null)
 const trackingLoading = ref(false)
@@ -330,6 +374,8 @@ let trackingInterval: ReturnType<typeof setInterval> | null = null
 
 const savedAddresses = ref<PassengerSavedAddress[]>([])
 const selectedSavedAddressId = ref<string | null>(null)
+const selectedSavedDestinationId = ref<string | null>(null)
+const destinationAddress = ref('')
 
 async function loadSavedAddresses(): Promise<void> {
   try {
@@ -344,6 +390,14 @@ watch(selectedSavedAddressId, (id) => {
   const addr = savedAddresses.value.find((a) => a.id === id)
   if (addr) {
     pickupAddress.value = `${addr.street_address}, ${addr.postal_code} ${addr.city}`
+  }
+})
+
+watch(selectedSavedDestinationId, (id) => {
+  if (!id) return
+  const addr = savedAddresses.value.find((a) => a.id === id)
+  if (addr) {
+    destinationAddress.value = `${addr.street_address}, ${addr.postal_code} ${addr.city}`
   }
 })
 
@@ -480,6 +534,9 @@ function reset(): void {
   pickupLat.value = null
   pickupLon.value = null
   pickupAddress.value = ''
+  destinationAddress.value = ''
+  selectedSavedAddressId.value = null
+  selectedSavedDestinationId.value = null
   geocodingStatus.value = 'idle'
   geocodingPrecision.value = null
   matches.value = []
@@ -505,6 +562,7 @@ async function bookRide(match: SpontaneousRideMatchResult): Promise<void> {
       pickup_latitude: pickupLat.value,
       pickup_longitude: pickupLon.value,
       pickup_address: pickupAddress.value.trim() || null,
+      destination_address: destinationAddress.value.trim() || null,
     })
     bookingResult.value = result
     activeRequestId.value = result.request_id
