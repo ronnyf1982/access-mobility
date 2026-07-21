@@ -45,6 +45,29 @@
         <button class="sr-view__btn-link" @click="reset">Neue Suche</button>
       </div>
 
+      <!-- Abholadresse -->
+      <div class="sr-view__address-field">
+        <label for="pickup-address" class="sr-view__label">
+          Abholadresse <span class="sr-view__required" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="pickup-address"
+          v-model="pickupAddress"
+          class="sr-view__input"
+          type="text"
+          placeholder="Straße, Hausnummer, PLZ Ort"
+          maxlength="200"
+          aria-describedby="pickup-address-hint"
+        />
+        <small id="pickup-address-hint" class="sr-view__hint">
+          Der Standort wird für die Karte verwendet. Die Adresse hilft dem Fahrer beim Abholen.
+        </small>
+      </div>
+      <div v-if="addressWarning" class="sr-view__warning" role="status">
+        <span class="pi pi-exclamation-circle" aria-hidden="true"></span>
+        <span>Bitte Abholadresse ergänzen.</span>
+      </div>
+
       <!-- Karte -->
       <SpontaneousRideMap
         v-if="pickupLat !== null && pickupLon !== null"
@@ -92,7 +115,7 @@
             </dl>
             <button
               class="sr-view__btn sr-view__btn--primary"
-              :disabled="!!bookingLoading[m.vehicle_id]"
+              :disabled="!!bookingLoading[m.vehicle_id] || !pickupAddress.trim()"
               @click="bookRide(m)"
             >
               <span v-if="bookingLoading[m.vehicle_id]" class="pi pi-spin pi-spinner" aria-hidden="true"></span>
@@ -157,6 +180,10 @@
       <!-- Tracking-Detailkarte (Text) -->
       <div v-if="trackingData" class="sr-view__tracking-card">
         <dl class="sr-view__tracking-details">
+          <div v-if="pickupAddress" class="sr-view__tracking-row">
+            <dt><span class="pi pi-map-marker" aria-hidden="true"></span> Abholadresse</dt>
+            <dd>{{ pickupAddress }}</dd>
+          </div>
           <div v-if="vehicleLabel" class="sr-view__tracking-row">
             <dt><span class="pi pi-truck" aria-hidden="true"></span> Fahrzeug</dt>
             <dd>{{ vehicleLabel }}</dd>
@@ -235,6 +262,7 @@ const ACTIVE_SPONTANEOUS_STATUSES = new Set(['spontaneous_requested', 'assigned'
 const phase = ref<Phase>('idle')
 const pickupLat = ref<number | null>(null)
 const pickupLon = ref<number | null>(null)
+const pickupAddress = ref('')
 const matches = ref<SpontaneousRideMatchResult[]>([])
 const geoErrorMessage = ref('')
 const searchError = ref('')
@@ -242,6 +270,10 @@ const bookingLoading = ref<Record<string, boolean>>({})
 const bookingError = ref<string | null>(null)
 const bookingResult = ref<SpontaneousRideBookResponse | null>(null)
 const activeRequestId = ref<string | null>(null)
+
+const addressWarning = computed<boolean>(
+  () => phase.value === 'results' && matches.value.length > 0 && !pickupAddress.value.trim(),
+)
 
 // Tracking state
 const trackingData = ref<SpontaneousRideTracking | null>(null)
@@ -259,6 +291,7 @@ async function restoreActiveSpontaneousRide(): Promise<void> {
     activeRequestId.value = active.id
     pickupLat.value = active.pickup_latitude ?? null
     pickupLon.value = active.pickup_longitude ?? null
+    pickupAddress.value = active.pickup_address ?? ''
     phase.value = 'booked'
   } catch {
     // Silently ignore — user sees idle state on restore failure
@@ -358,6 +391,7 @@ function reset(): void {
   phase.value = 'idle'
   pickupLat.value = null
   pickupLon.value = null
+  pickupAddress.value = ''
   matches.value = []
   geoErrorMessage.value = ''
   searchError.value = ''
@@ -380,6 +414,7 @@ async function bookRide(match: SpontaneousRideMatchResult): Promise<void> {
       vehicle_id: match.vehicle_id,
       pickup_latitude: pickupLat.value,
       pickup_longitude: pickupLon.value,
+      pickup_address: pickupAddress.value.trim() || null,
     })
     bookingResult.value = result
     activeRequestId.value = result.request_id
@@ -712,6 +747,50 @@ function requestLocation(): void {
   margin: 0;
   font-weight: 500;
   color: #f5f5f5;
+}
+
+.sr-view__address-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.sr-view__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--p-text-color, #f5f5f5);
+}
+
+.sr-view__required {
+  color: #f87171;
+  margin-left: 2px;
+}
+
+.sr-view__input {
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f5f5;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sr-view__input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.sr-view__input:focus {
+  outline: none;
+  border-color: var(--p-primary-color, #3b82f6);
+}
+
+.sr-view__hint {
+  font-size: 0.78rem;
+  color: var(--p-text-muted-color, #94a3b8);
+  line-height: 1.4;
 }
 
 .sr-view__active-hint {

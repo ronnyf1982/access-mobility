@@ -208,10 +208,16 @@
             <i class="pi pi-bell" aria-hidden="true"></i>
             Spontane Fahrtanfragen
           </h2>
-          <button class="driver-btn-link driver-btn-link--sm" :disabled="spontaneousLoading" @click="loadSpontaneousRequests">
-            <i class="pi pi-refresh" aria-hidden="true"></i>
-            Aktualisieren
-          </button>
+          <div class="section-title-actions">
+            <span class="section-auto-refresh-label">
+              <i class="pi pi-clock" aria-hidden="true"></i>
+              Aktualisiert automatisch
+            </span>
+            <button class="driver-btn-link driver-btn-link--sm" :disabled="spontaneousLoading" @click="loadSpontaneousRequests">
+              <i class="pi pi-refresh" aria-hidden="true"></i>
+              Aktualisieren
+            </button>
+          </div>
         </div>
 
         <div v-if="spontaneousLoading" class="section-loading" aria-live="polite">
@@ -235,7 +241,12 @@
             <div class="assignment-route">
               <div class="assignment-address">
                 <i class="pi pi-map-marker" aria-hidden="true"></i>
-                Abholpunkt: {{ req.pickup_latitude.toFixed(4) }}, {{ req.pickup_longitude.toFixed(4) }}
+                <span v-if="req.pickup_address">{{ req.pickup_address }}</span>
+                <span v-else-if="req.pickup_latitude != null" class="pickup-coords">
+                  Aktueller Standort des Fahrgasts
+                  <small>{{ req.pickup_latitude.toFixed(4) }}, {{ req.pickup_longitude.toFixed(4) }}</small>
+                </span>
+                <span v-else>Abholort nicht angegeben</span>
               </div>
             </div>
             <div class="spontan-req-actions">
@@ -497,6 +508,9 @@ const spontaneousLoading = ref(false)
 const spontaneousActionLoading = ref<Record<string, boolean>>({})
 const spontaneousError = ref<Record<string, string | null>>({})
 
+const SPONTANEOUS_POLL_INTERVAL_MS = 10_000
+let spontaneousPollingInterval: ReturnType<typeof setInterval> | null = null
+
 // ── Standort-Teilen (spontane Fahrten, Sprint 12D) ────────────────────────────
 
 const LOCATION_SHARE_INTERVAL_MS = 15_000
@@ -657,11 +671,16 @@ const statusIconPi = computed(() => {
 
 onMounted(async () => {
   await Promise.all([loadContext(), loadAssignments(), loadSpontaneousRequests()])
+  spontaneousPollingInterval = setInterval(loadSpontaneousRequests, SPONTANEOUS_POLL_INTERVAL_MS)
 })
 
 onUnmounted(() => {
   for (const id of Object.keys(locationIntervals)) {
     clearInterval(locationIntervals[id])
+  }
+  if (spontaneousPollingInterval !== null) {
+    clearInterval(spontaneousPollingInterval)
+    spontaneousPollingInterval = null
   }
 })
 
@@ -1329,6 +1348,22 @@ function extractError(err: unknown): string {
   display: flex;
   flex-direction: column;
   gap: var(--am-space-m);
+}
+
+/* ─── Abschnitt Titel mit Aktionen ──────────────────────────────────── */
+.section-title-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-m);
+}
+
+.section-auto-refresh-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--am-text-secondary);
+  opacity: 0.7;
 }
 
 /* ─── Spontane Fahrtanfragen ─────────────────────────────────────────── */

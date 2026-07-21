@@ -167,6 +167,7 @@ def book_spontaneous_ride(
         is_spontaneous=True,
         pickup_latitude=body.pickup_latitude,
         pickup_longitude=body.pickup_longitude,
+        pickup_address=body.pickup_address,
         assigned_driver_profile_id=driver_profile.id,
         assigned_vehicle_id=body.vehicle_id,
         assigned_at=now,

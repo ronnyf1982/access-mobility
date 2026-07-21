@@ -32,6 +32,7 @@ class SpontaneousRideBookRequest(BaseModel):
     vehicle_id: uuid.UUID
     pickup_latitude: Annotated[float, Field(ge=-90.0, le=90.0)]
     pickup_longitude: Annotated[float, Field(ge=-180.0, le=180.0)]
+    pickup_address: str | None = None
     passenger_user_id: uuid.UUID | None = None
 
 
@@ -49,6 +50,7 @@ class SpontaneousRideRequestItem(BaseModel):
     passenger_display_name: str | None = None
     pickup_latitude: float
     pickup_longitude: float
+    pickup_address: str | None = None
     status: TransportRequestStatus
     created_at: datetime
 
