@@ -111,43 +111,6 @@
         {{ saveError }}
       </div>
 
-      <!-- ── Abschnitt 1: Notfallkontakt ────────────────────────────────── -->
-      <section class="mp-section am-card" aria-labelledby="s1-heading">
-        <h2 id="s1-heading" class="mp-section-title">
-          <i class="pi pi-phone" aria-hidden="true"></i>
-          Notfallkontakt
-        </h2>
-        <p class="mp-section-desc">
-          Wer soll im Notfall kontaktiert werden? Die Angabe ist freiwillig.
-        </p>
-        <div class="mp-field-row">
-          <div class="mp-field">
-            <label for="ec-name" class="mp-label">Name der Kontaktperson</label>
-            <input
-              id="ec-name"
-              v-model="form.emergency_contact_name"
-              type="text"
-              class="mp-input"
-              autocomplete="off"
-              aria-label="Name der Notfallkontaktperson"
-              placeholder="Vorname Nachname"
-            />
-          </div>
-          <div class="mp-field">
-            <label for="ec-phone" class="mp-label">Telefonnummer</label>
-            <input
-              id="ec-phone"
-              v-model="form.emergency_contact_phone"
-              type="tel"
-              class="mp-input"
-              autocomplete="off"
-              aria-label="Telefonnummer der Notfallkontaktperson"
-              placeholder="+49 30 …"
-            />
-          </div>
-        </div>
-      </section>
-
       <!-- ── Abschnitt 2: Mobilitätsbedarf ──────────────────────────────── -->
       <section class="mp-section am-card" aria-labelledby="s2-heading">
         <h2 id="s2-heading" class="mp-section-title">
@@ -646,8 +609,8 @@
             <button
               type="button"
               class="am-btn am-btn-primary"
-              :disabled="contactFormSaving || !contactForm.name.trim() || !contactForm.phone_number.trim()"
-              :aria-disabled="contactFormSaving || !contactForm.name.trim() || !contactForm.phone_number.trim()"
+              :disabled="contactFormSaving || !safeStr(contactForm.name).trim() || !safeStr(contactForm.phone_number).trim()"
+              :aria-disabled="contactFormSaving || !safeStr(contactForm.name).trim() || !safeStr(contactForm.phone_number).trim()"
               @click="handleContactSave"
             >
               <i v-if="contactFormSaving" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
@@ -1028,6 +991,8 @@ const ATTENDANT_TYPE_OPTIONS = [
 
 // ── Kontakte (Sprint 12E) ──────────────────────────────────────────────────────
 
+const safeStr = (v: unknown): string => (typeof v === 'string' ? v : '')
+
 const contacts = ref<PassengerContact[]>([])
 const contactsLoading = ref(false)
 const contactsError = ref('')
@@ -1090,7 +1055,7 @@ function openAddContact() {
 }
 
 function openEditContact(c: PassengerContact) {
-  contactForm.name = c.name
+  contactForm.name = c.name ?? ''
   contactForm.phone_number = c.phone_number ?? ''
   contactForm.role_label = c.role_label
   contactForm.contact_type = c.contact_type
@@ -1109,15 +1074,18 @@ async function loadContacts() {
   contactsError.value = ''
   try {
     contacts.value = await listContacts()
-  } catch {
-    contactsError.value = 'Kontakte konnten nicht geladen werden.'
+  } catch (err: unknown) {
+    const resp = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+    contactsError.value = resp
+      ? `Kontakte konnten nicht geladen werden: ${resp.status ?? ''} ${resp.data?.detail ?? ''}`.trim()
+      : 'Kontakte konnten nicht geladen werden.'
   } finally {
     contactsLoading.value = false
   }
 }
 
 async function handleContactSave() {
-  if (!contactForm.name.trim() || !contactForm.phone_number.trim()) {
+  if (!safeStr(contactForm.name).trim() || !safeStr(contactForm.phone_number).trim()) {
     contactFormError.value = 'Bitte Name und Telefonnummer eintragen.'
     return
   }
@@ -1132,19 +1100,29 @@ async function handleContactSave() {
     showContactForm.value = false
     resetContactForm()
     await loadContacts()
-  } catch {
-    contactFormError.value = 'Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.'
+  } catch (err: unknown) {
+    const resp = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+    contactFormError.value = resp
+      ? `Speichern fehlgeschlagen: ${resp.status ?? ''} ${resp.data?.detail ?? ''}`.trim()
+      : 'Speichern fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung.'
   } finally {
     contactFormSaving.value = false
   }
 }
 
 async function handleContactDelete(id: string) {
+  if (!id) {
+    contactsError.value = 'Kontakt ohne gültige ID – bitte Cleanup ausführen.'
+    return
+  }
   try {
     await deleteContact(id)
     await loadContacts()
-  } catch {
-    contactsError.value = 'Löschen fehlgeschlagen.'
+  } catch (err: unknown) {
+    const resp = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+    contactsError.value = resp
+      ? `Löschen fehlgeschlagen: ${resp.status ?? ''} ${resp.data?.detail ?? ''}`.trim()
+      : 'Löschen fehlgeschlagen.'
   }
 }
 

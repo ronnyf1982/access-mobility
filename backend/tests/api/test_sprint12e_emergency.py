@@ -547,3 +547,169 @@ class TestEmergencyGlossary:
     def test_get_nonexistent_key_returns_none(self):
         from app.services.emergency_glossary import get_glossary_entry
         assert get_glossary_entry("does_not_exist") is None
+
+
+# ── Legacy-Kontakte (kaputte Alt-Daten) ───────────────────────────────────────
+
+class TestLegacyContactHandling:
+    """Verify that legacy contacts with NULL/empty name or phone can be listed and deleted."""
+
+    legacy_id: str | None = None
+
+    @pytest.fixture(autouse=True)
+    def insert_legacy_contact(self, auth_headers: dict):
+        """Insert a contact with NULL phone directly via DB (bypasses API validation)."""
+        from app.db.session import SessionLocal
+        from app.models.mobility_profile import MobilityProfile
+        from app.models.passenger_contact import PassengerContact
+        from app.models.user import User
+        import uuid as _uuid
+
+        db = SessionLocal()
+        try:
+            passenger = db.query(User).filter(User.email == "passenger@access.test").first()
+            if not passenger:
+                yield
+                return
+            profile = db.query(MobilityProfile).filter(MobilityProfile.user_id == passenger.id).first()
+            if not profile:
+                yield
+                return
+
+            legacy = PassengerContact(
+                id=_uuid.uuid4(),
+                mobility_profile_id=profile.id,
+                name="",
+                phone_number=None,
+                contact_type="other",
+                is_emergency_contact=False,
+                visible_to_driver=False,
+                visible_in_emergency=False,
+                callable_in_emergency=False,
+                priority=999,
+            )
+            db.add(legacy)
+            db.commit()
+            TestLegacyContactHandling.legacy_id = str(legacy.id)
+            yield
+            # Cleanup if not already deleted
+            remaining = db.get(PassengerContact, legacy.id)
+            if remaining:
+                db.delete(remaining)
+                db.commit()
+        finally:
+            db.close()
+
+    def test_list_with_legacy_contact_returns_200(self, client: TestClient, auth_headers: dict):
+        """GET list must not crash even when legacy contacts with empty name/phone exist."""
+        resp = client.get("/api/v1/passenger-contacts/", headers=auth_headers)
+        assert resp.status_code == 200
+        ids = [c["id"] for c in resp.json()]
+        assert TestLegacyContactHandling.legacy_id in ids
+
+    def test_delete_legacy_contact_returns_204(self, client: TestClient, auth_headers: dict):
+        """DELETE must succeed for legacy contacts regardless of their content."""
+        assert TestLegacyContactHandling.legacy_id is not None
+        resp = client.delete(
+            f"/api/v1/passenger-contacts/{TestLegacyContactHandling.legacy_id}",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 204
+
+
+
+# ── Cleanup-Script ────────────────────────────────────────────────────────────
+
+class TestCleanupScript:
+    """Test the cleanup_empty_passenger_contacts script logic."""
+
+    @pytest.fixture
+    def db_with_invalid_contacts(self):
+        """Insert mix of valid and invalid contacts for cleanup tests."""
+        from app.db.session import SessionLocal
+        from app.models.mobility_profile import MobilityProfile
+        from app.models.passenger_contact import PassengerContact
+        from app.models.user import User
+        import uuid as _uuid
+
+        db = SessionLocal()
+        inserted_ids = []
+        try:
+            passenger = db.query(User).filter(User.email == "passenger@access.test").first()
+            if not passenger:
+                yield db, []
+                return
+            profile = db.query(MobilityProfile).filter(MobilityProfile.user_id == passenger.id).first()
+            if not profile:
+                yield db, []
+                return
+
+            def _make(name, phone):
+                c = PassengerContact(
+                    id=_uuid.uuid4(),
+                    mobility_profile_id=profile.id,
+                    name=name,
+                    phone_number=phone,
+                    contact_type="other",
+                    is_emergency_contact=False,
+                    visible_to_driver=False,
+                    visible_in_emergency=False,
+                    callable_in_emergency=False,
+                    priority=1,
+                )
+                db.add(c)
+                return c
+
+            invalid1 = _make("", None)
+            invalid2 = _make("Unbenannter Kontakt", "")
+            invalid3 = _make("Nur Name", None)
+            valid1 = _make("Maria Müller", "+4917012345678")
+            db.commit()
+            inserted_ids = [invalid1.id, invalid2.id, invalid3.id, valid1.id]
+            yield db, inserted_ids
+        finally:
+            # Cleanup all inserted
+            for cid in inserted_ids:
+                c = db.get(PassengerContact, cid)
+                if c:
+                    db.delete(c)
+            db.commit()
+            db.close()
+
+    def test_cleanup_deletes_only_invalid(self, db_with_invalid_contacts):
+        db, ids = db_with_invalid_contacts
+        if not ids:
+            pytest.skip("Setup-Daten nicht verfügbar")
+
+        from app.scripts.cleanup_empty_passenger_contacts import run_cleanup
+        result = run_cleanup(db, dry_run=False)
+
+        assert result["deleted"] >= 3  # at least the 3 invalid ones
+        assert result["remaining"] >= 1  # at least the valid one stays
+
+    def test_cleanup_dry_run_deletes_nothing(self, db_with_invalid_contacts):
+        db, ids = db_with_invalid_contacts
+        if not ids:
+            pytest.skip("Setup-Daten nicht verfügbar")
+
+        from app.models.passenger_contact import PassengerContact
+        before = db.query(PassengerContact).count()
+        from app.scripts.cleanup_empty_passenger_contacts import run_cleanup
+        result = run_cleanup(db, dry_run=True)
+        after = db.query(PassengerContact).count()
+
+        assert result["deleted"] == 0
+        assert before == after
+
+    def test_cleanup_is_idempotent(self, db_with_invalid_contacts):
+        db, ids = db_with_invalid_contacts
+        if not ids:
+            pytest.skip("Setup-Daten nicht verfügbar")
+
+        from app.scripts.cleanup_empty_passenger_contacts import run_cleanup
+        r1 = run_cleanup(db, dry_run=False)
+        r2 = run_cleanup(db, dry_run=False)
+
+        # Second run deletes nothing more
+        assert r2["deleted"] == 0
+        assert r2["remaining"] == r1["remaining"]
