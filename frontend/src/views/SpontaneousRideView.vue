@@ -87,17 +87,17 @@
       </div>
 
       <!-- Geocoding-Status -->
-      <div v-if="geocodingStatus === 'success' && geocodingPrecision === 'precise'" class="sr-view__geocode-success" role="status">
+      <div v-if="geocodingStatus === 'success' && (geocodingPrecision === 'precise' || geocodingPrecision === 'nearest')" class="sr-view__geocode-success" role="status">
         <span class="pi pi-check-circle" aria-hidden="true"></span>
         <span>Adresse automatisch ermittelt. Bitte prüfen.</span>
       </div>
       <div v-else-if="geocodingStatus === 'success' && geocodingPrecision === 'approximate'" class="sr-view__geocode-approximate" role="status">
         <span class="pi pi-map-marker" aria-hidden="true"></span>
-        <span>Ungefähre Adresse ermittelt (ohne Hausnummer). Bitte Hausnummer ergänzen.</span>
+        <span>Adresse ohne Hausnummer ermittelt. Bitte Hausnummer ergänzen.</span>
       </div>
       <div v-else-if="geocodingStatus === 'success' && geocodingPrecision === 'coordinates'" class="sr-view__geocode-coords" role="status">
         <span class="pi pi-info-circle" aria-hidden="true"></span>
-        <span>Keine genaue Adresse gefunden. Koordinaten werden als Abholort übermittelt.</span>
+        <span>Keine genaue Adresse gefunden. Koordinaten werden als Abholort verwendet. Bitte Adresse ergänzen.</span>
       </div>
       <div v-else-if="geocodingStatus === 'error'" class="sr-view__warning" role="status">
         <span class="pi pi-exclamation-circle" aria-hidden="true"></span>

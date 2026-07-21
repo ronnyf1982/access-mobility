@@ -1,4 +1,4 @@
-"""Geocoding endpoint tests (Hotfix 12D-D / 12D-E).
+"""Geocoding endpoint tests (Hotfix 12D-D / 12D-E, Sprint 12F-C).
 
 All tests mock the external Nominatim HTTP call so no real network request
 is made. The external service is never a test dependency.
@@ -21,6 +21,25 @@ def _patch_nominatim(address: dict):
     patcher = patch("app.services.reverse_geocoding.httpx.Client")
     mock_client_cls = patcher.start()
     mock_client_cls.return_value.__enter__.return_value.get.return_value = mock_resp
+    return patcher
+
+
+def _patch_nominatim_with_search(reverse_address: dict, search_results: list):
+    """Mock two sequential get() calls: reverse then search."""
+    reverse_resp = MagicMock()
+    reverse_resp.json.return_value = {"address": reverse_address}
+    reverse_resp.raise_for_status = MagicMock()
+
+    search_resp = MagicMock()
+    search_resp.json.return_value = search_results
+    search_resp.raise_for_status = MagicMock()
+
+    patcher = patch("app.services.reverse_geocoding.httpx.Client")
+    mock_client_cls = patcher.start()
+    mock_client_cls.return_value.__enter__.return_value.get.side_effect = [
+        reverse_resp,
+        search_resp,
+    ]
     return patcher
 
 
@@ -187,3 +206,139 @@ class TestReverseGeocodePrecision:
             assert "Koordinaten" in data["message"]
         finally:
             patcher.stop()
+
+
+class TestNearestHouseNumber:
+    """Sprint 12F-C: secondary search for house number when reverse returns none."""
+
+    def test_nearest_search_finds_nearby_address_with_house_number(
+        self, client: TestClient, auth_headers: dict
+    ):
+        # Reverse: road but no house_number. Search: one result 65 m away with house_number.
+        patcher = _patch_nominatim_with_search(
+            reverse_address={"road": "Teststraße", "postcode": "10115", "city": "Berlin"},
+            search_results=[
+                {
+                    "lat": "52.5005",
+                    "lon": "13.4005",
+                    "address": {
+                        "road": "Teststraße",
+                        "house_number": "7",
+                        "postcode": "10115",
+                        "city": "Berlin",
+                    },
+                }
+            ],
+        )
+        try:
+            resp = client.get(
+                "/api/v1/geocoding/reverse?latitude=52.5&longitude=13.4",
+                headers=auth_headers,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["precision"] == "nearest"
+            assert data["house_number"] == "7"
+            assert "Teststraße 7" in data["formatted_address"]
+            assert data["message"] is None
+        finally:
+            patcher.stop()
+
+    def test_nearest_search_result_too_far_away_falls_back_to_approximate(
+        self, client: TestClient, auth_headers: dict
+    ):
+        # Search result is ~1.1 km away — beyond 100 m radius → not used.
+        patcher = _patch_nominatim_with_search(
+            reverse_address={"road": "Waldweg", "postcode": "10000", "city": "München"},
+            search_results=[
+                {
+                    "lat": "48.11",  # ~1.1 km from 48.1
+                    "lon": "11.5",
+                    "address": {
+                        "road": "Waldweg",
+                        "house_number": "99",
+                        "postcode": "10000",
+                        "city": "München",
+                    },
+                }
+            ],
+        )
+        try:
+            resp = client.get(
+                "/api/v1/geocoding/reverse?latitude=48.1&longitude=11.5",
+                headers=auth_headers,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["precision"] == "approximate"
+            assert data["house_number"] is None
+            assert "99" not in (data["formatted_address"] or "")
+        finally:
+            patcher.stop()
+
+    def test_nearest_search_returns_empty_list_falls_back_to_approximate(
+        self, client: TestClient, auth_headers: dict
+    ):
+        patcher = _patch_nominatim_with_search(
+            reverse_address={"road": "Feldstraße", "postcode": "20000", "city": "Hamburg"},
+            search_results=[],
+        )
+        try:
+            resp = client.get(
+                "/api/v1/geocoding/reverse?latitude=53.5&longitude=10.0",
+                headers=auth_headers,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["precision"] == "approximate"
+            assert data["formatted_address"] == "Feldstraße, 20000 Hamburg"
+        finally:
+            patcher.stop()
+
+    def test_nearest_search_returns_results_without_house_number_falls_back_to_approximate(
+        self, client: TestClient, auth_headers: dict
+    ):
+        # All search results lack house_number → no usable result.
+        patcher = _patch_nominatim_with_search(
+            reverse_address={"road": "Parkweg", "postcode": "30000", "city": "Hannover"},
+            search_results=[
+                {
+                    "lat": "52.3701",
+                    "lon": "9.7302",
+                    "address": {"road": "Parkweg", "postcode": "30000", "city": "Hannover"},
+                }
+            ],
+        )
+        try:
+            resp = client.get(
+                "/api/v1/geocoding/reverse?latitude=52.37&longitude=9.73",
+                headers=auth_headers,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["precision"] == "approximate"
+            assert data["house_number"] is None
+        finally:
+            patcher.stop()
+
+    def test_nearest_search_network_failure_falls_back_to_approximate(
+        self, client: TestClient, auth_headers: dict
+    ):
+        # First call (reverse) succeeds; second call (search) raises → falls back gracefully.
+        reverse_resp = MagicMock()
+        reverse_resp.json.return_value = {"address": {"road": "Bergstraße", "city": "Dresden"}}
+        reverse_resp.raise_for_status = MagicMock()
+
+        with patch("app.services.reverse_geocoding.httpx.Client") as mock_cls:
+            mock_cls.return_value.__enter__.return_value.get.side_effect = [
+                reverse_resp,
+                Exception("search network error"),
+            ]
+            resp = client.get(
+                "/api/v1/geocoding/reverse?latitude=51.0&longitude=13.7",
+                headers=auth_headers,
+            )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["precision"] == "approximate"
+        assert data["house_number"] is None
