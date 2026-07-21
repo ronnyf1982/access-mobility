@@ -49,6 +49,34 @@ class MobilityProfileBase(BaseModel):
     medical_notes: str | None = None
     general_notes: str | None = None
 
+    # Notfallinformationen — Sprint 12E
+    has_epilepsy: bool = False
+    is_mute: bool = False
+    other_disabilities_notes: str | None = None
+    known_conditions: str | None = None
+    medication_notes: str | None = None
+    allergy_notes: str | None = None
+    emergency_care_notes: str | None = None
+    what_helps_notes: str | None = None
+    what_to_avoid_notes: str | None = None
+    additional_emergency_notes: str | None = None
+    body_height_cm: int | None = None
+    body_weight_kg: int | None = None
+    gender: str | None = None
+
+    # Sichtbarkeitseinstellungen — Sprint 12E
+    show_disabilities_to_driver: bool = False
+    show_disabilities_in_emergency: bool = False
+    show_medication_to_driver: bool = False
+    show_medication_in_emergency: bool = False
+    show_emergency_notes_to_driver: bool = False
+    show_emergency_notes_in_emergency: bool = False
+    show_communication_notes_to_driver: bool = False
+    show_communication_notes_in_emergency: bool = False
+    show_body_data_in_emergency: bool = False
+    show_contacts_to_driver: bool = False
+    show_contacts_in_emergency: bool = False
+
 
 class MobilityProfileCreate(MobilityProfileBase):
     pass
@@ -98,6 +126,34 @@ class MobilityProfileUpdate(BaseModel):
     communication_notes: str | None = None
     medical_notes: str | None = None
     general_notes: str | None = None
+
+    # Notfallinformationen — Sprint 12E
+    has_epilepsy: bool | None = None
+    is_mute: bool | None = None
+    other_disabilities_notes: str | None = None
+    known_conditions: str | None = None
+    medication_notes: str | None = None
+    allergy_notes: str | None = None
+    emergency_care_notes: str | None = None
+    what_helps_notes: str | None = None
+    what_to_avoid_notes: str | None = None
+    additional_emergency_notes: str | None = None
+    body_height_cm: int | None = None
+    body_weight_kg: int | None = None
+    gender: str | None = None
+
+    # Sichtbarkeitseinstellungen — Sprint 12E
+    show_disabilities_to_driver: bool | None = None
+    show_disabilities_in_emergency: bool | None = None
+    show_medication_to_driver: bool | None = None
+    show_medication_in_emergency: bool | None = None
+    show_emergency_notes_to_driver: bool | None = None
+    show_emergency_notes_in_emergency: bool | None = None
+    show_communication_notes_to_driver: bool | None = None
+    show_communication_notes_in_emergency: bool | None = None
+    show_body_data_in_emergency: bool | None = None
+    show_contacts_to_driver: bool | None = None
+    show_contacts_in_emergency: bool | None = None
 
 
 class MobilityProfilePublic(MobilityProfileBase):

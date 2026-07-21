@@ -526,7 +526,319 @@
         </button>
       </section>
 
-      <!-- ── Abschnitt 6: Speichern ──────────────────────────────────────── -->
+      <!-- ── Abschnitt 6: Wichtige Kontakte ────────────────────────────── -->
+      <section class="mp-section am-card" aria-labelledby="s6-heading">
+        <h2 id="s6-heading" class="mp-section-title">
+          <i class="pi pi-users" aria-hidden="true"></i>
+          Wichtige Kontakte
+        </h2>
+        <p class="mp-section-desc">
+          Verwalten Sie Ihre Kontakte und legen Sie fest, welche davon dem Fahrer oder im Notfall sichtbar sind.
+        </p>
+
+        <div v-if="contactsError" class="mp-alert mp-alert--error" role="alert">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          {{ contactsError }}
+        </div>
+
+        <div v-if="contactsLoading" class="mp-loading" role="status">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+          Kontakte werden geladen …
+        </div>
+
+        <div v-else-if="contacts.length > 0" class="contact-list" role="list">
+          <div v-for="c in contacts" :key="c.id" class="contact-item" role="listitem">
+            <div class="contact-item-info">
+              <span class="contact-item-name">{{ c.name }}</span>
+              <span v-if="c.role_label" class="contact-item-role">{{ c.role_label }}</span>
+              <span class="contact-item-type">{{ CONTACT_TYPE_LABELS[c.contact_type] }}</span>
+              <div class="contact-item-badges">
+                <span v-if="c.is_emergency_contact" class="contact-badge contact-badge--emergency">Notfallkontakt</span>
+                <span v-if="c.visible_to_driver" class="contact-badge contact-badge--driver">Fahrer sieht</span>
+                <span v-if="c.visible_in_emergency" class="contact-badge contact-badge--emerg">Notfall sieht</span>
+              </div>
+            </div>
+            <div class="contact-item-actions">
+              <a v-if="c.phone_number" :href="`tel:${c.phone_number}`" class="contact-phone-link" :aria-label="`${c.name} anrufen`">
+                <i class="pi pi-phone" aria-hidden="true"></i>
+                {{ c.phone_number }}
+              </a>
+              <button type="button" class="am-btn am-btn-secondary contact-action-btn" @click="openEditContact(c)" :aria-label="`${c.name} bearbeiten`">
+                <i class="pi pi-pencil" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="am-btn contact-action-btn contact-action-btn--delete" @click="handleContactDelete(c.id)" :aria-label="`${c.name} löschen`">
+                <i class="pi pi-trash" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p v-else-if="!contactsLoading" class="mp-section-desc">Noch keine Kontakte angelegt.</p>
+
+        <button v-if="!showContactForm" type="button" class="am-btn am-btn-secondary contact-add-btn" @click="openAddContact">
+          <i class="pi pi-plus" aria-hidden="true"></i>
+          Kontakt hinzufügen
+        </button>
+
+        <div v-if="showContactForm" class="contact-form" role="form" :aria-label="editingContactId ? 'Kontakt bearbeiten' : 'Neuen Kontakt anlegen'">
+          <h3 class="contact-form-title">{{ editingContactId ? 'Kontakt bearbeiten' : 'Neuen Kontakt anlegen' }}</h3>
+
+          <div v-if="contactFormError" class="mp-alert mp-alert--error" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+            {{ contactFormError }}
+          </div>
+
+          <div class="mp-field-row">
+            <div class="mp-field">
+              <label for="cf-name" class="mp-label">Name <span style="color:var(--am-danger)">*</span></label>
+              <input id="cf-name" v-model="contactForm.name" type="text" class="mp-input" placeholder="Vor- und Nachname" autocomplete="off" />
+            </div>
+            <div class="mp-field">
+              <label for="cf-phone" class="mp-label">Telefonnummer</label>
+              <input id="cf-phone" v-model="contactForm.phone_number" type="tel" class="mp-input" placeholder="+49 30 …" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="mp-field-row">
+            <div class="mp-field">
+              <label for="cf-type" class="mp-label">Art des Kontakts</label>
+              <select id="cf-type" v-model="contactForm.contact_type" class="mp-input mp-select">
+                <option v-for="opt in CONTACT_TYPE_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="mp-field">
+              <label for="cf-role" class="mp-label">Bezeichnung <span class="mp-optional-badge">freiwillig</span></label>
+              <input id="cf-role" v-model="contactForm.role_label" type="text" class="mp-input" placeholder="z. B. Mutter, Hausarzt" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="mp-field">
+            <label for="cf-note" class="mp-label">Notiz <span class="mp-optional-badge">freiwillig</span></label>
+            <textarea id="cf-note" v-model="contactForm.note" class="mp-textarea" rows="2" placeholder="Weitere Hinweise zu dieser Person"></textarea>
+          </div>
+
+          <div class="mp-field">
+            <label for="cf-priority" class="mp-label">Priorität <span class="mp-optional-badge">0 = höchste</span></label>
+            <input id="cf-priority" v-model.number="contactForm.priority" type="number" min="0" max="999" class="mp-input" style="max-width:120px" />
+          </div>
+
+          <div class="contact-flags">
+            <label class="contact-flag">
+              <input type="checkbox" v-model="contactForm.is_emergency_contact" class="contact-flag-check" />
+              <span>Ist Notfallkontakt</span>
+            </label>
+            <label class="contact-flag">
+              <input type="checkbox" v-model="contactForm.visible_to_driver" class="contact-flag-check" />
+              <span>Für Fahrer sichtbar</span>
+            </label>
+            <label class="contact-flag">
+              <input type="checkbox" v-model="contactForm.visible_in_emergency" class="contact-flag-check" />
+              <span>Im Notfall sichtbar</span>
+            </label>
+            <label class="contact-flag">
+              <input type="checkbox" v-model="contactForm.callable_in_emergency" class="contact-flag-check" />
+              <span>Im Notfall anrufbar</span>
+            </label>
+          </div>
+
+          <div class="contact-form-actions">
+            <button type="button" class="am-btn am-btn-primary" :disabled="contactFormSaving" @click="handleContactSave">
+              <i v-if="contactFormSaving" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              <i v-else class="pi pi-save" aria-hidden="true"></i>
+              {{ contactFormSaving ? 'Wird gespeichert …' : 'Speichern' }}
+            </button>
+            <button type="button" class="am-btn am-btn-secondary" @click="showContactForm = false; resetContactForm()">
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Abschnitt 7: Notfallinformationen ──────────────────────────── -->
+      <section class="mp-section am-card" aria-labelledby="s7-heading">
+        <h2 id="s7-heading" class="mp-section-title">
+          <i class="pi pi-heart-fill" aria-hidden="true"></i>
+          Notfallinformationen
+          <span class="mp-optional-badge">freiwillig</span>
+        </h2>
+        <p class="mp-section-desc">
+          Diese Angaben helfen im Notfall. Sie entscheiden, was Fahrer und Einsatzkräfte sehen dürfen.
+        </p>
+
+        <!-- Körperdaten -->
+        <div class="efinfo-block">
+          <div class="efinfo-block-header">
+            <h3 class="efinfo-block-title">Körperdaten</h3>
+            <div class="efinfo-vis-row" role="group" aria-label="Sichtbarkeit Körperdaten">
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_body_data_in_emergency" class="contact-flag-check" />
+                Im Notfall anzeigen
+              </label>
+            </div>
+          </div>
+          <div class="mp-field-row">
+            <div class="mp-field">
+              <label for="ef-gender" class="mp-label">Geschlecht</label>
+              <select id="ef-gender" v-model="form.gender" class="mp-input mp-select">
+                <option value="">– keine Angabe –</option>
+                <option v-for="opt in GENDER_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="mp-field">
+              <label for="ef-height" class="mp-label">Körpergröße (cm)</label>
+              <input id="ef-height" v-model.number="form.body_height_cm" type="number" min="50" max="250" class="mp-input" placeholder="z. B. 172" />
+            </div>
+            <div class="mp-field">
+              <label for="ef-weight" class="mp-label">Körpergewicht (kg)</label>
+              <input id="ef-weight" v-model.number="form.body_weight_kg" type="number" min="10" max="300" class="mp-input" placeholder="z. B. 70" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Erkrankungen & Behinderungen -->
+        <div class="efinfo-block">
+          <div class="efinfo-block-header">
+            <h3 class="efinfo-block-title">Erkrankungen & Behinderungen</h3>
+            <div class="efinfo-vis-row" role="group" aria-label="Sichtbarkeit Erkrankungen">
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_disabilities_to_driver" class="contact-flag-check" />
+                Fahrer
+              </label>
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_disabilities_in_emergency" class="contact-flag-check" />
+                Notfall
+              </label>
+            </div>
+          </div>
+          <div class="mp-toggle-list">
+            <label class="mp-toggle-row">
+              <span class="mp-toggle-label">
+                Epilepsie bekannt
+                <span class="mp-toggle-sub">Aktiviert spezifische Erste-Hilfe-Hinweise im Notfall.</span>
+              </span>
+              <button type="button" class="mp-toggle-btn" :class="{ 'mp-toggle-btn--on': form.has_epilepsy }" role="switch" :aria-checked="form.has_epilepsy" @click="form.has_epilepsy = !form.has_epilepsy">
+                <span class="mp-toggle-knob"></span>
+              </button>
+            </label>
+            <label class="mp-toggle-row">
+              <span class="mp-toggle-label">
+                Sprechbehinderung / nicht sprechend
+                <span class="mp-toggle-sub">Hinweis für Fahrer und Einsatzkräfte.</span>
+              </span>
+              <button type="button" class="mp-toggle-btn" :class="{ 'mp-toggle-btn--on': form.is_mute }" role="switch" :aria-checked="form.is_mute" @click="form.is_mute = !form.is_mute">
+                <span class="mp-toggle-knob"></span>
+              </button>
+            </label>
+          </div>
+          <div class="mp-field">
+            <label for="ef-conditions" class="mp-label">Bekannte Erkrankungen</label>
+            <p class="mp-field-hint">z. B. Diabetes, Herzerkrankung, Demenz</p>
+            <textarea id="ef-conditions" v-model="form.known_conditions" class="mp-textarea" rows="2"></textarea>
+          </div>
+          <div class="mp-field">
+            <label for="ef-dis-notes" class="mp-label">Sonstige Behinderungshinweise</label>
+            <textarea id="ef-dis-notes" v-model="form.other_disabilities_notes" class="mp-textarea" rows="2"></textarea>
+          </div>
+        </div>
+
+        <!-- Medikation & Allergien -->
+        <div class="efinfo-block">
+          <div class="efinfo-block-header">
+            <h3 class="efinfo-block-title">Medikation & Allergien</h3>
+            <div class="efinfo-vis-row" role="group" aria-label="Sichtbarkeit Medikation">
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_medication_to_driver" class="contact-flag-check" />
+                Fahrer
+              </label>
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_medication_in_emergency" class="contact-flag-check" />
+                Notfall
+              </label>
+            </div>
+          </div>
+          <div class="mp-field">
+            <label for="ef-medication" class="mp-label">Dauermedikation</label>
+            <p class="mp-field-hint">z. B. „Metformin 500 mg 2x täglich"</p>
+            <textarea id="ef-medication" v-model="form.medication_notes" class="mp-textarea" rows="2"></textarea>
+          </div>
+          <div class="mp-field">
+            <label for="ef-allergy" class="mp-label">Allergien / Unverträglichkeiten</label>
+            <textarea id="ef-allergy" v-model="form.allergy_notes" class="mp-textarea" rows="2"></textarea>
+          </div>
+        </div>
+
+        <!-- Notfallverhalten -->
+        <div class="efinfo-block">
+          <div class="efinfo-block-header">
+            <h3 class="efinfo-block-title">Notfallverhalten</h3>
+            <div class="efinfo-vis-row" role="group" aria-label="Sichtbarkeit Notfallhinweise">
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_emergency_notes_to_driver" class="contact-flag-check" />
+                Fahrer
+              </label>
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_emergency_notes_in_emergency" class="contact-flag-check" />
+                Notfall
+              </label>
+            </div>
+          </div>
+          <div class="mp-field">
+            <label for="ef-care" class="mp-label">Im Notfall bitte …</label>
+            <p class="mp-field-hint">Was sollen Helfer tun?</p>
+            <textarea id="ef-care" v-model="form.emergency_care_notes" class="mp-textarea" rows="2"></textarea>
+          </div>
+          <div class="mp-field">
+            <label for="ef-helps" class="mp-label">Das hilft</label>
+            <textarea id="ef-helps" v-model="form.what_helps_notes" class="mp-textarea" rows="2"></textarea>
+          </div>
+          <div class="mp-field">
+            <label for="ef-avoid" class="mp-label">Das vermeiden</label>
+            <textarea id="ef-avoid" v-model="form.what_to_avoid_notes" class="mp-textarea" rows="2"></textarea>
+          </div>
+          <div class="mp-field">
+            <label for="ef-extra" class="mp-label">Weitere Notfallhinweise</label>
+            <textarea id="ef-extra" v-model="form.additional_emergency_notes" class="mp-textarea" rows="2"></textarea>
+          </div>
+        </div>
+
+        <!-- Kommunikationshinweise (Sichtbarkeit) -->
+        <div class="efinfo-block">
+          <div class="efinfo-block-header">
+            <h3 class="efinfo-block-title">Sichtbarkeit: Kommunikationshinweise</h3>
+            <div class="efinfo-vis-row" role="group" aria-label="Sichtbarkeit Kommunikationshinweise">
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_communication_notes_to_driver" class="contact-flag-check" />
+                Fahrer
+              </label>
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_communication_notes_in_emergency" class="contact-flag-check" />
+                Notfall
+              </label>
+            </div>
+          </div>
+          <p class="mp-section-desc">Steuert, ob die Kommunikationshinweise aus Abschnitt 4 für Fahrer / im Notfall sichtbar sind.</p>
+        </div>
+
+        <!-- Kontaktsichtbarkeit (global) -->
+        <div class="efinfo-block">
+          <div class="efinfo-block-header">
+            <h3 class="efinfo-block-title">Sichtbarkeit: Kontakte (global)</h3>
+            <div class="efinfo-vis-row" role="group" aria-label="Sichtbarkeit Kontakte global">
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_contacts_to_driver" class="contact-flag-check" />
+                Fahrer
+              </label>
+              <label class="efinfo-vis-label">
+                <input type="checkbox" v-model="form.show_contacts_in_emergency" class="contact-flag-check" />
+                Notfall
+              </label>
+            </div>
+          </div>
+          <p class="mp-section-desc">Globaler Schalter. Jeder Kontakt kann zusätzlich individuell konfiguriert werden (Abschnitt 6).</p>
+        </div>
+      </section>
+
+      <!-- ── Abschnitt 8: Speichern ──────────────────────────────────────── -->
       <div class="mp-save-bar">
         <button
           type="submit"
@@ -550,8 +862,9 @@ import { useToast } from 'primevue/usetoast'
 import { useMobilityProfileStore } from '@/stores/mobilityProfile'
 import { getTransportOptions } from '@/api/transportOptions'
 import { getNotificationPreferences, saveNotificationPreferences } from '@/api/notificationPreferences'
-import type { MobilityProfile, NotificationEventType, WheelchairType, AttendantType, TransportType } from '@/types'
-import { NOTIFICATION_EVENT_LABELS } from '@/types'
+import { listContacts, createContact, updateContact, deleteContact } from '@/api/passengerContacts'
+import type { MobilityProfile, NotificationEventType, WheelchairType, AttendantType, TransportType, PassengerContact, PassengerContactCreate, ContactType } from '@/types'
+import { NOTIFICATION_EVENT_LABELS, CONTACT_TYPE_LABELS } from '@/types'
 
 type NeedKey =
   | 'uses_wheelchair'
@@ -706,6 +1019,128 @@ const ATTENDANT_TYPE_OPTIONS = [
   { value: 'unknown' as AttendantType, label: 'Unbekannt / bitte klären' },
 ]
 
+// ── Kontakte (Sprint 12E) ──────────────────────────────────────────────────────
+
+const contacts = ref<PassengerContact[]>([])
+const contactsLoading = ref(false)
+const contactsError = ref('')
+const showContactForm = ref(false)
+const contactFormSaving = ref(false)
+const contactFormError = ref('')
+const editingContactId = ref<string | null>(null)
+
+const CONTACT_TYPE_OPTIONS: Array<{ value: ContactType; label: string }> = [
+  { value: 'emergency_contact', label: 'Notfallkontakt' },
+  { value: 'parent',            label: 'Elternteil / Familie' },
+  { value: 'trusted_person',    label: 'Vertrauensperson' },
+  { value: 'caregiver',         label: 'Pflegeperson' },
+  { value: 'doctor',            label: 'Arzt / Therapeut' },
+  { value: 'nursing_service',   label: 'Pflegedienst' },
+  { value: 'school',            label: 'Schule' },
+  { value: 'workshop',          label: 'Werkstatt / Beschäftigung' },
+  { value: 'daycare',           label: 'Tagesstätte' },
+  { value: 'other',             label: 'Sonstige' },
+]
+
+const GENDER_OPTIONS = [
+  { value: 'weiblich',    label: 'Weiblich' },
+  { value: 'männlich',    label: 'Männlich' },
+  { value: 'divers',      label: 'Divers' },
+  { value: 'keine Angabe', label: 'Keine Angabe' },
+]
+
+const contactForm = reactive<PassengerContactCreate>({
+  name: '',
+  phone_number: null,
+  role_label: null,
+  contact_type: 'other',
+  note: null,
+  is_emergency_contact: false,
+  visible_to_driver: false,
+  visible_in_emergency: false,
+  callable_in_emergency: false,
+  priority: 99,
+})
+
+function resetContactForm() {
+  contactForm.name = ''
+  contactForm.phone_number = null
+  contactForm.role_label = null
+  contactForm.contact_type = 'other'
+  contactForm.note = null
+  contactForm.is_emergency_contact = false
+  contactForm.visible_to_driver = false
+  contactForm.visible_in_emergency = false
+  contactForm.callable_in_emergency = false
+  contactForm.priority = 99
+  editingContactId.value = null
+  contactFormError.value = ''
+}
+
+function openAddContact() {
+  resetContactForm()
+  showContactForm.value = true
+}
+
+function openEditContact(c: PassengerContact) {
+  contactForm.name = c.name
+  contactForm.phone_number = c.phone_number
+  contactForm.role_label = c.role_label
+  contactForm.contact_type = c.contact_type
+  contactForm.note = c.note
+  contactForm.is_emergency_contact = c.is_emergency_contact
+  contactForm.visible_to_driver = c.visible_to_driver
+  contactForm.visible_in_emergency = c.visible_in_emergency
+  contactForm.callable_in_emergency = c.callable_in_emergency
+  contactForm.priority = c.priority
+  editingContactId.value = c.id
+  showContactForm.value = true
+}
+
+async function loadContacts() {
+  contactsLoading.value = true
+  contactsError.value = ''
+  try {
+    contacts.value = await listContacts()
+  } catch {
+    contactsError.value = 'Kontakte konnten nicht geladen werden.'
+  } finally {
+    contactsLoading.value = false
+  }
+}
+
+async function handleContactSave() {
+  if (!contactForm.name.trim()) {
+    contactFormError.value = 'Name ist erforderlich.'
+    return
+  }
+  contactFormSaving.value = true
+  contactFormError.value = ''
+  try {
+    if (editingContactId.value) {
+      await updateContact(editingContactId.value, { ...contactForm })
+    } else {
+      await createContact({ ...contactForm })
+    }
+    showContactForm.value = false
+    resetContactForm()
+    await loadContacts()
+  } catch {
+    contactFormError.value = 'Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.'
+  } finally {
+    contactFormSaving.value = false
+  }
+}
+
+async function handleContactDelete(id: string) {
+  try {
+    await deleteContact(id)
+    await loadContacts()
+  } catch {
+    contactsError.value = 'Löschen fehlgeschlagen.'
+  }
+}
+
 // Lokales Formular-State — wird beim Laden aus dem Store befüllt
 const form = reactive<Partial<MobilityProfile>>({
   emergency_contact_name: null,
@@ -743,6 +1178,31 @@ const form = reactive<Partial<MobilityProfile>>({
   communication_notes: null,
   medical_notes: null,
   general_notes: null,
+  // Sprint 12E
+  has_epilepsy: false,
+  is_mute: false,
+  other_disabilities_notes: null,
+  known_conditions: null,
+  medication_notes: null,
+  allergy_notes: null,
+  emergency_care_notes: null,
+  what_helps_notes: null,
+  what_to_avoid_notes: null,
+  additional_emergency_notes: null,
+  body_height_cm: null,
+  body_weight_kg: null,
+  gender: null,
+  show_disabilities_to_driver: false,
+  show_disabilities_in_emergency: false,
+  show_medication_to_driver: false,
+  show_medication_in_emergency: false,
+  show_emergency_notes_to_driver: false,
+  show_emergency_notes_in_emergency: false,
+  show_communication_notes_to_driver: false,
+  show_communication_notes_in_emergency: false,
+  show_body_data_in_emergency: false,
+  show_contacts_to_driver: false,
+  show_contacts_in_emergency: false,
 })
 
 function syncFormFromStore() {
@@ -784,6 +1244,31 @@ function syncFormFromStore() {
     communication_notes: p.communication_notes,
     medical_notes: p.medical_notes,
     general_notes: p.general_notes,
+    // Sprint 12E
+    has_epilepsy: p.has_epilepsy ?? false,
+    is_mute: p.is_mute ?? false,
+    other_disabilities_notes: p.other_disabilities_notes ?? null,
+    known_conditions: p.known_conditions ?? null,
+    medication_notes: p.medication_notes ?? null,
+    allergy_notes: p.allergy_notes ?? null,
+    emergency_care_notes: p.emergency_care_notes ?? null,
+    what_helps_notes: p.what_helps_notes ?? null,
+    what_to_avoid_notes: p.what_to_avoid_notes ?? null,
+    additional_emergency_notes: p.additional_emergency_notes ?? null,
+    body_height_cm: p.body_height_cm ?? null,
+    body_weight_kg: p.body_weight_kg ?? null,
+    gender: p.gender ?? null,
+    show_disabilities_to_driver: p.show_disabilities_to_driver ?? false,
+    show_disabilities_in_emergency: p.show_disabilities_in_emergency ?? false,
+    show_medication_to_driver: p.show_medication_to_driver ?? false,
+    show_medication_in_emergency: p.show_medication_in_emergency ?? false,
+    show_emergency_notes_to_driver: p.show_emergency_notes_to_driver ?? false,
+    show_emergency_notes_in_emergency: p.show_emergency_notes_in_emergency ?? false,
+    show_communication_notes_to_driver: p.show_communication_notes_to_driver ?? false,
+    show_communication_notes_in_emergency: p.show_communication_notes_in_emergency ?? false,
+    show_body_data_in_emergency: p.show_body_data_in_emergency ?? false,
+    show_contacts_to_driver: p.show_contacts_to_driver ?? false,
+    show_contacts_in_emergency: p.show_contacts_in_emergency ?? false,
   })
 }
 
@@ -884,6 +1369,7 @@ onMounted(async () => {
   TRANSPORT_TYPES.value = typesResult.status === 'fulfilled' ? typesResult.value : []
   syncFormFromStore()
   await loadNotifPrefs()
+  await loadContacts()
 })
 
 // Store-Profil-Änderungen ins Formular übernehmen (z. B. nach erstem Load)
@@ -1543,5 +2029,226 @@ watch(() => store.profile, syncFormFromStore)
     grid-template-columns: 1fr 72px 60px 60px 60px;
     font-size: 0.8rem;
   }
+}
+
+/* ── Sprint 12E: Kontaktverwaltung ──────────────────────────────────── */
+.contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-s);
+}
+
+.contact-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--am-space-m);
+  padding: var(--am-space-m);
+  background: var(--am-bg-raised);
+  border: 1px solid var(--am-border);
+  border-radius: var(--am-radius-s);
+  flex-wrap: wrap;
+}
+
+.contact-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.contact-item-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--am-text-primary);
+}
+
+.contact-item-role,
+.contact-item-type {
+  font-size: 0.78rem;
+  color: var(--am-text-secondary);
+}
+
+.contact-item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.contact-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--am-border);
+  background: var(--am-bg-card);
+  color: var(--am-text-secondary);
+}
+
+.contact-badge--emergency {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: var(--am-danger, #dc2626);
+  color: var(--am-danger, #dc2626);
+}
+
+.contact-badge--driver {
+  background: rgba(255, 214, 0, 0.1);
+  border-color: var(--am-accent);
+  color: var(--am-accent);
+}
+
+.contact-badge--emerg {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.contact-item-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.contact-phone-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--am-success, #16a34a);
+  text-decoration: none;
+  border: 1px solid currentColor;
+  padding: 4px 10px;
+  border-radius: var(--am-radius-s);
+  background: rgba(34, 197, 94, 0.07);
+  white-space: nowrap;
+}
+
+.contact-action-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-action-btn--delete {
+  background: transparent;
+  border: 1px solid var(--am-danger, #dc2626);
+  color: var(--am-danger, #dc2626);
+  border-radius: var(--am-radius-s);
+  cursor: pointer;
+  transition: background var(--am-transition);
+}
+
+.contact-action-btn--delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.contact-add-btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-m);
+  padding: var(--am-space-m);
+  background: var(--am-bg-base);
+  border: 1px solid var(--am-accent);
+  border-radius: var(--am-radius-m);
+}
+
+.contact-form-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--am-text-primary);
+  margin: 0;
+}
+
+.contact-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--am-space-m);
+}
+
+.contact-flag {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  font-size: 0.875rem;
+  color: var(--am-text-primary);
+  cursor: pointer;
+}
+
+.contact-flag-check {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--am-accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.contact-form-actions {
+  display: flex;
+  gap: var(--am-space-m);
+  flex-wrap: wrap;
+}
+
+/* ── Sprint 12E: Notfallinformationen ───────────────────────────────── */
+.efinfo-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-space-m);
+  padding: var(--am-space-m);
+  background: var(--am-bg-raised);
+  border: 1px solid var(--am-border);
+  border-radius: var(--am-radius-s);
+}
+
+.efinfo-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--am-space-m);
+  flex-wrap: wrap;
+}
+
+.efinfo-block-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--am-text-primary);
+  margin: 0;
+}
+
+.efinfo-vis-row {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-m);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.efinfo-vis-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--am-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mp-select {
+  appearance: none;
+  cursor: pointer;
 }
 </style>

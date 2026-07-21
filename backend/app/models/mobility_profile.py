@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -91,6 +91,34 @@ class MobilityProfile(Base):
     communication_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     medical_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     general_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Notfallinformationen — Sprint 12E
+    has_epilepsy: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_mute: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    other_disabilities_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    known_conditions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    medication_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    allergy_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    emergency_care_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    what_helps_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    what_to_avoid_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    additional_emergency_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    body_height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    body_weight_kg: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Sichtbarkeitseinstellungen — Sprint 12E
+    show_disabilities_to_driver: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_disabilities_in_emergency: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_medication_to_driver: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_medication_in_emergency: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_emergency_notes_to_driver: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_emergency_notes_in_emergency: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_communication_notes_to_driver: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_communication_notes_in_emergency: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_body_data_in_emergency: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_contacts_to_driver: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_contacts_in_emergency: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

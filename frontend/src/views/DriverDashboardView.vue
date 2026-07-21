@@ -373,6 +373,26 @@
               </div>
             </div>
 
+            <!-- ── Notfall-Buttons (Sprint 12E) ──────────────────────── -->
+            <div class="emergency-btns" role="group" :aria-label="`Notfall-Aktionen für Fahrt ${req.id}`">
+              <button
+                class="driver-btn driver-btn--emergency-file driver-btn--sm"
+                :title="'Freigegebene Notfallakte öffnen'"
+                @click="openEmergencyFile(req.id)"
+              >
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                Notfallakte
+              </button>
+              <button
+                class="driver-btn driver-btn--emergency driver-btn--sm"
+                :title="'Geführten Notfall-Assistenten öffnen'"
+                @click="openEmergencyMode(req.id)"
+              >
+                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                NOTFALL
+              </button>
+            </div>
+
             <!-- ── Statusverlauf ────────────────────────────────────────── -->
             <div class="ride-status-section">
               <div v-if="statusEventsLoading[req.id]" class="ride-status-loading">
@@ -450,6 +470,20 @@
 
     </template>
 
+    <!-- ── Notfallakte-Modal (Sprint 12E) ──────────────────────────────────── -->
+    <EmergencyFileModal
+      :visible="emergencyFileRequestId !== null"
+      :request-id="emergencyFileRequestId"
+      @close="emergencyFileRequestId = null"
+    />
+
+    <!-- ── Notfall-Assistenten-Modal (Sprint 12E) ───────────────────────────── -->
+    <EmergencyModeModal
+      :visible="emergencyModeRequestId !== null"
+      :request-id="emergencyModeRequestId"
+      @close="emergencyModeRequestId = null"
+    />
+
     <!-- ── Bestätigungs-Dialog: Schicht beenden ──────────────────────────── -->
     <div v-if="confirmEndShift" class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
       <div class="confirm-panel">
@@ -483,6 +517,8 @@ import type {
   SpontaneousRideRequestItem, TransportRequestListItem, VehicleBrief,
 } from '@/types'
 import { RIDE_STATUS_EVENT_LABELS, VEHICLE_TYPE_LABELS } from '@/types'
+import EmergencyFileModal from '@/components/EmergencyFileModal.vue'
+import EmergencyModeModal from '@/components/EmergencyModeModal.vue'
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -510,6 +546,19 @@ const spontaneousError = ref<Record<string, string | null>>({})
 
 const SPONTANEOUS_POLL_INTERVAL_MS = 10_000
 let spontaneousPollingInterval: ReturnType<typeof setInterval> | null = null
+
+// ── Notfallakte (Sprint 12E) ──────────────────────────────────────────────────
+
+const emergencyFileRequestId = ref<string | null>(null)
+const emergencyModeRequestId = ref<string | null>(null)
+
+function openEmergencyFile(requestId: string): void {
+  emergencyFileRequestId.value = requestId
+}
+
+function openEmergencyMode(requestId: string): void {
+  emergencyModeRequestId.value = requestId
+}
 
 // ── Standort-Teilen (spontane Fahrten, Sprint 12D) ────────────────────────────
 
@@ -1314,6 +1363,37 @@ function extractError(err: unknown): string {
   padding: 6px 10px;
   border-radius: var(--am-radius-s);
   border: 1px solid var(--am-danger, #dc2626);
+}
+
+/* ─── Notfall-Buttons (Sprint 12E) ───────────────────────────────────── */
+.emergency-btns {
+  display: flex;
+  gap: var(--am-space-s);
+  padding: var(--am-space-s) 0;
+}
+
+.driver-btn--emergency-file {
+  border-color: rgba(34,197,94,0.5);
+  color: var(--am-success, #16a34a);
+  background: rgba(34,197,94,0.08);
+}
+
+.driver-btn--emergency-file:hover:not(:disabled) {
+  background: rgba(34,197,94,0.16);
+  border-color: var(--am-success, #22c55e);
+}
+
+.driver-btn--emergency {
+  border-color: var(--am-danger, #dc2626);
+  color: var(--am-danger, #dc2626);
+  background: rgba(220,38,38,0.08);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.driver-btn--emergency:hover:not(:disabled) {
+  background: var(--am-danger, #dc2626);
+  color: #fff;
 }
 
 /* ─── Bestätigungs-Dialog ────────────────────────────────────────────── */

@@ -235,6 +235,32 @@ export interface MobilityProfile {
   communication_notes: string | null
   medical_notes: string | null
   general_notes: string | null
+  // Sprint 12E — Notfallinformationen
+  has_epilepsy: boolean
+  is_mute: boolean
+  other_disabilities_notes: string | null
+  known_conditions: string | null
+  medication_notes: string | null
+  allergy_notes: string | null
+  emergency_care_notes: string | null
+  what_helps_notes: string | null
+  what_to_avoid_notes: string | null
+  additional_emergency_notes: string | null
+  body_height_cm: number | null
+  body_weight_kg: number | null
+  gender: string | null
+  // Sprint 12E — Sichtbarkeitseinstellungen
+  show_disabilities_to_driver: boolean
+  show_disabilities_in_emergency: boolean
+  show_medication_to_driver: boolean
+  show_medication_in_emergency: boolean
+  show_emergency_notes_to_driver: boolean
+  show_emergency_notes_in_emergency: boolean
+  show_communication_notes_to_driver: boolean
+  show_communication_notes_in_emergency: boolean
+  show_body_data_in_emergency: boolean
+  show_contacts_to_driver: boolean
+  show_contacts_in_emergency: boolean
   created_at: string
   updated_at: string
 }
@@ -661,6 +687,126 @@ export interface ReverseGeocodeResponse {
   precision: string
   source: string
   message: string | null
+}
+
+// ─── Kontakte (Sprint 12E) ────────────────────────────────────────────────────
+
+export type ContactType =
+  | 'emergency_contact'
+  | 'trusted_person'
+  | 'caregiver'
+  | 'school'
+  | 'workshop'
+  | 'daycare'
+  | 'doctor'
+  | 'nursing_service'
+  | 'parent'
+  | 'other'
+
+export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+  emergency_contact: 'Notfallkontakt',
+  trusted_person:    'Vertrauensperson',
+  caregiver:         'Pflegeperson',
+  school:            'Schule',
+  workshop:          'Werkstatt / Beschäftigung',
+  daycare:           'Tagesstätte',
+  doctor:            'Arzt / Therapeut',
+  nursing_service:   'Pflegedienst',
+  parent:            'Elternteil / Familie',
+  other:             'Sonstige',
+}
+
+export interface PassengerContact {
+  id: string
+  mobility_profile_id: string
+  name: string
+  phone_number: string | null
+  role_label: string | null
+  contact_type: ContactType
+  note: string | null
+  is_emergency_contact: boolean
+  visible_to_driver: boolean
+  visible_in_emergency: boolean
+  callable_in_emergency: boolean
+  priority: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PassengerContactCreate {
+  name: string
+  phone_number?: string | null
+  role_label?: string | null
+  contact_type?: ContactType
+  note?: string | null
+  is_emergency_contact?: boolean
+  visible_to_driver?: boolean
+  visible_in_emergency?: boolean
+  callable_in_emergency?: boolean
+  priority?: number
+}
+
+export type PassengerContactUpdate = Partial<PassengerContactCreate>
+
+// ─── Notfallakte (Sprint 12E) ─────────────────────────────────────────────────
+
+export interface EmergencyGlossaryEntry {
+  key: string
+  title: string
+  immediate_action_title: string
+  first_aid_steps: string[]
+  do_not_do: string[]
+  call_112_when: string[]
+  call_112_script_hint: string | null
+  source_note: string
+}
+
+export interface EmergencyContactItem {
+  id: string
+  name: string
+  phone_number: string | null
+  role_label: string | null
+  contact_type: string
+  is_emergency_contact: boolean
+  callable_in_emergency: boolean
+  priority: number
+}
+
+export interface EmergencyFileResponse {
+  transport_request_id: string
+  passenger_display_name: string | null
+  emergency_mode: boolean
+  disabilities_visible: boolean
+  has_epilepsy: boolean
+  is_mute: boolean
+  is_deaf_or_hard_of_hearing: boolean
+  uses_wheelchair: boolean
+  is_blind_or_visually_impaired: boolean
+  other_disabilities_notes: string | null
+  known_conditions: string | null
+  medication_visible: boolean
+  medication_notes: string | null
+  allergy_notes: string | null
+  emergency_notes_visible: boolean
+  emergency_care_notes: string | null
+  what_helps_notes: string | null
+  what_to_avoid_notes: string | null
+  additional_emergency_notes: string | null
+  communication_notes_visible: boolean
+  communication_notes: string | null
+  body_data_visible: boolean
+  body_height_cm: number | null
+  body_weight_kg: number | null
+  gender: string | null
+  visible_contacts: EmergencyContactItem[]
+  primary_emergency_contact: EmergencyContactItem | null
+  has_callable_emergency_contact: boolean
+  emergency_summary_for_112: string
+  current_location_label: string | null
+  pickup_latitude: number | null
+  pickup_longitude: number | null
+  glossary_entries: EmergencyGlossaryEntry[]
+  medical_disclaimer: string
 }
 
 // ─── Transporttypen ──────────────────────────────────────────────────────────
