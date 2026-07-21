@@ -549,7 +549,7 @@
         <div v-else-if="contacts.length > 0" class="contact-list" role="list">
           <div v-for="c in contacts" :key="c.id" class="contact-item" role="listitem">
             <div class="contact-item-info">
-              <span class="contact-item-name">{{ c.name }}</span>
+              <span class="contact-item-name">{{ c.name || 'Unbenannter Kontakt' }}</span>
               <span v-if="c.role_label" class="contact-item-role">{{ c.role_label }}</span>
               <span class="contact-item-type">{{ CONTACT_TYPE_LABELS[c.contact_type] }}</span>
               <div class="contact-item-badges">
@@ -559,10 +559,11 @@
               </div>
             </div>
             <div class="contact-item-actions">
-              <a v-if="c.phone_number" :href="`tel:${c.phone_number}`" class="contact-phone-link" :aria-label="`${c.name} anrufen`">
+              <a v-if="c.phone_number" :href="`tel:${c.phone_number}`" class="contact-phone-link" :aria-label="`${c.name || 'Kontakt'} anrufen`">
                 <i class="pi pi-phone" aria-hidden="true"></i>
                 {{ c.phone_number }}
               </a>
+              <span v-else class="contact-no-phone">Keine Telefonnummer</span>
               <button type="button" class="am-btn am-btn-secondary contact-action-btn" @click="openEditContact(c)" :aria-label="`${c.name} bearbeiten`">
                 <i class="pi pi-pencil" aria-hidden="true"></i>
               </button>
@@ -642,7 +643,13 @@
           </div>
 
           <div class="contact-form-actions">
-            <button type="button" class="am-btn am-btn-primary" :disabled="contactFormSaving" @click="handleContactSave">
+            <button
+              type="button"
+              class="am-btn am-btn-primary"
+              :disabled="contactFormSaving || !contactForm.name.trim() || !contactForm.phone_number.trim()"
+              :aria-disabled="contactFormSaving || !contactForm.name.trim() || !contactForm.phone_number.trim()"
+              @click="handleContactSave"
+            >
               <i v-if="contactFormSaving" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
               <i v-else class="pi pi-save" aria-hidden="true"></i>
               {{ contactFormSaving ? 'Wird gespeichert …' : 'Speichern' }}
@@ -1051,7 +1058,7 @@ const GENDER_OPTIONS = [
 
 const contactForm = reactive<PassengerContactCreate>({
   name: '',
-  phone_number: null,
+  phone_number: '',
   role_label: null,
   contact_type: 'other',
   note: null,
@@ -1059,12 +1066,12 @@ const contactForm = reactive<PassengerContactCreate>({
   visible_to_driver: false,
   visible_in_emergency: false,
   callable_in_emergency: false,
-  priority: 99,
+  priority: 1,
 })
 
 function resetContactForm() {
   contactForm.name = ''
-  contactForm.phone_number = null
+  contactForm.phone_number = ''
   contactForm.role_label = null
   contactForm.contact_type = 'other'
   contactForm.note = null
@@ -1072,7 +1079,7 @@ function resetContactForm() {
   contactForm.visible_to_driver = false
   contactForm.visible_in_emergency = false
   contactForm.callable_in_emergency = false
-  contactForm.priority = 99
+  contactForm.priority = 1
   editingContactId.value = null
   contactFormError.value = ''
 }
@@ -1084,7 +1091,7 @@ function openAddContact() {
 
 function openEditContact(c: PassengerContact) {
   contactForm.name = c.name
-  contactForm.phone_number = c.phone_number
+  contactForm.phone_number = c.phone_number ?? ''
   contactForm.role_label = c.role_label
   contactForm.contact_type = c.contact_type
   contactForm.note = c.note
@@ -1110,8 +1117,8 @@ async function loadContacts() {
 }
 
 async function handleContactSave() {
-  if (!contactForm.name.trim()) {
-    contactFormError.value = 'Name ist erforderlich.'
+  if (!contactForm.name.trim() || !contactForm.phone_number.trim()) {
+    contactFormError.value = 'Bitte Name und Telefonnummer eintragen.'
     return
   }
   contactFormSaving.value = true
@@ -2126,6 +2133,12 @@ watch(() => store.profile, syncFormFromStore)
   border-radius: var(--am-radius-s);
   background: rgba(34, 197, 94, 0.07);
   white-space: nowrap;
+}
+
+.contact-no-phone {
+  font-size: 0.78rem;
+  color: var(--am-text-secondary);
+  font-style: italic;
 }
 
 .contact-action-btn {

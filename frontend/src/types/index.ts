@@ -735,7 +735,7 @@ export interface PassengerContact {
 
 export interface PassengerContactCreate {
   name: string
-  phone_number?: string | null
+  phone_number: string
   role_label?: string | null
   contact_type?: ContactType
   note?: string | null
@@ -746,7 +746,18 @@ export interface PassengerContactCreate {
   priority?: number
 }
 
-export type PassengerContactUpdate = Partial<PassengerContactCreate>
+export interface PassengerContactUpdate {
+  name?: string
+  phone_number?: string
+  role_label?: string | null
+  contact_type?: ContactType
+  note?: string | null
+  is_emergency_contact?: boolean
+  visible_to_driver?: boolean
+  visible_in_emergency?: boolean
+  callable_in_emergency?: boolean
+  priority?: number
+}
 
 // ─── Notfallakte (Sprint 12E) ─────────────────────────────────────────────────
 

@@ -120,19 +120,20 @@ class TestContactCRUD:
 # ── Kontakt-Validierung ───────────────────────────────────────────────────────
 
 class TestContactValidation:
-    def test_create_minimal_contact(self, client: TestClient, auth_headers: dict):
+    def test_create_with_name_and_phone(self, client: TestClient, auth_headers: dict):
+        """Both name and phone_number are required for creation."""
         resp = client.post(
             "/api/v1/passenger-contacts/",
-            json={"name": "Minimalkontakt"},
+            json={"name": "Vollständiger Kontakt", "phone_number": "0170 9999999"},
             headers=auth_headers,
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["name"] == "Minimalkontakt"
+        assert data["name"] == "Vollständiger Kontakt"
+        assert data["phone_number"] == "0170 9999999"
         assert data["contact_type"] == "other"
         assert data["is_emergency_contact"] is False
-        assert data["visible_to_driver"] is False
-        # Cleanup
+        assert data["priority"] == 1
         client.delete(f"/api/v1/passenger-contacts/{data['id']}", headers=auth_headers)
 
     def test_missing_name_returns_422(self, client: TestClient, auth_headers: dict):
@@ -143,10 +144,140 @@ class TestContactValidation:
         )
         assert resp.status_code == 422
 
+    def test_missing_phone_returns_422(self, client: TestClient, auth_headers: dict):
+        """phone_number is now required for creation."""
+        resp = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Nur Name"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_blank_name_returns_422(self, client: TestClient, auth_headers: dict):
+        resp = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "", "phone_number": "0170 123"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_whitespace_name_returns_422(self, client: TestClient, auth_headers: dict):
+        resp = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "   ", "phone_number": "0170 123"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_blank_phone_returns_422(self, client: TestClient, auth_headers: dict):
+        resp = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Test", "phone_number": ""},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_whitespace_phone_returns_422(self, client: TestClient, auth_headers: dict):
+        resp = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Test", "phone_number": "   "},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
     def test_invalid_contact_type_returns_422(self, client: TestClient, auth_headers: dict):
         resp = client.post(
             "/api/v1/passenger-contacts/",
-            json={"name": "Test", "contact_type": "invalid_type"},
+            json={"name": "Test", "phone_number": "0170 123", "contact_type": "invalid_type"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_name_is_stripped_on_create(self, client: TestClient, auth_headers: dict):
+        resp = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "  Anna Muster  ", "phone_number": "  0170 123  "},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["name"] == "Anna Muster"
+        assert data["phone_number"] == "0170 123"
+        client.delete(f"/api/v1/passenger-contacts/{data['id']}", headers=auth_headers)
+
+    def test_patch_blank_name_returns_422(self, client: TestClient, auth_headers: dict):
+        # Create valid contact first
+        create = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Patch Test", "phone_number": "0170 000"},
+            headers=auth_headers,
+        )
+        assert create.status_code == 201
+        cid = create.json()["id"]
+        resp = client.patch(
+            f"/api/v1/passenger-contacts/{cid}",
+            json={"name": ""},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+        client.delete(f"/api/v1/passenger-contacts/{cid}", headers=auth_headers)
+
+    def test_patch_blank_phone_returns_422(self, client: TestClient, auth_headers: dict):
+        create = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Patch Test 2", "phone_number": "0170 111"},
+            headers=auth_headers,
+        )
+        assert create.status_code == 201
+        cid = create.json()["id"]
+        resp = client.patch(
+            f"/api/v1/passenger-contacts/{cid}",
+            json={"phone_number": ""},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+        client.delete(f"/api/v1/passenger-contacts/{cid}", headers=auth_headers)
+
+    def test_patch_null_name_returns_422(self, client: TestClient, auth_headers: dict):
+        create = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Patch Null Test", "phone_number": "0170 222"},
+            headers=auth_headers,
+        )
+        assert create.status_code == 201
+        cid = create.json()["id"]
+        resp = client.patch(
+            f"/api/v1/passenger-contacts/{cid}",
+            json={"name": None},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+        client.delete(f"/api/v1/passenger-contacts/{cid}", headers=auth_headers)
+
+    def test_delete_works_for_contact(self, client: TestClient, auth_headers: dict):
+        """DELETE must work for any contact the user owns, regardless of content."""
+        create = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Zum Löschen", "phone_number": "0170 333"},
+            headers=auth_headers,
+        )
+        assert create.status_code == 201
+        cid = create.json()["id"]
+        resp = client.delete(f"/api/v1/passenger-contacts/{cid}", headers=auth_headers)
+        assert resp.status_code == 204
+        # Confirm gone
+        get = client.get(f"/api/v1/passenger-contacts/{cid}", headers=auth_headers)
+        assert get.status_code == 404
+
+    def test_emergency_contact_without_phone_ignored_in_primary(
+        self, client: TestClient, auth_headers: dict
+    ):
+        """Contacts listed as emergency contact but lacking phone must not appear as primary."""
+        # This is validated by the driver endpoint logic (not the contact endpoint).
+        # Here we verify a contact with phone_number required by API — cannot be created without one.
+        resp = client.post(
+            "/api/v1/passenger-contacts/",
+            json={"name": "Kein Telefon", "is_emergency_contact": True},
             headers=auth_headers,
         )
         assert resp.status_code == 422
