@@ -7,5 +7,6 @@ class ReverseGeocodeResponse(BaseModel):
     house_number: str | None = None
     postal_code: str | None = None
     city: str | None = None
+    precision: str
     source: str
     message: str | None = None

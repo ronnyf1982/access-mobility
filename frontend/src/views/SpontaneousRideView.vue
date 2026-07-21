@@ -71,9 +71,17 @@
       </div>
 
       <!-- Geocoding-Status -->
-      <div v-if="geocodingStatus === 'success' && pickupAddress" class="sr-view__geocode-success" role="status">
+      <div v-if="geocodingStatus === 'success' && geocodingPrecision === 'precise'" class="sr-view__geocode-success" role="status">
         <span class="pi pi-check-circle" aria-hidden="true"></span>
         <span>Adresse automatisch ermittelt. Bitte prüfen.</span>
+      </div>
+      <div v-else-if="geocodingStatus === 'success' && geocodingPrecision === 'approximate'" class="sr-view__geocode-approximate" role="status">
+        <span class="pi pi-map-marker" aria-hidden="true"></span>
+        <span>Ungefähre Adresse ermittelt (ohne Hausnummer). Bitte Hausnummer ergänzen.</span>
+      </div>
+      <div v-else-if="geocodingStatus === 'success' && geocodingPrecision === 'coordinates'" class="sr-view__geocode-coords" role="status">
+        <span class="pi pi-info-circle" aria-hidden="true"></span>
+        <span>Keine genaue Adresse gefunden. Koordinaten werden als Abholort übermittelt.</span>
       </div>
       <div v-else-if="geocodingStatus === 'error'" class="sr-view__warning" role="status">
         <span class="pi pi-exclamation-circle" aria-hidden="true"></span>
@@ -290,6 +298,7 @@ const bookingResult = ref<SpontaneousRideBookResponse | null>(null)
 const activeRequestId = ref<string | null>(null)
 
 const geocodingStatus = ref<GeocodingStatus>('idle')
+const geocodingPrecision = ref<string | null>(null)
 
 const addressWarning = computed<boolean>(
   () => phase.value === 'results' && matches.value.length > 0 && !pickupAddress.value.trim() && geocodingStatus.value !== 'loading',
@@ -329,6 +338,7 @@ async function geocodePickupLocation(lat: number, lon: number): Promise<void> {
     const result = await reverseGeocode(lat, lon)
     if (result.formatted_address) {
       pickupAddress.value = result.formatted_address
+      geocodingPrecision.value = result.precision
       geocodingStatus.value = 'success'
     } else {
       geocodingStatus.value = 'error'
@@ -431,6 +441,7 @@ function reset(): void {
   pickupLon.value = null
   pickupAddress.value = ''
   geocodingStatus.value = 'idle'
+  geocodingPrecision.value = null
   matches.value = []
   geoErrorMessage.value = ''
   searchError.value = ''
@@ -875,6 +886,32 @@ function requestLocation(): void {
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
   color: #86efac;
+  font-size: 0.84rem;
+}
+
+.sr-view__geocode-approximate {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  color: #fde68a;
+  font-size: 0.84rem;
+}
+
+.sr-view__geocode-coords {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  color: #c7d2fe;
   font-size: 0.84rem;
 }
 

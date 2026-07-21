@@ -1,4 +1,4 @@
-"""Geocoding endpoint tests (Hotfix 12D-D).
+"""Geocoding endpoint tests (Hotfix 12D-D / 12D-E).
 
 All tests mock the external Nominatim HTTP call so no real network request
 is made. The external service is never a test dependency.
@@ -85,6 +85,7 @@ class TestReverseGeocodeResults:
             assert data["house_number"] == "5"
             assert data["postal_code"] == "12345"
             assert data["city"] == "Berlin"
+            assert data["precision"] == "precise"
             assert data["source"] == "nominatim"
             assert data["message"] is None
         finally:
@@ -98,6 +99,7 @@ class TestReverseGeocodeResults:
             data = resp.json()
             assert data["formatted_address"] == "Waldweg, 10000 München"
             assert data["house_number"] is None
+            assert data["precision"] == "approximate"
         finally:
             patcher.stop()
 
@@ -112,33 +114,76 @@ class TestReverseGeocodeResults:
         finally:
             patcher.stop()
 
-    def test_empty_address_returns_null_with_message(self, client: TestClient, auth_headers: dict):
+    def test_empty_address_returns_coordinate_fallback(self, client: TestClient, auth_headers: dict):
         patcher = _patch_nominatim({})
         try:
             resp = client.get("/api/v1/geocoding/reverse?latitude=0.0&longitude=0.0", headers=auth_headers)
             assert resp.status_code == 200
             data = resp.json()
-            assert data["formatted_address"] is None
+            assert data["formatted_address"] == "Standort: 0.0000, 0.0000"
+            assert data["precision"] == "coordinates"
             assert data["message"] is not None
         finally:
             patcher.stop()
 
 
 class TestReverseGeocodeProviderFailure:
-    def test_network_error_returns_200_with_null_address(self, client: TestClient, auth_headers: dict):
+    def test_network_error_returns_coordinate_fallback(self, client: TestClient, auth_headers: dict):
         with patch("app.services.reverse_geocoding.httpx.Client") as mock_cls:
             mock_cls.return_value.__enter__.return_value.get.side_effect = Exception("connection refused")
             resp = client.get("/api/v1/geocoding/reverse?latitude=52.5&longitude=13.4", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["formatted_address"] is None
+        assert data["formatted_address"] == "Standort: 52.5000, 13.4000"
+        assert data["precision"] == "coordinates"
         assert data["message"] is not None
         assert data["source"] == "nominatim"
 
-    def test_http_error_returns_200_with_null_address(self, client: TestClient, auth_headers: dict):
+    def test_http_error_returns_coordinate_fallback(self, client: TestClient, auth_headers: dict):
         with patch("app.services.reverse_geocoding.httpx.Client") as mock_cls:
             mock_cls.return_value.__enter__.return_value.get.side_effect = Exception("503 Service Unavailable")
             resp = client.get("/api/v1/geocoding/reverse?latitude=52.5&longitude=13.4", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["formatted_address"] is None
+        assert data["formatted_address"] == "Standort: 52.5000, 13.4000"
+        assert data["precision"] == "coordinates"
+
+
+class TestReverseGeocodePrecision:
+    def test_road_and_house_number_is_precise(self, client: TestClient, auth_headers: dict):
+        patcher = _patch_nominatim({"road": "Hauptstraße", "house_number": "12", "city": "Hamburg"})
+        try:
+            resp = client.get("/api/v1/geocoding/reverse?latitude=53.5&longitude=10.0", headers=auth_headers)
+            data = resp.json()
+            assert data["precision"] == "precise"
+        finally:
+            patcher.stop()
+
+    def test_city_only_is_approximate(self, client: TestClient, auth_headers: dict):
+        patcher = _patch_nominatim({"city": "Köln", "postcode": "50667"})
+        try:
+            resp = client.get("/api/v1/geocoding/reverse?latitude=50.9&longitude=6.9", headers=auth_headers)
+            data = resp.json()
+            assert data["precision"] == "approximate"
+            assert data["formatted_address"] == "50667 Köln"
+        finally:
+            patcher.stop()
+
+    def test_coordinate_fallback_formatted_address_uses_4_decimals(self, client: TestClient, auth_headers: dict):
+        patcher = _patch_nominatim({})
+        try:
+            resp = client.get("/api/v1/geocoding/reverse?latitude=48.1234&longitude=11.5678", headers=auth_headers)
+            data = resp.json()
+            assert data["formatted_address"] == "Standort: 48.1234, 11.5678"
+            assert data["precision"] == "coordinates"
+        finally:
+            patcher.stop()
+
+    def test_coordinate_fallback_message_set(self, client: TestClient, auth_headers: dict):
+        patcher = _patch_nominatim({})
+        try:
+            resp = client.get("/api/v1/geocoding/reverse?latitude=52.0&longitude=13.0", headers=auth_headers)
+            data = resp.json()
+            assert "Koordinaten" in data["message"]
+        finally:
+            patcher.stop()

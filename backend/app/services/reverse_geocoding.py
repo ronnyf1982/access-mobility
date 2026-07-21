@@ -22,10 +22,16 @@ _SOURCE = "nominatim"
 def reverse_geocode(latitude: float, longitude: float) -> ReverseGeocodeResponse:
     """Resolve coordinates to a human-readable address.
 
-    Returns a response with formatted_address=None and a message if the
-    external service is unreachable or returns no usable address data.
-    Never raises — callers always get a valid ReverseGeocodeResponse.
+    Always returns a usable value: precise address → approximate address →
+    coordinate string. Never raises — callers always get a valid response.
+
+    precision values:
+      "precise"     – road + house number
+      "approximate" – road without house number, or city/postcode only
+      "coordinates" – no address found; formatted_address is "Standort: lat, lon"
     """
+    coordinate_fallback = f"Standort: {latitude:.4f}, {longitude:.4f}"
+
     try:
         with httpx.Client(timeout=_TIMEOUT_S) as client:
             resp = client.get(
@@ -42,6 +48,8 @@ def reverse_geocode(latitude: float, longitude: float) -> ReverseGeocodeResponse
             data = resp.json()
     except Exception:
         return ReverseGeocodeResponse(
+            formatted_address=coordinate_fallback,
+            precision="coordinates",
             source=_SOURCE,
             message="Geocoding-Dienst nicht erreichbar.",
         )
@@ -73,7 +81,20 @@ def reverse_geocode(latitude: float, longitude: float) -> ReverseGeocodeResponse
     elif postcode:
         parts.append(postcode)
 
-    formatted = ", ".join(parts) if parts else None
+    if not parts:
+        return ReverseGeocodeResponse(
+            formatted_address=coordinate_fallback,
+            street=road,
+            house_number=None,
+            postal_code=postcode,
+            city=city,
+            precision="coordinates",
+            source=_SOURCE,
+            message="Keine genaue Adresse gefunden. Koordinaten werden als Abholort verwendet.",
+        )
+
+    precision = "precise" if (road and house_number) else "approximate"
+    formatted = ", ".join(parts)
 
     return ReverseGeocodeResponse(
         formatted_address=formatted,
@@ -81,6 +102,7 @@ def reverse_geocode(latitude: float, longitude: float) -> ReverseGeocodeResponse
         house_number=house_number,
         postal_code=postcode,
         city=city,
+        precision=precision,
         source=_SOURCE,
-        message=None if formatted else "Adresse konnte nicht automatisch ermittelt werden.",
+        message=None,
     )

@@ -658,6 +658,7 @@ export interface ReverseGeocodeResponse {
   house_number: string | null
   postal_code: string | null
   city: string | null
+  precision: string
   source: string
   message: string | null
 }
