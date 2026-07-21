@@ -418,19 +418,21 @@
                   Noch kein Statusereignis gesetzt.
                 </div>
 
-                <!-- Statusbuttons -->
-                <div class="ride-status-btns" role="group" :aria-label="`Statuswechsel für Fahrt vom ${req.pickup_date ?? ''}`">
+                <!-- Nächster Statusbutton -->
+                <div class="ride-status-btns" role="group" :aria-label="`Nächster Statusschritt für diese Fahrt`">
                   <button
-                    v-for="action in STATUS_ACTIONS"
-                    :key="action.status"
-                    class="ride-status-btn"
+                    v-if="nextActionFor(req.id)"
+                    class="ride-status-btn ride-status-btn--next"
                     :disabled="statusActionLoading[req.id]"
-                    :title="action.label"
-                    @click="setStatus(req.id, action.status)"
+                    @click="setStatus(req.id, nextActionFor(req.id)!.status)"
                   >
-                    <i :class="['pi', action.icon]" aria-hidden="true"></i>
-                    {{ action.label }}
+                    <i :class="['pi', nextActionFor(req.id)!.icon]" aria-hidden="true"></i>
+                    {{ nextActionFor(req.id)!.label }}
                   </button>
+                  <div v-else class="ride-status-done">
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    Fahrt abgeschlossen
+                  </div>
                 </div>
 
                 <!-- Problem melden mit Notiz -->
@@ -637,6 +639,20 @@ const STATUS_ACTIONS: Array<{ status: RideStatusEventType; label: string; icon: 
 function lastEventFor(requestId: string): RideStatusEvent | undefined {
   const events = statusEventsMap.value[requestId]
   return events && events.length > 0 ? events[events.length - 1] : undefined
+}
+
+function nextActionFor(requestId: string): typeof STATUS_ACTIONS[0] | null {
+  const events = statusEventsMap.value[requestId]
+  const flowStatuses = STATUS_ACTIONS.map(a => a.status)
+  let lastMainIdx = -1
+  if (events && events.length > 0) {
+    for (let i = events.length - 1; i >= 0; i--) {
+      const idx = flowStatuses.indexOf(events[i].status)
+      if (idx !== -1) { lastMainIdx = idx; break }
+    }
+  }
+  if (lastMainIdx === STATUS_ACTIONS.length - 1) return null
+  return STATUS_ACTIONS[lastMainIdx + 1]
 }
 
 async function loadStatusEvents(requestId: string) {
@@ -1321,6 +1337,30 @@ function extractError(err: unknown): string {
 .ride-status-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.ride-status-btn--next {
+  background: var(--am-accent-bg, rgba(99,102,241,0.1));
+  border-color: var(--am-accent);
+  color: var(--am-accent);
+  font-size: 0.9rem;
+  padding: 10px 18px;
+  min-height: 42px;
+}
+
+.ride-status-btn--next:hover:not(:disabled) {
+  background: var(--am-accent);
+  color: var(--am-text-on-accent);
+}
+
+.ride-status-done {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--am-success, #16a34a);
+  font-weight: 600;
+  padding: 4px 0;
 }
 
 .ride-status-btn--issue {

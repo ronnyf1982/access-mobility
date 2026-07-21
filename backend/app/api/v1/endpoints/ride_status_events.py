@@ -50,10 +50,10 @@ def create_status_event(
             detail="Diese Fahrt ist Ihnen nicht zugewiesen.",
         )
 
-    if tr.status not in (TransportRequestStatus.assigned, TransportRequestStatus.completed, TransportRequestStatus.cancelled):
+    if tr.status != TransportRequestStatus.assigned:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Statusereignisse können nur für zugewiesene Fahrten gesetzt werden.",
+            detail="Statusereignisse können nur für aktiv zugewiesene Fahrten gesetzt werden.",
         )
 
     event = crud_ride_status_event.create_event(

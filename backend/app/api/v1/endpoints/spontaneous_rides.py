@@ -8,6 +8,7 @@ from app.api.deps import get_current_user, get_db
 from app.crud import crud_driver_shift
 from app.models.driver_profile import DriverProfile
 from app.models.driver_shift import DriverShift, ShiftStatus
+from app.models.ride_status_event import RideStatusEvent, RideStatusEventType
 from app.models.transport_request import TransportRequest, TransportRequestStatus
 from app.models.trusted_relationship import TrustedRelationship, TrustStatus
 from app.models.user import User, UserRole
@@ -188,6 +189,16 @@ def book_spontaneous_ride(
 
 # ── Sprint 12D: Live-Tracking ─────────────────────────────────────────────────
 
+_RIDE_EVENT_LABELS: dict[RideStatusEventType, str] = {
+    RideStatusEventType.driver_on_way:       "Fahrer ist unterwegs",
+    RideStatusEventType.driver_arrived:      "Fahrer ist angekommen",
+    RideStatusEventType.passenger_picked_up: "Fahrgast aufgenommen",
+    RideStatusEventType.ride_started:        "Fahrt gestartet",
+    RideStatusEventType.ride_completed:      "Fahrt abgeschlossen",
+    RideStatusEventType.ride_cancelled:      "Fahrt storniert",
+    RideStatusEventType.issue_reported:      "Problem gemeldet",
+}
+
 _TRACKING_STATUS_LABELS: dict[TransportRequestStatus, str] = {
     TransportRequestStatus.spontaneous_requested: "Warte auf Fahrerannahme",
     TransportRequestStatus.assigned: "Fahrer angenommen — unterwegs zu Ihnen",
@@ -234,6 +245,16 @@ def get_spontaneous_ride_tracking(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
 
     label = _TRACKING_STATUS_LABELS.get(tr.status, tr.status.value)
+
+    # Aktuellstes Statusereignis für detaillierteres Label
+    latest_event: RideStatusEvent | None = (
+        db.query(RideStatusEvent)
+        .filter(RideStatusEvent.transport_request_id == transport_request_id)
+        .order_by(RideStatusEvent.created_at.desc())
+        .first()
+    )
+    if latest_event:
+        label = _RIDE_EVENT_LABELS.get(latest_event.status, label)
 
     # Wenn Fahrt nicht angenommen: can_track=False, kein Fahrerstandort
     if tr.status != TransportRequestStatus.assigned or not tr.assigned_driver_profile_id:
