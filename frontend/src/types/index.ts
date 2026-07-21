@@ -650,6 +650,18 @@ export interface SpontaneousRideTracking {
   ride_status_label: string
 }
 
+// ─── Geocoding ───────────────────────────────────────────────────────────────
+
+export interface ReverseGeocodeResponse {
+  formatted_address: string | null
+  street: string | null
+  house_number: string | null
+  postal_code: string | null
+  city: string | null
+  source: string
+  message: string | null
+}
+
 // ─── Transporttypen ──────────────────────────────────────────────────────────
 
 export interface TransportType {

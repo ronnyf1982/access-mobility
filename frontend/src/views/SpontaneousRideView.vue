@@ -50,20 +50,36 @@
         <label for="pickup-address" class="sr-view__label">
           Abholadresse <span class="sr-view__required" aria-hidden="true">*</span>
         </label>
-        <input
-          id="pickup-address"
-          v-model="pickupAddress"
-          class="sr-view__input"
-          type="text"
-          placeholder="Straße, Hausnummer, PLZ Ort"
-          maxlength="200"
-          aria-describedby="pickup-address-hint"
-        />
+        <div class="sr-view__input-wrapper">
+          <input
+            id="pickup-address"
+            v-model="pickupAddress"
+            class="sr-view__input"
+            :class="{ 'sr-view__input--loading': geocodingStatus === 'loading' }"
+            type="text"
+            :placeholder="geocodingStatus === 'loading' ? 'Adresse wird aus Standort ermittelt …' : 'Straße, Hausnummer, PLZ Ort'"
+            maxlength="200"
+            :disabled="geocodingStatus === 'loading'"
+            aria-describedby="pickup-address-hint"
+          />
+          <span v-if="geocodingStatus === 'loading'" class="pi pi-spin pi-spinner sr-view__input-spinner" aria-hidden="true"></span>
+        </div>
         <small id="pickup-address-hint" class="sr-view__hint">
-          Der Standort wird für die Karte verwendet. Die Adresse hilft dem Fahrer beim Abholen.
+          Wir ermitteln die Adresse aus Ihrem Standort. Bitte prüfen Sie die Angabe vor der Anfrage.
+          <em class="sr-view__privacy-note">Ihr Standort wird nur für diese Fahrtanfrage verwendet.</em>
         </small>
       </div>
-      <div v-if="addressWarning" class="sr-view__warning" role="status">
+
+      <!-- Geocoding-Status -->
+      <div v-if="geocodingStatus === 'success' && pickupAddress" class="sr-view__geocode-success" role="status">
+        <span class="pi pi-check-circle" aria-hidden="true"></span>
+        <span>Adresse automatisch ermittelt. Bitte prüfen.</span>
+      </div>
+      <div v-else-if="geocodingStatus === 'error'" class="sr-view__warning" role="status">
+        <span class="pi pi-exclamation-circle" aria-hidden="true"></span>
+        <span>Adresse konnte nicht automatisch ermittelt werden. Bitte geben Sie die Abholadresse ein.</span>
+      </div>
+      <div v-else-if="addressWarning" class="sr-view__warning" role="status">
         <span class="pi pi-exclamation-circle" aria-hidden="true"></span>
         <span>Bitte Abholadresse ergänzen.</span>
       </div>
@@ -115,7 +131,7 @@
             </dl>
             <button
               class="sr-view__btn sr-view__btn--primary"
-              :disabled="!!bookingLoading[m.vehicle_id] || !pickupAddress.trim()"
+              :disabled="!!bookingLoading[m.vehicle_id] || !pickupAddress.trim() || geocodingStatus === 'loading'"
               @click="bookRide(m)"
             >
               <span v-if="bookingLoading[m.vehicle_id]" class="pi pi-spin pi-spinner" aria-hidden="true"></span>
@@ -249,11 +265,13 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SpontaneousRideMap from '@/components/SpontaneousRideMap.vue'
 import { findSpontaneousMatches, bookSpontaneousRide, getTrackingStatus } from '@/api/spontaneous'
+import { reverseGeocode } from '@/api/geocoding'
 import { getTransportRequests } from '@/api/transportRequests'
 import type { SpontaneousRideBookResponse, SpontaneousRideMatchResult, SpontaneousRideTracking } from '@/types'
 import { VEHICLE_TYPE_LABELS } from '@/types'
 
 type Phase = 'idle' | 'locating' | 'geo-error' | 'searching' | 'results' | 'booked'
+type GeocodingStatus = 'idle' | 'loading' | 'success' | 'error'
 
 const TRACKING_POLL_INTERVAL_MS = 15_000
 const TERMINAL_STATUSES = new Set(['driver_declined', 'completed', 'cancelled'])
@@ -271,8 +289,10 @@ const bookingError = ref<string | null>(null)
 const bookingResult = ref<SpontaneousRideBookResponse | null>(null)
 const activeRequestId = ref<string | null>(null)
 
+const geocodingStatus = ref<GeocodingStatus>('idle')
+
 const addressWarning = computed<boolean>(
-  () => phase.value === 'results' && matches.value.length > 0 && !pickupAddress.value.trim(),
+  () => phase.value === 'results' && matches.value.length > 0 && !pickupAddress.value.trim() && geocodingStatus.value !== 'loading',
 )
 
 // Tracking state
@@ -292,6 +312,7 @@ async function restoreActiveSpontaneousRide(): Promise<void> {
     pickupLat.value = active.pickup_latitude ?? null
     pickupLon.value = active.pickup_longitude ?? null
     pickupAddress.value = active.pickup_address ?? ''
+    geocodingStatus.value = active.pickup_address ? 'success' : 'idle'
     phase.value = 'booked'
   } catch {
     // Silently ignore — user sees idle state on restore failure
@@ -299,6 +320,23 @@ async function restoreActiveSpontaneousRide(): Promise<void> {
 }
 
 onMounted(() => restoreActiveSpontaneousRide())
+
+// ── Reverse Geocoding ─────────────────────────────────────────────────────────
+
+async function geocodePickupLocation(lat: number, lon: number): Promise<void> {
+  geocodingStatus.value = 'loading'
+  try {
+    const result = await reverseGeocode(lat, lon)
+    if (result.formatted_address) {
+      pickupAddress.value = result.formatted_address
+      geocodingStatus.value = 'success'
+    } else {
+      geocodingStatus.value = 'error'
+    }
+  } catch {
+    geocodingStatus.value = 'error'
+  }
+}
 
 // ── Tracking-Polling ──────────────────────────────────────────────────────────
 
@@ -392,6 +430,7 @@ function reset(): void {
   pickupLat.value = null
   pickupLon.value = null
   pickupAddress.value = ''
+  geocodingStatus.value = 'idle'
   matches.value = []
   geoErrorMessage.value = ''
   searchError.value = ''
@@ -453,6 +492,8 @@ function requestLocation(): void {
     (pos) => {
       pickupLat.value = pos.coords.latitude
       pickupLon.value = pos.coords.longitude
+      // Geocoding und Fahrzeugsuche parallel starten
+      geocodePickupLocation(pos.coords.latitude, pos.coords.longitude)
       searchMatches(pos.coords.latitude, pos.coords.longitude)
     },
     (err) => {
@@ -778,6 +819,29 @@ function requestLocation(): void {
   box-sizing: border-box;
 }
 
+.sr-view__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sr-view__input-wrapper .sr-view__input {
+  flex: 1;
+  padding-right: 2rem;
+}
+
+.sr-view__input-spinner {
+  position: absolute;
+  right: 0.6rem;
+  color: var(--p-primary-color, #3b82f6);
+  font-size: 0.9rem;
+}
+
+.sr-view__input--loading {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .sr-view__input::placeholder {
   color: rgba(255, 255, 255, 0.35);
 }
@@ -791,6 +855,27 @@ function requestLocation(): void {
   font-size: 0.78rem;
   color: var(--p-text-muted-color, #94a3b8);
   line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sr-view__privacy-note {
+  font-style: normal;
+  opacity: 0.75;
+}
+
+.sr-view__geocode-success {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  color: #86efac;
+  font-size: 0.84rem;
 }
 
 .sr-view__active-hint {
