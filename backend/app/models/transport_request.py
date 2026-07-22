@@ -84,6 +84,10 @@ class TransportRequest(Base):
     assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     assignment_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Sprint 12K: Auto-Rematch
+    rematch_group_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    rematch_attempt: Mapped[int] = mapped_column(default=0, nullable=False, server_default="0")
+
     # Zeitstempel
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

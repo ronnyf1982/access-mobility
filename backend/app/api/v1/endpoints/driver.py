@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.crud import crud_driver_shift, crud_passenger_contact
+from app.services import spontaneous_matching as _sm
 from app.models.driver_shift import DriverShift, ShiftStatus
 from app.models.mobility_profile import MobilityProfile
 from app.models.passenger_contact import PassengerContact
@@ -359,7 +360,9 @@ def decline_spontaneous_ride_request(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Diese Anfrage gehört nicht zu Ihrem Profil.")
     if req.status != TransportRequestStatus.spontaneous_requested:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Anfrage ist nicht mehr ausstehend.")
-    req.status = TransportRequestStatus.driver_declined
+
+    # Sprint 12K: Auto-Rematch — Ersatzfahrer suchen, alten TR auf driver_declined setzen
+    _sm.do_rematch(db, req)
     db.commit()
     db.refresh(req)
     return _build_spontaneous_request_item(req, db)

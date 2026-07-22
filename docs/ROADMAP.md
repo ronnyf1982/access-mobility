@@ -329,6 +329,19 @@ Nach Fahrerannahme sieht der Fahrgast den Fahrer auf der Karte. Kein WebSocket, 
 - Keine Zahlungs-/Abrechnungslogik
 - Vertrauensperson-Tracking folgt Sprint 12E
 
+## Sprint 12K — Automatische Weiterleitung nach Ablehnung oder Timeout ✅
+
+Wenn ein Fahrer ablehnt oder die 2-Minuten-Wartezeit abläuft, sucht das System automatisch den nächsten freien Fahrer.
+
+- **`rematch_group_id` + `rematch_attempt`** auf `TransportRequest` — verbinden alle Versuche einer Rematch-Kette, Alembic-Migration `e2f3a4b5c6d7`
+- **`do_rematch()`** in `spontaneous_matching.py`: setzt alten TR auf `driver_declined`, sucht Ersatzfahrer (alle bisherigen Fahrer der Gruppe ausgeschlossen), erstellt neuen TR mit `rematch_attempt+1`; max. 3 Versuche
+- **Tracking-Response** liefert `next_request_id` (nächste TR-ID bei Rematch) und `request_expires_at` (Buchungszeit + 120s)
+- **`POST /{id}/timeout`**: Frontend ruft diesen Endpoint auf wenn `request_expires_at` in der Vergangenheit — löst Rematch aus; nur Fahrgast der Fahrt, nur bei `spontaneous_requested`-Status
+- **Decline-Endpoint** ruft `do_rematch()` statt direkten Status-Set
+- **Fahrgast-App**: blaues Rematch-Banner; kein UI-Reset; `driver_declined`-Fehler nur noch bei endgültiger Ablehnung; Polling wechselt `activeRequestId` bei Rematch automatisch
+- **Manuelle Stornierung** → kein Rematch (unveränderte Logik aus 12J)
+- **14 Tests**, alle grün (352 gesamt); TypeScript ✅; Build ✅; Alembic ✅
+
 ## Sprint 12E — Vertrauenspersonen-View & echter Notification-Dispatch
 _geplant_
 
@@ -378,7 +391,7 @@ KI-gestützte Routenoptimierung für Disponenten.
 |---|---|---|
 | **Angefragte/geplante Fahrt** | Fahrgast oder Org stellt Anfrage mit Vorlaufzeit; Disponent weist Fahrzeug + Fahrer zu | ✅ Sprint 6–12A |
 | **Linienfahrt** | Wiederkehrende oder fest geplante Fahrten nach Fahrplan/Route | geplant Sprint 15+ |
-| **Spontane Fahrt** | Sofortfahrt-Modus (Uber-artig): Fahrgast bucht jetzt, GPS-Standort als Abholort, nächstes freies Fahrzeug | geplant Sprint 12B–12D |
+| **Spontane Fahrt** | Sofortfahrt-Modus (Uber-artig): Fahrgast bucht jetzt, GPS-Standort als Abholort, nächstes freies Fahrzeug, Auto-Rematch bei Ablehnung/Timeout | ✅ Sprint 12B–12K |
 
 ## Bewusst außerhalb des MVP
 

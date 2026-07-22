@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-21 · Sprint 12J abgeschlossen · Fahrgast-Stornierung spontaner Fahrten implementiert
+Letzte Aktualisierung: 2026-07-22 · Sprint 12K abgeschlossen · Automatische Weiterleitung nach Ablehnung/Timeout implementiert
 
 ---
 
@@ -132,6 +132,7 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint 12H** | **Fahrgast-Fahrtverlauf: Aktive + vergangene Fahrten, letzter Statuslabel, Adressen** | ✅ abgeschlossen |
 | **Sprint 12I** | **Fahrer-Verfügbarkeit: Kein Parallel-Accept, Matching exkludiert aktive Fahrer** | ✅ abgeschlossen |
 | **Sprint 12J** | **Fahrgast-Stornierung spontaner Fahrten, klarer Status nach Fahrerablehnung** | ✅ abgeschlossen |
+| **Sprint 12K** | **Auto-Rematch: automatische Weiterleitung nach Ablehnung oder Timeout** | ✅ abgeschlossen |
 
 ---
 
@@ -139,9 +140,6 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 
 | Sprint | Schwerpunkt | Fahrttyp |
 |---|---|---|
-| Sprint 12B | Spontane Fahrten: Matching- und Verfügbarkeitsgrundlage | Spontan |
-| Sprint 12C | Spontane Fahrten: Fahrgast-UI und Standortfreigabe | Spontan |
-| Sprint 12D | Spontane Fahrten: Fahrerannahme und Live-Zufahrt | Spontan |
 | Sprint 12E | Vertrauenspersonen-View, echter Notification-Dispatch | Alle |
 | Sprint 13 | Online-KI-Berater / ChatGPT-Anbindung (Backend-only) | Alle |
 | Sprint 14 | Fahrt per Sprache anfragen | Geplant |

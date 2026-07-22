@@ -7,6 +7,7 @@ straight-line distance with a conservative ETA estimate.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from math import atan2, cos, radians, sin, sqrt
 
 from sqlalchemy.orm import Session
@@ -17,6 +18,8 @@ from app.models.mobility_profile import MobilityProfile, WheelchairType
 from app.models.transport_request import TransportRequest, TransportRequestStatus
 from app.models.vehicle import Vehicle
 from app.schemas.spontaneous_ride import SpontaneousRideMatchResult
+
+_MAX_REMATCH_ATTEMPT = 3
 
 _BLOCKING_STATUSES = {TransportRequestStatus.assigned, TransportRequestStatus.spontaneous_requested}
 
@@ -100,6 +103,7 @@ def find_matches(
     pickup_lat: float,
     pickup_lon: float,
     passenger_user_id: uuid.UUID,
+    excluded_driver_profile_ids: set[uuid.UUID] | None = None,
 ) -> list[SpontaneousRideMatchResult]:
     # Alle blocked vehicle_ids (aktive Fahrtanfragen)
     blocked_vehicle_ids: set[uuid.UUID] = {
@@ -123,6 +127,10 @@ def find_matches(
         )
         .all()
     }
+
+    # Zusätzlich ausgeschlossene Fahrer (z. B. bereits abgelehnte bei Rematch)
+    if excluded_driver_profile_ids:
+        blocked_driver_profile_ids |= excluded_driver_profile_ids
 
     # Mobilitätsprofil des Fahrgasts
     profile: MobilityProfile | None = (
@@ -186,3 +194,82 @@ def find_matches(
 
     results.sort(key=lambda r: r.distance_km)
     return results
+
+
+def find_rematch_match(
+    db: Session,
+    original_tr: TransportRequest,
+) -> SpontaneousRideMatchResult | None:
+    """Find a replacement driver for a declined/timed-out spontaneous ride.
+
+    Excludes all driver profiles that have already been tried in this rematch group.
+    """
+    excluded: set[uuid.UUID] = set()
+    if original_tr.rematch_group_id:
+        excluded = {
+            row[0]
+            for row in db.query(TransportRequest.assigned_driver_profile_id)
+            .filter(
+                TransportRequest.rematch_group_id == original_tr.rematch_group_id,
+                TransportRequest.assigned_driver_profile_id.isnot(None),
+            )
+            .all()
+        }
+    elif original_tr.assigned_driver_profile_id:
+        excluded = {original_tr.assigned_driver_profile_id}
+
+    if original_tr.pickup_latitude is None or original_tr.pickup_longitude is None:
+        return None
+
+    results = find_matches(
+        db=db,
+        pickup_lat=original_tr.pickup_latitude,
+        pickup_lon=original_tr.pickup_longitude,
+        passenger_user_id=original_tr.passenger_user_id,
+        excluded_driver_profile_ids=excluded,
+    )
+    return results[0] if results else None
+
+
+def do_rematch(db: Session, original_tr: TransportRequest) -> TransportRequest | None:
+    """Setzt alten TR auf driver_declined und erstellt neuen TR für Ersatzfahrer (falls verfügbar).
+
+    Respektiert _MAX_REMATCH_ATTEMPT. Kein DB-Commit — Aufrufer muss committen.
+    """
+    if original_tr.rematch_group_id is None or original_tr.rematch_attempt >= _MAX_REMATCH_ATTEMPT:
+        original_tr.status = TransportRequestStatus.driver_declined
+        db.flush()
+        return None
+
+    match = find_rematch_match(db, original_tr)
+    original_tr.status = TransportRequestStatus.driver_declined
+    db.flush()
+
+    if not match:
+        return None
+
+    new_profile = db.query(DriverProfile).filter(
+        DriverProfile.user_id == match.driver_id,
+        DriverProfile.is_active.is_(True),
+    ).first()
+    if not new_profile:
+        return None
+
+    new_tr = TransportRequest(
+        requester_user_id=original_tr.requester_user_id,
+        passenger_user_id=original_tr.passenger_user_id,
+        status=TransportRequestStatus.spontaneous_requested,
+        is_spontaneous=True,
+        pickup_latitude=original_tr.pickup_latitude,
+        pickup_longitude=original_tr.pickup_longitude,
+        pickup_address=original_tr.pickup_address,
+        destination_address=original_tr.destination_address,
+        assigned_driver_profile_id=new_profile.id,
+        assigned_vehicle_id=match.vehicle_id,
+        assigned_at=datetime.now(timezone.utc),
+        rematch_group_id=original_tr.rematch_group_id,
+        rematch_attempt=original_tr.rematch_attempt + 1,
+    )
+    db.add(new_tr)
+    db.flush()
+    return new_tr

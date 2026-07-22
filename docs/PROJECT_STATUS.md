@@ -973,6 +973,47 @@ Fahrer mit aktiver spontaner Fahrt darf keine weitere Anfrage annehmen. Matching
 
 ---
 
+## Sprint 12K — Automatische Weiterleitung nach Ablehnung oder Timeout ✅
+
+**Abgeschlossen:** 2026-07-22
+
+### Ziel
+Wenn ein Fahrer eine spontane Anfrage ablehnt oder die 2-Minuten-Wartezeit abläuft, sucht das System automatisch den nächsten verfügbaren Fahrer. Fahrgast sieht „Wir suchen ein anderes Fahrzeug …" statt einer Fehlermeldung. Manuelle Stornierung durch den Fahrgast löst keinen Rematch aus.
+
+### Backend
+- [x] `backend/alembic/versions/20260722_0016-e2f3a4b5c6d7_sprint12k_rematch_fields.py` — Migration: `rematch_group_id` (UUID, nullable, indiziert) + `rematch_attempt` (INT default 0) zu `transport_requests`
+- [x] `backend/app/models/transport_request.py` — `rematch_group_id: Mapped[UUID | None]` + `rematch_attempt: Mapped[int]`
+- [x] `backend/app/schemas/spontaneous_ride.py` — `SpontaneousRideTracking` um `next_request_id: UUID | None` + `request_expires_at: datetime | None` erweitert
+- [x] `backend/app/services/spontaneous_matching.py` — `find_matches()` akzeptiert `excluded_driver_profile_ids`; neue Funktionen `find_rematch_match()` + `do_rematch()` (max. 3 Versuche, schließt alle Fahrer der Rematch-Gruppe aus)
+- [x] `backend/app/api/v1/endpoints/spontaneous_rides.py` — Buchung setzt `rematch_group_id=uuid4()` + `rematch_attempt=0`; Tracking gibt `next_request_id` + `request_expires_at` zurück; neuer Endpoint `POST /{id}/timeout`
+- [x] `backend/app/api/v1/endpoints/driver.py` — Decline-Endpoint ruft `do_rematch()` statt direkten Status-Set
+- [x] `backend/tests/api/test_sprint12k_auto_rematch.py` — 14 Tests: Rematch-Felder bei Buchung, expires_at im Tracking, next_request_id-Kette, Fahrerwechsel, Gruppen-ID-Konsistenz, attempt-Inkrement, erschöpfter Rematch, Stornierung ohne Rematch, Timeout-409, Timeout-Rematch, Timeout-Response-Felder, falscher Fahrgast → 403/404, falscher Status → 409
+
+### Frontend
+- [x] `frontend/src/types/index.ts` — `SpontaneousRideTracking` um `next_request_id: string | null` + `request_expires_at: string | null` erweitert
+- [x] `frontend/src/api/spontaneous.ts` — neue Funktion `triggerSpontaneousRideTimeout()`
+- [x] `frontend/src/views/SpontaneousRideView.vue` — `pollTracking()` erkennt Timeout (ruft Timeout-Endpoint auf), bei Rematch (`driver_declined` + `next_request_id`) wechselt `activeRequestId` ohne Stopp; blaues Rematch-Banner `sr-view__rematch-info`; `driver_declined`-Fehler nur bei endgültiger Ablehnung (kein `next_request_id`); "Erneut suchen"-Button ebenso; `rematchMessage`-Ref + Reset in `reset()`
+
+### Checks
+- [x] `alembic upgrade head`: ✅ Migration `e2f3a4b5c6d7` angewendet
+- [x] `pytest` (352 passed, 0 failed, 9 skipped, 1 warning): ✅
+- [x] TypeScript-Check (`vue-tsc --noEmit`): ✅ keine Fehler
+- [x] Vite-Build (`npm run build`): ✅ erfolgreich
+
+### Schlüsselregeln
+- `rematch_group_id` verbindet alle TRs einer Rematch-Kette; erstellt bei Buchung, nie geändert
+- `rematch_attempt` zählt hoch (0 = erste Anfrage, 1 = erster Rematch, …); Stopp ab `>= 3`
+- Manuelle Stornierung des Fahrgastes löst keinen Rematch aus
+- Timeout-Endpoint: nur Fahrgast der Fahrt, nur `spontaneous_requested`, nur wenn `created_at + 120s` in der Vergangenheit
+- Frontend: kein UI-Reset bei Rematch — Fahrgast bleibt in gleicher View
+
+### Bewusst nicht umgesetzt (Sprint 12K)
+- Kein serverseitiger Timeout-Timer (Backend-Cron/Worker) — Frontend-getriggert durch `request_expires_at`-Prüfung im Poll
+- Kein WebSocket statt Polling
+- Keine Push-Notification bei Rematch
+
+---
+
 ## Sprint 12J — Fahrgast-Stornierung und klarer Status nach Fahrerablehnung ✅
 
 **Abgeschlossen:** 2026-07-21

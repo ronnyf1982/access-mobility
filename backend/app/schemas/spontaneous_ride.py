@@ -84,3 +84,6 @@ class SpontaneousRideTracking(BaseModel):
     estimated_arrival_minutes: int | None = None
     last_location_update: datetime | None = None
     ride_status_label: str
+    # Sprint 12K: Auto-Rematch
+    next_request_id: uuid.UUID | None = None
+    request_expires_at: datetime | None = None

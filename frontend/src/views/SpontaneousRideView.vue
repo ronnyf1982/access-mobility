@@ -246,10 +246,16 @@
         <p>Verbindung wird aufgebaut …</p>
       </div>
 
-      <!-- Fahrer abgelehnt -->
-      <div v-if="trackingData?.status === 'driver_declined'" class="sr-view__error" role="alert">
+      <!-- Sprint 12K: Rematch läuft -->
+      <div v-if="rematchMessage" class="sr-view__rematch-info" role="status" aria-live="polite">
+        <span class="pi pi-spin pi-spinner" aria-hidden="true"></span>
+        <span>{{ rematchMessage }}</span>
+      </div>
+
+      <!-- Fahrer abgelehnt, kein weiterer Rematch möglich -->
+      <div v-if="trackingData?.status === 'driver_declined' && !trackingData?.next_request_id" class="sr-view__error" role="alert">
         <span class="pi pi-times-circle" aria-hidden="true"></span>
-        <span>Der Fahrer hat die Anfrage leider abgelehnt.</span>
+        <span>Leider kein Fahrzeug verfügbar. Bitte versuchen Sie es später erneut.</span>
       </div>
 
       <!-- Tracking-Detailkarte (Text) -->
@@ -292,9 +298,9 @@
         <span>Statusabruf unterbrochen. Nächster Versuch in Kürze.</span>
       </div>
 
-      <!-- Terminal: abgelehnt oder storniert → erneut suchen -->
+      <!-- Terminal: abgelehnt (kein Rematch) oder storniert → erneut suchen -->
       <button
-        v-if="trackingData?.status === 'driver_declined' || trackingData?.status === 'cancelled'"
+        v-if="(trackingData?.status === 'driver_declined' && !trackingData?.next_request_id) || trackingData?.status === 'cancelled'"
         class="sr-view__btn sr-view__btn--primary"
         @click="reset"
       >
@@ -337,7 +343,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SpontaneousRideMap from '@/components/SpontaneousRideMap.vue'
-import { findSpontaneousMatches, bookSpontaneousRide, getTrackingStatus, cancelSpontaneousRide } from '@/api/spontaneous'
+import { findSpontaneousMatches, bookSpontaneousRide, getTrackingStatus, cancelSpontaneousRide, triggerSpontaneousRideTimeout } from '@/api/spontaneous'
 import { reverseGeocode } from '@/api/geocoding'
 import { getTransportRequests } from '@/api/transportRequests'
 import { listAddresses } from '@/api/passengerSavedAddresses'
@@ -379,6 +385,9 @@ const trackingData = ref<SpontaneousRideTracking | null>(null)
 const trackingLoading = ref(false)
 const trackingError = ref(false)
 let trackingInterval: ReturnType<typeof setInterval> | null = null
+
+// Sprint 12K: Rematch
+const rematchMessage = ref<string | null>(null)
 
 // Stornierung
 const cancelLoading = ref(false)
@@ -481,8 +490,25 @@ async function pollTracking(): Promise<void> {
   trackingLoading.value = true
   trackingError.value = false
   try {
-    trackingData.value = await getTrackingStatus(requestId)
-    if (TERMINAL_STATUSES.has(trackingData.value.status)) {
+    let data = await getTrackingStatus(requestId)
+
+    // Sprint 12K: Timeout erkannt → Timeout-Endpoint aufrufen
+    if (data.status === 'spontaneous_requested' && data.request_expires_at) {
+      if (new Date(data.request_expires_at) < new Date()) {
+        data = await triggerSpontaneousRideTimeout(requestId)
+      }
+    }
+
+    trackingData.value = data
+
+    // Sprint 12K: Rematch — nächsten Fahrer anfragen
+    if (data.status === 'driver_declined' && data.next_request_id) {
+      rematchMessage.value = 'Wir suchen ein anderes Fahrzeug für Sie …'
+      activeRequestId.value = data.next_request_id
+      return
+    }
+
+    if (TERMINAL_STATUSES.has(data.status)) {
       stopTracking()
     }
   } catch {
@@ -570,6 +596,7 @@ function reset(): void {
   trackingLoading.value = false
   cancelLoading.value = false
   cancelError.value = null
+  rematchMessage.value = null
 }
 
 async function cancelRide(): Promise<void> {
@@ -1064,6 +1091,18 @@ function requestLocation(): void {
   margin-bottom: 0.75rem;
   color: #c7d2fe;
   font-size: 0.84rem;
+}
+
+.sr-view__rematch-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: #93c5fd;
 }
 
 .sr-view__active-hint {

@@ -2,7 +2,7 @@
 
 Übergeordnete Quelle: `docs/SOURCE_OF_TRUTH.md`
 Langfristige Vision: `docs/Product/PRODUCT_VISION.md`
-Letzte Aktualisierung: 2026-07-16
+Letzte Aktualisierung: 2026-07-22
 
 ---
 
@@ -196,7 +196,7 @@ Fahrgast oder Organisation stellt Anfrage mit Vorlaufzeit. Disponent weist Fahrz
 #### Linienfahrt (Sprint 15)
 Wiederkehrende oder fest geplante Fahrten mit Fahrplan und Reihenfolge. Disponenten konfigurieren Touren. Optimierte Fahrgastliste für Fahrer.
 
-#### Spontane Fahrt / Sofortfahrt (Sprint 12B–12D, Hotfix 12F-A, Sprint 12I, Sprint 12J)
+#### Spontane Fahrt / Sofortfahrt (Sprint 12B–12D, Hotfix 12F-A, Sprint 12I, Sprint 12J, Sprint 12K)
 Fahrgast bucht jetzt sofort. GPS-Standort als Abholort (Reverse-Geocoding). System zeigt passende freie Fahrzeuge in der Nähe. Fahrer nimmt an oder lehnt ab. Kein Disponent erforderlich.
 
 **Adressauswahl (Sprint 12F + Hotfix 12F-A):**
@@ -227,6 +227,15 @@ Fahrgast bucht jetzt sofort. GPS-Standort als Abholort (Reverse-Geocoding). Syst
 - Frontend: "Fahrt stornieren"-Button in aktiver Tracking-Ansicht; nach Storno zeigt Polling `cancelled`-Status + "Erneut suchen"-Button
 - Fahrer: stornierte Fahrt verschwindet beim nächsten Dashboard-Poll (10s); Fahrer wird sofort wieder verfügbar
 - Nach Fahrerablehnung: klarer Status "Vom Fahrer abgelehnt" + "Erneut suchen"-Button
+
+**Automatische Weiterleitung / Auto-Rematch (Sprint 12K):**
+- Bei Fahrerablehnung sucht das System automatisch den nächsten verfügbaren Fahrer (max. 3 Versuche)
+- Fahrgast sieht blaues Banner „Wir suchen ein anderes Fahrzeug …" statt Fehlermeldung
+- Kein UI-Reset: Fahrgast bleibt in der Tracking-Ansicht während der Weitersuche
+- Alle Versuche einer Rematch-Kette teilen dieselbe `rematch_group_id` — ausgeschlossene Fahrer werden nicht erneut angefragt
+- Timeout-Erkennung: Tracking-Antwort enthält `request_expires_at` (2-Minuten-Grenze); Frontend ruft Timeout-Endpoint auf wenn Anfrage abgelaufen ist → Rematch wird ausgelöst
+- Endgültige Ablehnung (kein weiterer Fahrer verfügbar): klarer Fehlertext + "Erneut suchen"-Button
+- Manuelle Stornierung durch Fahrgast löst keinen Rematch aus
 
 **GPS-Datenschutz (Spontanfahrten):**
 - Standort nur mit ausdrücklicher Zustimmung

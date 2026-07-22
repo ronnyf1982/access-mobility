@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -23,6 +23,8 @@ from app.schemas.spontaneous_ride import (
 from app.services import spontaneous_matching
 
 router = APIRouter(prefix="/spontaneous-rides", tags=["spontaneous-rides"])
+
+_SPONTANEOUS_TIMEOUT_SECONDS = 120  # 2 Minuten bis Timeout-Rematch möglich
 
 _STAFF_ROLES = {
     UserRole.dispatcher,
@@ -199,6 +201,8 @@ def book_spontaneous_ride(
         assigned_driver_profile_id=driver_profile.id,
         assigned_vehicle_id=body.vehicle_id,
         assigned_at=now,
+        rematch_group_id=uuid.uuid4(),
+        rematch_attempt=0,
     )
     db.add(transport_request)
     db.commit()
@@ -259,6 +263,39 @@ def cancel_spontaneous_ride(
     tr.cancelled_at = datetime.now(timezone.utc)
     db.commit()
     return {"status": "cancelled"}
+
+
+# ── Sprint 12K: Timeout-Rematch ───────────────────────────────────────────────
+
+@router.post("/{transport_request_id}/timeout", response_model=SpontaneousRideTracking)
+def timeout_spontaneous_ride(
+    transport_request_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SpontaneousRideTracking:
+    """Fahrgast meldet Timeout: Anfrage ist abgelaufen, System sucht Ersatzfahrer."""
+    if current_user.role != UserRole.passenger:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Nur Fahrgäste können Timeout melden.")
+    tr = db.get(TransportRequest, transport_request_id)
+    if not tr or not tr.is_spontaneous:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spontane Fahrt nicht gefunden.")
+    if tr.passenger_user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
+    if tr.status != TransportRequestStatus.spontaneous_requested:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Anfrage ist nicht mehr ausstehend.")
+
+    expires_at = tr.created_at + timedelta(seconds=_SPONTANEOUS_TIMEOUT_SECONDS)
+    if datetime.now(timezone.utc) < expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Anfrage ist noch nicht abgelaufen.",
+        )
+
+    spontaneous_matching.do_rematch(db, tr)
+    db.commit()
+
+    # Tracking für den alten TR zurückgeben (inklusive next_request_id)
+    return get_spontaneous_ride_tracking(transport_request_id, current_user, db)
 
 
 # ── Sprint 12D: Live-Tracking ─────────────────────────────────────────────────
@@ -330,6 +367,25 @@ def get_spontaneous_ride_tracking(
     if latest_event:
         label = _RIDE_EVENT_LABELS.get(latest_event.status, label)
 
+    # Sprint 12K: next_request_id — Folge-Anfrage bei Rematch
+    next_request_id: uuid.UUID | None = None
+    if tr.status == TransportRequestStatus.driver_declined and tr.rematch_group_id is not None:
+        next_tr = (
+            db.query(TransportRequest)
+            .filter(
+                TransportRequest.rematch_group_id == tr.rematch_group_id,
+                TransportRequest.rematch_attempt == tr.rematch_attempt + 1,
+            )
+            .first()
+        )
+        if next_tr:
+            next_request_id = next_tr.id
+
+    # Sprint 12K: request_expires_at — wann Timeout möglich (nur für wartende Anfragen)
+    request_expires_at = None
+    if tr.status == TransportRequestStatus.spontaneous_requested:
+        request_expires_at = tr.created_at + timedelta(seconds=_SPONTANEOUS_TIMEOUT_SECONDS)
+
     # Wenn Fahrt nicht angenommen: can_track=False, kein Fahrerstandort
     if tr.status != TransportRequestStatus.assigned or not tr.assigned_driver_profile_id:
         return SpontaneousRideTracking(
@@ -341,6 +397,8 @@ def get_spontaneous_ride_tracking(
             pickup_address=tr.pickup_address,
             destination_address=tr.destination_address,
             ride_status_label=label,
+            next_request_id=next_request_id,
+            request_expires_at=request_expires_at,
         )
 
     driver_profile: DriverProfile | None = db.get(DriverProfile, tr.assigned_driver_profile_id)
@@ -393,4 +451,6 @@ def get_spontaneous_ride_tracking(
         estimated_arrival_minutes=eta,
         last_location_update=last_update,
         ride_status_label=label,
+        next_request_id=next_request_id,
+        request_expires_at=request_expires_at,
     )

@@ -251,6 +251,31 @@ Fragenkatalog: `frontend/src/data/mobilityAssistantQuestions.ts`
 
 ---
 
+### Spontane Fahrt — Buchung, Tracking & Auto-Rematch (Sprint 12B–12K)
+
+| Aspekt | Details |
+|---|---|
+| **Zweck** | Fahrgast bucht sofort ein verfügbares, passendes Fahrzeug in der Nähe ohne Vorlaufzeit |
+| **Strukturierte Felder** | `pickup_latitude/longitude`, `pickup_address`, `destination_address`, `rematch_group_id` (UUID), `rematch_attempt` (INT 0–3) |
+| **Visuelle Bedienung** | `SpontaneousRideView`: Phasen Idle → Locating → Results → Booked; Karte + Textliste; Tracking-Statusbanner; Rematch-Infobanner; "Fahrt stornieren"-Button |
+| **Sprach-/Assistenzmodus** | Hoch priorisiert für spätere Sprints: GPS-Standort diktieren, Zieladresse per Sprache, Fahrzeug vorlesen, Storno per Sprache |
+| **Offline möglich?** | ❌ (GPS-Abfrage, Matching und Buchung erfordern Backend) |
+| **Online-KI sinnvoll?** | ⚠️ (Zieladress-Interpretation per KI sinnvoll, Matching-Logik ist regelbasiert) |
+| **Bestätigung erforderlich?** | ✅ vor Buchung; Stornierung immer explizit |
+| **Datenschutz** | Standort nur nach ausdrücklichem Klick; kein Hintergrundtracking; kein Standortverlauf; Fahrer-GPS nur in `DriverShift.current_latitude/longitude` |
+
+**Implementierter Stand (Sprint 12K-Stand):**
+- Matching: Haversine-Luftlinie, ETA `max(3, int(km/30*60))`, Capability-Check, Verfügbarkeitscheck
+- Buchung: `POST /spontaneous-rides/book` setzt `rematch_group_id=uuid4()` + `rematch_attempt=0`
+- Tracking: `GET /{id}/tracking` liefert `can_track`, `next_request_id`, `request_expires_at`
+- Timeout-Endpoint: `POST /{id}/timeout` (Frontend-getriggert nach `created_at + 120s`)
+- Auto-Rematch: `do_rematch()` in `spontaneous_matching.py`; max. 3 Versuche; schließt alle Fahrer der Gruppe aus
+- Stornierung: `POST /{id}/cancel` — manuelle Stornierung löst keinen Rematch aus
+- Frontend: Rematch-Banner; Polling folgt `next_request_id`-Kette; endgültige Ablehnung zeigt Fehler + "Erneut suchen"
+- Fahrer: Verfügbarkeit (12I) + Ablehnung (12J/12K: ruft `do_rematch()` auf) + Statusfluss (11/12G)
+
+---
+
 ## Geplante Module (zukünftige Sprints)
 
 ### Fahrt per Sprache anfragen (Sprint 14)

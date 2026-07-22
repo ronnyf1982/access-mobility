@@ -679,6 +679,8 @@ export interface SpontaneousRideTracking {
   estimated_arrival_minutes: number | null
   last_location_update: string | null
   ride_status_label: string
+  next_request_id: string | null
+  request_expires_at: string | null
 }
 
 // ─── Geocoding ───────────────────────────────────────────────────────────────

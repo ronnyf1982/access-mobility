@@ -37,3 +37,10 @@ export async function getTrackingStatus(requestId: string): Promise<SpontaneousR
 export async function cancelSpontaneousRide(requestId: string): Promise<void> {
   await apiClient.post(`/spontaneous-rides/${requestId}/cancel`)
 }
+
+export async function triggerSpontaneousRideTimeout(requestId: string): Promise<SpontaneousRideTracking> {
+  const { data } = await apiClient.post<SpontaneousRideTracking>(
+    `/spontaneous-rides/${requestId}/timeout`,
+  )
+  return data
+}
