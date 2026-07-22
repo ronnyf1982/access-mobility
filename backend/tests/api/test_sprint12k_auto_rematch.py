@@ -5,6 +5,7 @@ Testet:
   2.  Tracking eines ausstehenden spontanen TR liefert request_expires_at.
   3.  Tracking eines frischen TR hat next_request_id=null.
   4.  Fahrer1-Ablehnung loest Rematch aus (neuer TR fuer Fahrer2).
+  4b. Fahrer B hat anderes, aber passendes Fahrzeug (AM-BUS-1 vs AM-VAN-1).
   5.  Neuer TR nach Rematch hat dieselbe rematch_group_id.
   6.  Neuer TR hat rematch_attempt=1 (inkrementiert).
   7.  Tracking des abgelehnten TR liefert next_request_id (neuer TR).
@@ -214,6 +215,33 @@ def test_driver1_decline_triggers_rematch(client: TestClient):
             if dp:
                 u = db.get(User, dp.user_id)
                 _state["ride_b_driver_email"] = u.email if u else None
+    finally:
+        db.close()
+
+
+def test_rematch_driver_b_has_different_compatible_vehicle(client: TestClient):
+    """Fahrer B hat ein anderes Fahrzeug als Fahrer A — aber trotzdem rollstuhltauglich."""
+    from app.db.session import SessionLocal
+    from app.models.transport_request import TransportRequest
+    from app.models.vehicle import Vehicle
+
+    db = SessionLocal()
+    try:
+        tr_a = db.get(TransportRequest, uuid.UUID(_state["ride_a_id"]))
+        tr_b = db.get(TransportRequest, uuid.UUID(_state["ride_b_id"]))
+        assert tr_a is not None and tr_b is not None
+
+        assert tr_a.assigned_vehicle_id != tr_b.assigned_vehicle_id, \
+            "Rematch muss anderes Fahrzeug verwenden als die abgelehnte Fahrt"
+
+        vehicle_b = db.get(Vehicle, tr_b.assigned_vehicle_id)
+        assert vehicle_b is not None
+        assert vehicle_b.wheelchair_space_count >= 1, \
+            f"Fahrzeug B ({vehicle_b.license_plate}) braucht Rollstuhlplatz"
+        assert vehicle_b.has_ramp or vehicle_b.has_lift, \
+            f"Fahrzeug B ({vehicle_b.license_plate}) braucht Rampe oder Lift"
+        assert vehicle_b.has_wheelchair_restraint, \
+            f"Fahrzeug B ({vehicle_b.license_plate}) braucht Rollstuhlsicherung"
     finally:
         db.close()
 

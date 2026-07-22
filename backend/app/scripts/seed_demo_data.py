@@ -410,6 +410,26 @@ def main() -> None:
             elif existing_dp and existing_dp.default_vehicle_id is not None:
                 print("  ok    DriverProfile driver@access.test — default_vehicle_id bereits gesetzt")
 
+        # ── Sprint 12K: Standardfahrzeug für driver2 → AM-BUS-1 ─────────────────
+        driver2_user_dv = created_users.get("driver2@access.test")
+        if driver2_user_dv and wb:
+            existing_dp2_dv = (
+                db.query(DriverProfile)
+                .filter(DriverProfile.user_id == driver2_user_dv.id)
+                .first()
+            )
+            if existing_dp2_dv and existing_dp2_dv.default_vehicle_id is None:
+                bus_vehicle_dv = (
+                    db.query(Vehicle)
+                    .filter(Vehicle.license_plate == "AM-BUS-1", Vehicle.is_active == True)  # noqa: E712
+                    .first()
+                )
+                if bus_vehicle_dv:
+                    existing_dp2_dv.default_vehicle_id = bus_vehicle_dv.id
+                    print(f"  upd   DriverProfile driver2@access.test — default_vehicle_id = AM-BUS-1")
+            elif existing_dp2_dv and existing_dp2_dv.default_vehicle_id is not None:
+                print("  ok    DriverProfile driver2@access.test — default_vehicle_id bereits gesetzt")
+
         # ── Transportanfragen (für passenger@access.test) ───────────────────
         if passenger_user:
             existing_requests = (
@@ -703,9 +723,9 @@ def main() -> None:
                         organization_id=wb.id,
                         display_name="Demo Fahrerin 2",
                         phone="+49 30 1234577",
-                        can_assist_wheelchair=False,
-                        can_secure_wheelchair=False,
-                        can_operate_lift=False,
+                        can_assist_wheelchair=True,
+                        can_secure_wheelchair=True,
+                        can_operate_lift=True,
                         has_first_aid_training=True,
                         has_passenger_transport_license=True,
                     )
@@ -714,6 +734,32 @@ def main() -> None:
                 print("  +drv  driver2@access.test -> WB Fahrdienste GmbH")
             else:
                 print("  skip  DriverProfile driver2@access.test (bereits vorhanden)")
+
+        # ── Sprint 12K: Backfill Rollstuhl-Qualifikationen für driver2 ──────────
+        if driver2_user and wb:
+            existing_dp2 = (
+                db.query(DriverProfile)
+                .filter(DriverProfile.user_id == driver2_user.id)
+                .first()
+            )
+            if existing_dp2:
+                _q_updated = False
+                if not existing_dp2.can_assist_wheelchair:
+                    existing_dp2.can_assist_wheelchair = True
+                    _q_updated = True
+                if not existing_dp2.can_secure_wheelchair:
+                    existing_dp2.can_secure_wheelchair = True
+                    _q_updated = True
+                if not existing_dp2.can_operate_lift:
+                    existing_dp2.can_operate_lift = True
+                    _q_updated = True
+                if not existing_dp2.has_wheelchair_restraint_training:
+                    existing_dp2.has_wheelchair_restraint_training = True
+                    _q_updated = True
+                if _q_updated:
+                    print("  upd   DriverProfile driver2@access.test — Rollstuhl-Qualifikationen gesetzt (Sprint 12K)")
+                else:
+                    print("  ok    DriverProfile driver2@access.test — Qualifikationen bereits korrekt")
 
         # ── Sprint 12B: Schichten mit GPS-Demo-Positionen ───────────────────────
         # driver@access.test + AM-VAN-1 → aktiv, passende Ausstattung, nahe Berlin-Mitte
@@ -785,6 +831,39 @@ def main() -> None:
                     print("  +shft driver2@access.test + AM-CAR-1 (pausiert, lat=52.510)")
                 else:
                     print("  skip  DriverShift driver2@access.test/AM-CAR-1 (bereits vorhanden)")
+
+        # ── Sprint 12K: Aktive Schicht für driver2 + AM-BUS-1 (Rematch-Demo) ────
+        bus_vehicle_12k = db.query(Vehicle).filter(Vehicle.license_plate == "AM-BUS-1").first()
+        if driver2_user_12b and bus_vehicle_12k:
+            dp2_12k = db.query(DriverProfile).filter(DriverProfile.user_id == driver2_user_12b.id).first()
+            if dp2_12k:
+                existing_shift_bus = (
+                    db.query(DriverShift)
+                    .filter(
+                        DriverShift.driver_profile_id == dp2_12k.id,
+                        DriverShift.vehicle_id == bus_vehicle_12k.id,
+                        DriverShift.status == ShiftStatus.active,
+                    )
+                    .first()
+                )
+                if not existing_shift_bus:
+                    db.add(DriverShift(
+                        driver_profile_id=dp2_12k.id,
+                        vehicle_id=bus_vehicle_12k.id,
+                        status=ShiftStatus.active,
+                        started_at=datetime.datetime(2026, 7, 22, 7, 30, 0, tzinfo=datetime.timezone.utc),
+                        current_latitude=52.515,
+                        current_longitude=13.410,
+                        notes="Sprint-12K-Demo: aktive Schicht Rollstuhlbus (passt fuer Rematch)",
+                    ))
+                    print("  +shft driver2@access.test + AM-BUS-1 (aktiv, lat=52.515, lon=13.410)")
+                else:
+                    if existing_shift_bus.current_latitude is None:
+                        existing_shift_bus.current_latitude = 52.515
+                        existing_shift_bus.current_longitude = 13.410
+                        print("  upd   DriverShift driver2@access.test/AM-BUS-1 — GPS ergaenzt")
+                    else:
+                        print("  skip  DriverShift driver2@access.test/AM-BUS-1 (bereits vorhanden)")
 
         # Onboarding-Backfill auch für driver2
         if driver2_user and driver2_user.onboarding_completed_at is None:
