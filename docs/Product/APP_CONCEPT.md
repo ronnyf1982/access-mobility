@@ -102,16 +102,19 @@ Erhalten ihre Tagesaufträge digital:
 | **Fahrer-Schichtstart & Fahrzeugwahl** | Schicht beginnen/pausieren/beenden, Standard- + Kennzeichen-Fahrzeugwahl, Auftragsstruktur | ✅ Sprint 10 |
 | **Fahrtstatus / Fahrer-App** | Statusereignisse, RideStatusEvent-Protokoll | ✅ Sprint 11 |
 | **Live-Status für Fahrgast** | Status + Verlauf für angefragte/geplante Fahrten, Polling | ✅ Sprint 12A |
-| **Spontane Fahrten: Matching** | Verfügbarkeitsprüfung, ETA-Näherung, API | Sprint 12B |
-| **Spontane Fahrten: Fahrgast-UI** | GPS-Standort, freie Fahrzeuge, Barrierefreiheit | Sprint 12C |
-| **Spontane Fahrten: Fahrerannahme** | Anfrage annehmen/ablehnen, Live-Zufahrt-Grundlage | Sprint 12D |
-| **Vertrauenspersonen-View & Dispatch** | Dedizierte View, echter Notification-Dispatch | Sprint 12E |
-| **Live-Standortfreigabe** | GPS-Koordinaten teilen, Link-Freigabe, Widerruf | Sprint 12D+ |
-| **KI-Berater** | Online-ChatGPT-Integration (Backend-only) | Sprint 13 |
-| **Fahrt per Sprache** | Vollständige Sprachführung durch Buchungsprozess | Sprint 14 |
-| **Regelmäßige Touren** | Serienfahrten, RRULE | Sprint 15 |
-| **Ausfallmanagement** | Ersatzfahrzeug, Fahrerausfall | Sprint 16 |
-| **Tourenoptimierung** | KI-gestützte Routenoptimierung | Sprint 17 |
+| **Spontane Fahrten: Matching, Buchung, Live-Tracking** | Verfügbarkeitsprüfung, Buchung, Fahrerannahme, GPS-Tracking | ✅ Sprint 12B–12D |
+| **Notfallkontakte & Notfallmodus** | Notfallkontakt-CRUD, Fahrer-Notfallmodus | ✅ Sprint 12E |
+| **Gespeicherte Adressen & Geburtsdatum** | PassengerSavedAddress CRUD, date_of_birth | ✅ Sprint 12F |
+| **Fahrer-Statusfluss & Fahrgast-Fahrtverlauf** | Nur nächster Button, Statushistorie, vergangene Fahrten | ✅ Sprint 12G+12H |
+| **Fahrer-Verfügbarkeit & Stornierung** | Kein Parallel-Accept, Fahrgast-Storno, Rematch | ✅ Sprint 12I–12J |
+| **Auto-Rematch & vereinfachte Buchung** | Automatische Weiterleitung, 1-Button-Buchung | ✅ Sprint 12K–12K-C |
+| **Fahrer-Flow nach Rematch** | Fahrer-Storno, Fahrgast-Storno-Erkennung; Statusbuttons ⚠️ offen | ⚠️ Sprint 12K-D |
+| **Mandantenfähiges Rollen- und Berechtigungsmodell** | Organizations, Rollen, Permissions, Mandantentrennung | Sprint 13 |
+| **Vertrauenspersonen-View & Benachrichtigungen** | Dedizierte View, echter Notification-Dispatch | Sprint 14 |
+| **Stammtouren & Linienverkehr** | Regelmäßige Fahrten, feste Fahrer-Fahrgast-Zuordnung | Sprint 15 |
+| **Abwesenheits- und Ausfallmanagement** | Abmeldung, Ersatzfahrer, Zeitänderungen | Sprint 16 |
+| **Stabilitätsorientierte Tourenoptimierung** | Minimale Neuplanung bei Änderungen | Sprint 17 |
+| **Live-Toursteuerung** | Verkehr, ETA, Kapazitäten je Abschnitt, Navigation | Sprint 18 |
 
 ---
 
@@ -275,11 +278,12 @@ mit berechtigten Personen teilen.
 Vollständige Datenschutzregeln: `docs/SOURCE_OF_TRUTH.md` (Abschnitt 7.9)
 Datenmodell-Konzept: `docs/DECISIONS.md`
 
-### 7. Tourenplanung (Sprint 15–17)
+### 7. Tourenplanung (Sprint 15–18)
 
-- Serienfahrten (RRULE)
-- Ausfallmanagement
-- KI-gestützte Routenoptimierung
+- Sprint 15: Stammtouren — feste Fahrgast-Fahrer-Zuordnung, Tourenvorlagen für tägliche Planung
+- Sprint 16: Abwesenheits- und Ausfallmanagement — Krankmeldungen, Ersatzfahrzeuge, Zeitänderungen
+- Sprint 17: Stabilitätsorientierte Tourenoptimierung — minimale Neuplanung bei Änderungen; Tourenvorschläge brauchen Disponent-Bestätigung
+- Sprint 18: Live-Toursteuerung — Verkehr, ETA-Updates, Kapazitätsverwaltung je Tourabschnitt, Navigation
 
 ---
 

@@ -1037,3 +1037,64 @@ Fahrgast kann eine wartende oder angenommene spontane Fahrt selbst stornieren. N
 - Fahrerablehnung-Logik (existierte bereits, kein Code geändert)
 - Fahrer-Dashboard (stornierte Fahrt verschwindet automatisch beim nächsten Poll nach 10s)
 - 12I-Fahrerverfügbarkeit (nach Stornierung kein `status=assigned` mehr → Fahrer frei)
+
+---
+
+## Sprint 12K-D — Fahrer-Flow nach Rematch wiederherstellen ⚠️ teilweise offen
+
+**committed + gepusht (b94cb30) — Fahrer-Statusbuttons nach Annahme online noch nicht abgenommen**
+
+### Ziel
+
+Nach Auto-Rematch (Sprint 12K) fehlten beim Fahrer B die Statusbuttons, konnte angenommene spontane Fahrt nicht stornieren, und die Fahreransicht aktualisierte sich nicht wenn der Fahrgast stornierte.
+
+### Backend
+
+- [x] `backend/app/api/v1/endpoints/driver.py` — neuer Endpoint `POST /driver/spontaneous-ride-requests/{id}/cancel`
+  - Prüft: spontane Fahrt, eigene Fahrt, Status `assigned`, kein blockierendes Event
+  - Ruft `do_rematch()` auf → Status `driver_declined`, ggf. Rematch an nächsten Fahrer
+  - 409 wenn `passenger_picked_up`, `ride_started` oder `ride_completed` bereits gesetzt
+
+### Frontend
+
+- [x] `frontend/src/api/driver.ts` — `cancelSpontaneousRideRequest(requestId)` hinzugefügt
+- [x] `frontend/src/views/DriverDashboardView.vue`:
+  - `pollAll()` ersetzt reines `loadSpontaneousRequests` im Intervall — erkennt Fahrgast-Storno
+  - `driverCompletedIds` Set verhindert False-Positive-Storno-Banner wenn Fahrer selbst abschließt
+  - `canDriverCancelRide()` prüft blockierende Events vor Anzeige des Storno-Buttons
+  - `confirmRideCancel()`: Storno-Flow mit Bestätigungsdialog
+  - Fahrgast-Storno-Banner nach Poll-Erkennung
+  - CSS-Fix: `.emergency-btns { grid-column: 1 / -1 }` für korrektes Grid-Layout
+
+### Tests
+
+- [x] `backend/tests/api/test_sprint12kd_driver_cancel.py` — 11 neue Tests (alle grün)
+  - Fahrer-Storno vor Pickup → 200 + `driver_declined`
+  - Storno nach Pickup-Event → 409
+  - Storno nach `ride_started` → 409
+  - Fahrer kann nur eigene Fahrt stornieren → 403
+  - Nicht-Fahrer-Zugriff → 403
+  - Nicht gefundene Fahrt → 404
+  - Storno im Status `spontaneous_requested` → 409
+  - Fahrer nach Storno wieder verfügbar
+  - Regression 12G und 12J
+- [x] `backend/tests/api/test_sprint11_ride_status_events.py` — `_get_assigned_request()` filtert jetzt deterministisch auf `driver@access.test`-Profil (verhindert 403 durch driver2-Stray-Rides)
+
+### Checks
+
+- [x] `pytest`: 364 passed, 9 skipped, 0 failed
+- [x] TypeScript-Check (`vue-tsc --noEmit`): ✅
+- [x] Vite-Build (`npm run build`): ✅ (index-MSEx--l6.js / index-CYktQp64.css)
+- [x] `git diff --check`: keine Whitespace-Fehler
+
+### Offener Punkt (→ Sprint 12K-E)
+
+- ⚠️ Fahrer-Statusbuttons (Fahrer unterwegs / Angekommen / Fahrgast aufgenommen / Fahrt gestartet / Fahrt abgeschlossen) nach Rematch-Annahme online nicht sichtbar
+- Auto-Rematch, vereinfachter Fahrgast-Button und Fahrgast-Storno funktionieren online
+
+### Constraints (bleiben aktiv)
+
+- Auto-Rematch aus 12K darf nicht kaputt gehen ✅
+- Vereinfachter Fahrgast-Button aus 12K-C bleibt ✅
+- Fahrer-Verfügbarkeit aus 12I bleibt ✅
+- Fahrgast-Storno aus 12J bleibt ✅

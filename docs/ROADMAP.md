@@ -329,6 +329,64 @@ Nach Fahrerannahme sieht der Fahrgast den Fahrer auf der Karte. Kein WebSocket, 
 - Keine Zahlungs-/Abrechnungslogik
 - Vertrauensperson-Tracking folgt Sprint 12E
 
+## Sprint 12E — Notfallkontakte, Notfallakte und Fahrer-Notfallmodus ✅
+
+Strukturierter Notfall-Workflow für Fahrgäste und Fahrer.
+
+- `EmergencyContact`-Modell getrennt von `MobilityProfile`; vollständiges CRUD
+- Notfallakte-View für Fahrgäste: strukturierte Notfallinformationen auf einen Blick
+- Fahrer-Notfallmodus im Dashboard: Schnellzugriff auf Notfallkontakte des Fahrgastes
+- Kontakt-CRUD-Hotfixes: Duplikat-Handling, Aktivierungsstatus, Reihenfolge
+
+## Sprint 12F — Gespeicherte Fahrgast-Adressen und Geburtsdatum ✅
+
+- `PassengerSavedAddress`-Modell: CRUD-API + UI für gespeicherte Adressen (Zuhause, Schule, Werkstatt …)
+- `date_of_birth`-Feld auf `MobilityProfile`: API + UI
+- Alembic-Migration
+
+## Sprint 12F-A — Zieladresse bei spontanen Fahrten ✅
+
+- Abhol- und Zieladresse getrennt erfasst und angezeigt
+- Buchung ohne Zieladresse blockiert
+- Fahrer sieht Abhol- und Zieladresse im Dashboard
+
+## Sprint 12F-B — Zieladresse beim Fahrer und Geocoding-Hinweise ✅
+
+- Fahrer sieht Zieladresse in Auftragsdetails
+- Geocoding-Qualitätshinweise bei ungenauen GPS-Adressen
+
+## Sprint 12F-C — Hausnummer-Ermittlung bei GPS-Abholadresse verbessert ✅
+
+- Nearest-house-number-Inferenz für ungenaue GPS-Koordinaten
+- Reverse-Geocoding gibt präzisere Abholadresse zurück
+
+## Sprint 12G — Fahrer-Statusfluss für spontane Fahrten ✅
+
+- `nextActionFor()`: nur nächster logischer Statusbutton sichtbar
+- Tracking-Label aus letztem `RideStatusEvent` befüllt
+- 409 für Status-Events nach `ride_completed`
+- 15 Tests, alle grün
+
+## Sprint 12H — Fahrgast-Fahrtverlauf / vergangene Fahrten ✅
+
+- Gemeinsame Ansicht für aktive + vergangene Fahrten
+- `last_status_label` auf `TransportRequestListItem`
+- Spontane Fahrten zeigen `pickup_address` statt Koordinaten
+- 8 Tests, alle grün
+
+## Sprint 12I — Fahrer-Verfügbarkeit und parallele spontane Fahrten abgesichert ✅
+
+- Fahrer mit aktiver Fahrt kann keine weitere Anfrage annehmen → 409
+- Matching exkludiert Fahrer mit aktiver Fahrt
+- Dashboard zeigt Hinweis statt offener Anfragen bei aktiver Fahrt
+- 11 Tests, alle grün
+
+## Sprint 12J — Fahrgast-Stornierung und klarer Status nach Fahrerablehnung ✅
+
+- `POST /spontaneous-rides/{id}/cancel`: Fahrgast storniert eigene Fahrt (vor Pickup-Event)
+- Klarer Status nach Fahrerablehnung: Label + „Erneut suchen"-Button
+- 14 Tests, alle grün
+
 ## Sprint 12K — Automatische Weiterleitung nach Ablehnung oder Timeout ✅
 
 Wenn ein Fahrer ablehnt oder die 2-Minuten-Wartezeit abläuft, sucht das System automatisch den nächsten freien Fahrer.
@@ -342,46 +400,144 @@ Wenn ein Fahrer ablehnt oder die 2-Minuten-Wartezeit abläuft, sucht das System 
 - **Manuelle Stornierung** → kein Rematch (unveränderte Logik aus 12J)
 - **14 Tests**, alle grün (352 gesamt); TypeScript ✅; Build ✅; Alembic ✅
 
-## Sprint 12E — Vertrauenspersonen-View & echter Notification-Dispatch
-_geplant_
+## Sprint 12K-A — Demo-Daten für zweiten Fahrer und Rematch-Szenarien ✅
 
-Dedizierte Ansicht für Vertrauenspersonen. Echter Benachrichtigungs-Dispatch.
+- `driver2@access.test` + `AM-BUS-1` in Seed-Daten ergänzt
+- Testumgebung für vollständigen Rematch-Flow (Fahrer A lehnt ab → Fahrer B bekommt Anfrage)
 
-- Vertrauenspersonen-View: Fahrten des verknüpften Fahrgastes sehen und Status lesen
-- Echter E-Mail/In-App-Dispatch basierend auf `PassengerNotificationPreference` (Sprint 11 Grundlage)
+## Sprint 12K-B — Rematch-Fortschritt statt roter Ablehnungsstatus ✅
+
+- Fahrgast-Header zeigt blaues Rematch-Banner statt rotem Fehlerstatus
+- Polling wechselt `activeRequestId` nahtlos beim Rematch ohne UI-Reset
+
+## Sprint 12K-C — Fahrgast-Buchung vereinfacht: kein Fahrzeugauswahl-Screen ✅
+
+- Ein-Button-Buchung: Fahrgast tippt nur „Fahrt buchen" — kein Fahrzeug-Auswahlschritt
+- Passender Fahrer wird automatisch aus Matching-Ergebnis übernommen
+
+## Sprint 12K-D — Fahrer-Flow nach Rematch wiederherstellen ⚠️ teilweise offen
+
+**committed + gepusht (b94cb30) — Fahrer-Statusbuttons nach Annahme online noch nicht abgenommen**
+
+Umgesetzt:
+- `POST /driver/spontaneous-ride-requests/{id}/cancel`: Fahrer-Storno → `driver_declined` + Auto-Rematch
+- `pollAll()` im Fahrer-Dashboard erkennt Fahrgast-Storno beim nächsten Poll-Intervall
+- `driverCompletedIds` Set verhindert False-Positive-Storno-Banner
+- `canDriverCancelRide()`: sperrt Storno-Button nach Pickup-Event
+- Test-Isolation-Fix: `_get_assigned_request()` filtert deterministisch auf `driver@access.test`
+- 364 passed, 9 skipped, 0 failed
+
+Offener Punkt:
+- ⚠️ Fahrer-Statusbuttons (Fahrer unterwegs / Angekommen / Fahrgast aufgenommen / Fahrt gestartet / Fahrt abgeschlossen) nach Rematch-Annahme online nicht sichtbar → Sprint 12K-E
+
+---
+
+## Sprint 12K-E — Fahrer-Statusbuttons nach Rematch/Annahme final sichtbar machen _(Hotfix, nächster Sprint)_
+
+**Ziel:** Nach Annahme einer spontanen Fahrt (auch nach Rematch) muss Fahrer B den vollständigen Statusfluss bedienen können.
+
+- Statusbuttons nach Annahme vollständig sichtbar und bedienbar
+- Nur der nächste sinnvolle Button sichtbar (aus Sprint 12G)
+- Statusereignisse werden korrekt auf dem Backend erstellt
+- `ride_completed` setzt Fahrt auf `completed`; Fahrgast- und Fahreransicht aktualisieren sich
+- Kein neuer Produktumfang — reiner Regression-Fix
+
+---
+
+## Sprint 13 — Mandantenfähiges Rollen- und Berechtigungsmodell _(geplant)_
+
+Eine Person besitzt genau ein Benutzerkonto. Zugriffe werden über Organisationsmitgliedschaften, Rollen und Berechtigungen gesteuert. Die Architektur ist für spätere Mandantenfähigkeit vorbereitet.
+
+**Grundmodell:**
+```
+User
+└── OrganizationMembership
+    ├── Organization
+    ├── MembershipRole
+    └── Permissions
+```
+
+**Fachliche Grundsätze:**
+- Eine Person = ein Benutzerkonto; eine Organisation = ein Mandant
+- Ein Benutzer kann mehreren Organisationen mit je unterschiedlichen Rollen angehören
+- Rollen bündeln einzelne Berechtigungen, die im Kontext der jeweiligen Organisation gelten
+- `platform_admin` bleibt globale Plattformberechtigung
+- Fahrgastprofile und Vertrauenspersonenbeziehungen sind keine klassischen Organisationsrollen
+
+**Backend:**
+- Bestehende `OrganizationMembership` erweitern; neue Modelle: `Role`, `Permission`, `RolePermission`, `MembershipRole`
+- Neue Berechtigungsprüfungen: `require_permission()`, `require_membership()`, `get_current_organization_context`
+- Bestehende Rollenprüfungen schrittweise von `User.role` auf Permissions umstellen
+- Mandantenfilter für Fahrzeuge, Fahrer, Schichten, Anfragen, Touren, Mitglieder
+- Migration bestehender Nutzer, Rollen und Demo-Daten; `User.role` als Legacy-Feld beibehalten
+- Tests gegen organisationsübergreifenden Datenzugriff
+
+**Frontend:**
+- Auth-Store um `memberships`, `activeOrganization`, `permissions`, `can(permission)` erweitern
+- Navigation anhand Berechtigungen statt einer einzelnen Rolle
+- Bei einer Organisation: automatischer Kontext; bei mehreren: Organisationswechsler
+
+**Standardrollen:** Fahrdienst (Organisations-Admin, Disponent, Fahrer) · Schule/Einrichtung/Amt/Klinik (Organisations-Admin, Koordinator, Mitarbeiter) · Krankenkasse (Organisations-Admin, Sachbearbeiter, Prüfer) · Plattform (Plattform-Admin)
+
+**Beispielberechtigungen:** `organization.view/manage`, `members.invite/manage_roles`, `passengers.view/manage`, `transport_requests.view/create/update/cancel`, `dispatch.view/assign`, `tours.view/plan/publish`, `vehicles.view/manage`, `drivers.view/manage`, `ride_status.view/update`
+
+**Abnahmekriterien:** Benutzer kann mehreren Organisationen mit unterschiedlichen Rollen angehören · Backend-Zugriffe werden über Permissions geprüft · Mandantensichere Datentrennung · Bestehende Demo-Nutzer funktionieren während der Migration · Tests verhindern Zugriff auf Daten fremder Organisationen
+
+**Bewusst nicht Bestandteil:** Kein öffentlicher Registrierungsprozess, kein Keycloak/Auth0-Wechsel, keine frei konfigurierbaren Rollen durch Kunden, keine Krankenkassen-/Abrechnungsworkflows.
+
+---
+
+## Sprint 14 — Vertrauenspersonen-Ansicht und Benachrichtigungen _(geplant)_
+
+- Dedizierte View für Vertrauenspersonen: Fahrten des verknüpften Fahrgastes + Statusverlauf
+- Echter Benachrichtigungs-Dispatch auf Basis `PassengerNotificationPreference` (Sprint 11 Grundlage)
 - Backend-Service `notification_dispatch.py` zu echtem Dispatcher ausbauen
+- In-App-Benachrichtigungen vorbereiten (kein SMS/E-Mail im ersten Schritt)
 
-## Sprint 13 — Online-KI-Berater / ChatGPT-Anbindung
+---
 
-Assistierter Anfrageprozess: KI schlägt Transporttyp und Anforderungen vor.
+## Sprint 15 — Stammtouren und regelmäßige Fahrgäste _(geplant)_
 
-- Backend-Endpoint `/api/v1/assistant/interpret` (API-Key nur im Backend)
-- Integration Claude API (claude-sonnet-4-6 oder höher) oder ChatGPT
-- Kontext: Mobilitätsprofil + Fahrtdaten → Vorschlag-Text + strukturierte Feldvorschläge
-- Fahrgast kann Vorschlag übernehmen oder manuell anpassen
-- Datenschutz: Zustimmung erforderlich, keine unnötige Weitergabe med. Daten
+Fahrando verwaltet feste Stammtouren für regelmäßige Fahrgäste. Fahrgäste bleiben ihrem bekannten Fahrer und ihrer gewohnten Tour zugeordnet. Eine Neuoptimierung erfolgt nur wenn sich etwas ändert.
 
-## Sprint 14 — Fahrt per Sprache anfragen
+- Regelmäßige Hin- und Rückfahrten mit Wochentagen, Abholzeiten und spätester Zielankunft
+- Feste Zuordnung von Fahrgästen, Fahrer und bevorzugtem Fahrzeug
+- Feste Grundreihenfolge der Abhol- und Zielstopps
+- Mobilitäts- und Platzbedarf je Fahrgast
+- Stammtour als Vorlage für den täglichen Tourenplan
 
-Vollständige Fahrtbuchung per Sprachführung.
+---
 
-- Sprachgeführter Buchungs-Wizard: Abholort → Ziel → Datum/Zeit → Anforderungen → Bestätigung
-- Adresseingabe per Sprache (Online-KI-Interpretation)
-- Datum/Zeit-Erkennung aus natürlicher Sprache
-- Bestätigungs-Dialog vor Absenden (kein automatisches Absenden)
+## Sprint 16 — Abwesenheits-, Änderungs- und Ausfallmanagement _(geplant)_
 
-## Sprint 15 — Regelmäßige Touren / Linienverkehr
+- Fahrgast für einzelne Tage, Zeiträume oder nur Hin-/Rückfahrt abmelden
+- Krankmeldung entfernt Fahrgast nur aus dem Tagesplan, nicht aus der Stammtour
+- Fahrer- und Fahrzeugausfälle sowie vorübergehende Zeit- oder Adressänderungen verwalten
+- Ersatzfahrer oder Ersatzfahrzeug mit passendem Matching vorschlagen
 
-Fahrgäste können regelmäßige Fahrten (täglich, wöchentlich) als Serienfahrten anlegen.
-Disponenten können Touren mit festen Reihenfolgen und Zeitplänen konfigurieren (Linienverkehr).
+---
 
-## Sprint 16 — Ausfallmanagement
+## Sprint 17 — Stabilitätsorientierte Tourenoptimierung _(geplant)_
 
-Ersatzfahrzeug, Fahrerausfall, Stornierung mit Neuzuweisung.
+Fahrando plant nicht täglich neu. Stammtouren bleiben stabil — Änderungen lösen eine möglichst kleine Neuoptimierung aus.
 
-## Sprint 17 — Tourenoptimierung
+- Einmalige sinnvolle Planung der Stammtouren aus Fahrgästen, Fahrzeugen und Fahrern
+- Neue Standardfahrgäste möglichst in bestehende Touren einfügen
+- Bei Änderungen nur die betroffene Tour minimal neu berechnen
+- Priorität: feste Fahrer-Fahrgast-Beziehungen → Anforderungen → Ankunftszeiten → Fahrzeit/Kilometer/Kosten
+- Tourenvorschläge müssen vom Disponenten bestätigt werden
 
-KI-gestützte Routenoptimierung für Disponenten.
+---
+
+## Sprint 18 — Live-Toursteuerung, Verkehr und Kapazitäten _(geplant)_
+
+- Beim Schichtstart Route und ETA zum ersten Fahrgast per Kartendienst berechnen; Verkehrslage berücksichtigen
+- Ersten Fahrgast über voraussichtliches Ankunftszeitfenster informieren
+- „Fahrgast aufgenommen": benötigten Sitz-/Rollstuhl-/Begleit-/Liegeplatz belegen; Restroute + ETA neu berechnen
+- „Fahrgast abgesetzt": belegten Platz freigeben; Kapazität je Tourabschnitt separat berechnen
+- Navigation über die Karten-App öffnen
+
+**Fachlicher Grundsatz:** Fahrgastbedarf, Fahrzeugausstattung und Fahrerqualifikation müssen jederzeit gemeinsam passen.
 
 ---
 
@@ -390,15 +546,15 @@ KI-gestützte Routenoptimierung für Disponenten.
 | Typ | Beschreibung | Status |
 |---|---|---|
 | **Angefragte/geplante Fahrt** | Fahrgast oder Org stellt Anfrage mit Vorlaufzeit; Disponent weist Fahrzeug + Fahrer zu | ✅ Sprint 6–12A |
-| **Linienfahrt** | Wiederkehrende oder fest geplante Fahrten nach Fahrplan/Route | geplant Sprint 15+ |
-| **Spontane Fahrt** | Sofortfahrt-Modus (Uber-artig): Fahrgast bucht jetzt, GPS-Standort als Abholort, nächstes freies Fahrzeug, Auto-Rematch bei Ablehnung/Timeout | ✅ Sprint 12B–12K |
+| **Linienfahrt / Stammtour** | Wiederkehrende oder fest geplante Fahrten mit Fahrplan/Route; feste Fahrer-Fahrgast-Zuordnung | geplant Sprint 15+ |
+| **Spontane Fahrt** | Sofortfahrt-Modus: Fahrgast bucht jetzt, GPS-Standort als Abholort, nächstes freies Fahrzeug, Auto-Rematch bei Ablehnung/Timeout | ✅ Sprint 12B–12K-D |
 
 ## Bewusst außerhalb des MVP
 
 - Echte Krankenkassenabrechnung
 - Zahlungsintegration
 - Externe Maps-/Routing-API (GTFS, Google Maps, OSM) — Crow-fly-Distanz als MVP-Ersatz
-- Echtzeit-GPS-Tracking (Live-Positionsdaten vom Fahrzeug) — Grundlage Sprint 12D
 - Native Mobile App
 - Push-Notifications (Web-Push)
-- Automatisches Matching ohne Disponent (Spontanfahrten: halbautomatisch via Sprint 12B)
+- Automatisches Matching ohne Disponent (Spontanfahrten: halbautomatisch via Sprint 12B+)
+- KI-gestützte Online-Beratung und Fahrtbuchung per Sprache (zurückgestellt, Priorität nach Sprint 13+)

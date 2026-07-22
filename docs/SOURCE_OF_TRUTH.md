@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-22 · Sprint 12K abgeschlossen · Automatische Weiterleitung nach Ablehnung/Timeout implementiert
+Letzte Aktualisierung: 2026-07-22 · Sprint 12K-D committed+gepusht (b94cb30) · Fahrer-Statusbuttons nach Rematch online noch offen (→ Sprint 12K-E)
 
 ---
 
@@ -133,19 +133,24 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint 12I** | **Fahrer-Verfügbarkeit: Kein Parallel-Accept, Matching exkludiert aktive Fahrer** | ✅ abgeschlossen |
 | **Sprint 12J** | **Fahrgast-Stornierung spontaner Fahrten, klarer Status nach Fahrerablehnung** | ✅ abgeschlossen |
 | **Sprint 12K** | **Auto-Rematch: automatische Weiterleitung nach Ablehnung oder Timeout** | ✅ abgeschlossen |
+| **Sprint 12K-A** | **Demo-Daten für zweiten Fahrer und Rematch-Szenarien vorbereitet** | ✅ abgeschlossen |
+| **Sprint 12K-B** | **Rematch-Fortschritt statt roter Ablehnungsstatus im Fahrgast-Header** | ✅ abgeschlossen |
+| **Sprint 12K-C** | **Fahrgast-Buchung vereinfacht: kein Fahrzeugauswahl-Screen, nur „Fahrt buchen"** | ✅ abgeschlossen |
+| **Sprint 12K-D** | **Fahrer-Storno-Endpoint + Fahrgast-Storno-Erkennung; Statusbuttons online noch offen** | ⚠️ teilweise offen |
 
 ---
 
 ## 6. Geplante Sprints (Roadmap-Richtung)
 
-| Sprint | Schwerpunkt | Fahrttyp |
+| Sprint | Schwerpunkt | Typ |
 |---|---|---|
-| Sprint 12E | Vertrauenspersonen-View, echter Notification-Dispatch | Alle |
-| Sprint 13 | Online-KI-Berater / ChatGPT-Anbindung (Backend-only) | Alle |
-| Sprint 14 | Fahrt per Sprache anfragen | Geplant |
-| Sprint 15 | Linienfahrten / Regelmäßige Touren, Serienfahrten | Linie |
-| Sprint 16 | Ausfallmanagement | Alle |
-| Sprint 17 | Tourenoptimierung | Alle |
+| Sprint 12K-E | Fahrer-Statusbuttons nach Rematch/Annahme final sichtbar machen (Hotfix) | Spontan |
+| Sprint 13 | Mandantenfähiges Rollen- und Berechtigungsmodell | Plattform |
+| Sprint 14 | Vertrauenspersonen-Ansicht und Benachrichtigungen | Alle |
+| Sprint 15 | Stammtouren und regelmäßige Fahrgäste | Linie |
+| Sprint 16 | Abwesenheits-, Änderungs- und Ausfallmanagement | Alle |
+| Sprint 17 | Stabilitätsorientierte Tourenoptimierung | Alle |
+| Sprint 18 | Live-Toursteuerung, Verkehr und Kapazitäten | Alle |
 
 ---
 
