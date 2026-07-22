@@ -306,7 +306,7 @@ export const TRANSPORT_REQUEST_STATUS_LABELS: Record<TransportRequestStatus, str
   completed: 'Abgeschlossen',
   cancelled: 'Storniert',
   spontaneous_requested: 'Sofortfahrt angefragt',
-  driver_declined: 'Fahrer abgelehnt',
+  driver_declined: 'Vom Fahrer abgelehnt',
 }
 
 export interface RequirementSnapshot {

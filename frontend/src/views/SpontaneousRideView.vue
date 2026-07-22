@@ -312,14 +312,24 @@
         Neue Suche starten
       </button>
 
-      <!-- Aktive Fahrt → Abbrechen noch nicht implementiert -->
-      <button
-        v-else
-        class="sr-view__btn sr-view__btn--secondary sr-view__btn--disabled"
-        disabled
-      >
-        Abbrechen (folgt später)
-      </button>
+      <!-- Aktive Fahrt → Stornieren -->
+      <template v-else>
+        <button
+          v-if="canCancelRide"
+          class="sr-view__btn sr-view__btn--secondary"
+          :disabled="cancelLoading"
+          aria-label="Spontane Fahrt stornieren"
+          @click="cancelRide"
+        >
+          <span v-if="cancelLoading" class="pi pi-spin pi-spinner" aria-hidden="true"></span>
+          <span v-else class="pi pi-times" aria-hidden="true"></span>
+          Fahrt stornieren
+        </button>
+        <div v-if="cancelError" class="sr-view__warning" role="alert">
+          <span class="pi pi-exclamation-circle" aria-hidden="true"></span>
+          <span>{{ cancelError }}</span>
+        </div>
+      </template>
     </section>
   </div>
 </template>
@@ -327,7 +337,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SpontaneousRideMap from '@/components/SpontaneousRideMap.vue'
-import { findSpontaneousMatches, bookSpontaneousRide, getTrackingStatus } from '@/api/spontaneous'
+import { findSpontaneousMatches, bookSpontaneousRide, getTrackingStatus, cancelSpontaneousRide } from '@/api/spontaneous'
 import { reverseGeocode } from '@/api/geocoding'
 import { getTransportRequests } from '@/api/transportRequests'
 import { listAddresses } from '@/api/passengerSavedAddresses'
@@ -369,6 +379,14 @@ const trackingData = ref<SpontaneousRideTracking | null>(null)
 const trackingLoading = ref(false)
 const trackingError = ref(false)
 let trackingInterval: ReturnType<typeof setInterval> | null = null
+
+// Stornierung
+const cancelLoading = ref(false)
+const cancelError = ref<string | null>(null)
+const CANCEL_ALLOWED_STATUSES = new Set(['spontaneous_requested', 'assigned'])
+const canCancelRide = computed<boolean>(
+  () => CANCEL_ALLOWED_STATUSES.has(trackingData.value?.status ?? ''),
+)
 
 // ── Gespeicherte Adressen ────────────────────────────────────────────────────
 
@@ -550,6 +568,23 @@ function reset(): void {
   trackingData.value = null
   trackingError.value = false
   trackingLoading.value = false
+  cancelLoading.value = false
+  cancelError.value = null
+}
+
+async function cancelRide(): Promise<void> {
+  if (!activeRequestId.value) return
+  cancelLoading.value = true
+  cancelError.value = null
+  try {
+    await cancelSpontaneousRide(activeRequestId.value)
+    await pollTracking()
+  } catch (err: unknown) {
+    const e = err as { response?: { data?: { detail?: string } } }
+    cancelError.value = e?.response?.data?.detail ?? 'Stornierung fehlgeschlagen. Bitte erneut versuchen.'
+  } finally {
+    cancelLoading.value = false
+  }
 }
 
 async function bookRide(match: SpontaneousRideMatchResult): Promise<void> {

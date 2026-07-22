@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-21 · Sprint 12I abgeschlossen · Fahrer-Verfügbarkeit und Parallelschutz implementiert
+Letzte Aktualisierung: 2026-07-21 · Sprint 12J abgeschlossen · Fahrgast-Stornierung spontaner Fahrten implementiert
 
 ---
 
@@ -130,6 +130,8 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Hotfix 12F-A** | **Zieladresse bei spontanen Fahrten (Selektor + Freitext, Backend-Speicherung)** | ✅ abgeschlossen |
 | **Sprint 12G** | **Fahrer-Statusfluss: Nur nächste Statusbutton, Tracking-Label, 409 nach Abschluss** | ✅ abgeschlossen |
 | **Sprint 12H** | **Fahrgast-Fahrtverlauf: Aktive + vergangene Fahrten, letzter Statuslabel, Adressen** | ✅ abgeschlossen |
+| **Sprint 12I** | **Fahrer-Verfügbarkeit: Kein Parallel-Accept, Matching exkludiert aktive Fahrer** | ✅ abgeschlossen |
+| **Sprint 12J** | **Fahrgast-Stornierung spontaner Fahrten, klarer Status nach Fahrerablehnung** | ✅ abgeschlossen |
 
 ---
 

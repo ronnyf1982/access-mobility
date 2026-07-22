@@ -36,6 +36,17 @@ _BOOKING_BLOCKED_STATUSES = [
     TransportRequestStatus.spontaneous_requested,
 ]
 
+_CANCEL_ALLOWED_STATUSES = {
+    TransportRequestStatus.spontaneous_requested,
+    TransportRequestStatus.assigned,
+}
+
+_CANCEL_BLOCKING_EVENT_TYPES = {
+    RideStatusEventType.passenger_picked_up,
+    RideStatusEventType.ride_started,
+    RideStatusEventType.ride_completed,
+}
+
 
 def _resolve_passenger_id(body, current_user: User, db: Session) -> uuid.UUID:
     """Resolve which passenger's profile to use for capability matching / booking."""
@@ -200,6 +211,54 @@ def book_spontaneous_ride(
         vehicle_label=vehicle.name,
         estimated_arrival_minutes=eta,
     )
+
+
+# ── Sprint 12J: Fahrgast-Stornierung ─────────────────────────────────────────
+
+@router.post("/{transport_request_id}/cancel", status_code=status.HTTP_200_OK)
+def cancel_spontaneous_ride(
+    transport_request_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    if current_user.role != UserRole.passenger:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Nur Fahrgäste können spontane Fahrten stornieren.",
+        )
+    tr = db.get(TransportRequest, transport_request_id)
+    if not tr or not tr.is_spontaneous:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spontane Fahrt nicht gefunden.")
+    if tr.passenger_user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Zugriff verweigert.")
+    if tr.status == TransportRequestStatus.cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Fahrt ist bereits storniert.",
+        )
+    if tr.status not in _CANCEL_ALLOWED_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Diese Fahrt kann nicht mehr storniert werden.",
+        )
+    if tr.status == TransportRequestStatus.assigned:
+        blocking = (
+            db.query(RideStatusEvent.id)
+            .filter(
+                RideStatusEvent.transport_request_id == transport_request_id,
+                RideStatusEvent.status.in_(list(_CANCEL_BLOCKING_EVENT_TYPES)),
+            )
+            .first()
+        )
+        if blocking:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Diese Fahrt kann nicht mehr storniert werden.",
+            )
+    tr.status = TransportRequestStatus.cancelled
+    tr.cancelled_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"status": "cancelled"}
 
 
 # ── Sprint 12D: Live-Tracking ─────────────────────────────────────────────────

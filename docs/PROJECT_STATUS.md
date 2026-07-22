@@ -970,3 +970,29 @@ Fahrer mit aktiver spontaner Fahrt darf keine weitere Anfrage annehmen. Matching
 - Statuswerte (bestehende Werte genutzt: assigned, completed)
 - Fahrgast-Buchungsflow
 - Statusfluss 12G / Fahrgast-Historie 12H
+
+---
+
+## Sprint 12J — Fahrgast-Stornierung und klarer Status nach Fahrerablehnung ✅
+
+**Abgeschlossen:** 2026-07-21
+
+### Ziel
+Fahrgast kann eine wartende oder angenommene spontane Fahrt selbst stornieren. Nach Fahrerablehnung bekommt der Fahrgast einen klaren Status und eine direkte Handlungsoption (neue Suche). Stornierte und abgelehnte Fahrten erscheinen korrekt in der Fahrthistorie.
+
+### Backend
+- [x] `backend/app/api/v1/endpoints/spontaneous_rides.py` — `POST /spontaneous-rides/{id}/cancel` Endpoint: nur Fahrgast, nur eigene spontane Fahrt; stornierbar bei `spontaneous_requested` oder `assigned` solange kein `passenger_picked_up`/`ride_started`/`ride_completed` Event existiert; setzt `status=cancelled` + `cancelled_at`; 409 bei abgeschlossener/bereits stornierter Fahrt; 403 bei fremder Fahrt; 404 bei nicht gefundener Fahrt
+- [x] Konstanten `_CANCEL_ALLOWED_STATUSES` und `_CANCEL_BLOCKING_EVENT_TYPES` hinzugefügt
+- [x] `backend/tests/api/test_sprint12j_spontaneous_cancel_decline.py` — 14 Tests: Stornierung requested, Stornierung assigned vor Pickup, Fremdstornierung 403, 404, 409 bei completed, 409 bei bereits storniert, Fahrer wieder verfügbar nach Storno, Fahrer sieht stornierte Anfrage nicht, Fahrer kann ablehnen, Fahrer sieht abgelehnte nicht mehr, Tracking liefert driver_declined, Stornierte in Fahrgast-Liste, Abgelehnte in Fahrgast-Liste, 409 nach passenger_picked_up
+
+### Frontend
+- [x] `frontend/src/api/spontaneous.ts` — `cancelSpontaneousRide(requestId)` Funktion
+- [x] `frontend/src/views/SpontaneousRideView.vue` — Placeholder "Abbrechen (folgt später)" durch echten "Fahrt stornieren"-Button ersetzt; `cancelLoading`, `cancelError`, `canCancelRide` (computed, basiert auf Tracking-Status); Button sichtbar solange Status `spontaneous_requested` oder `assigned`; nach Stornierung greift bestehende Polling-Logik → zeigt `cancelled`-Status + "Erneut suchen"-Button; `cancelError` reset bei `reset()`
+- [x] `frontend/src/types/index.ts` — Label `driver_declined` korrigiert: `'Fahrer abgelehnt'` → `'Vom Fahrer abgelehnt'`
+
+### Keine Änderungen an
+- Datenbankmodellen (keine Migration nötig — `cancelled_at` existierte bereits)
+- Statuswerten (bestehende Werte: `cancelled`, `driver_declined`)
+- Fahrerablehnung-Logik (existierte bereits, kein Code geändert)
+- Fahrer-Dashboard (stornierte Fahrt verschwindet automatisch beim nächsten Poll nach 10s)
+- 12I-Fahrerverfügbarkeit (nach Stornierung kein `status=assigned` mehr → Fahrer frei)

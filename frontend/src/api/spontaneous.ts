@@ -33,3 +33,7 @@ export async function getTrackingStatus(requestId: string): Promise<SpontaneousR
   )
   return data
 }
+
+export async function cancelSpontaneousRide(requestId: string): Promise<void> {
+  await apiClient.post(`/spontaneous-rides/${requestId}/cancel`)
+}

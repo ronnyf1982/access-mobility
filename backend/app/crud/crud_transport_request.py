@@ -12,7 +12,7 @@ def get(db: Session, request_id: uuid.UUID) -> TransportRequest | None:
 
 
 def get_for_user(
-    db: Session, user_id: uuid.UUID, skip: int = 0, limit: int = 100
+    db: Session, user_id: uuid.UUID
 ) -> list[TransportRequest]:
     return (
         db.query(TransportRequest)
@@ -21,8 +21,6 @@ def get_for_user(
             | (TransportRequest.passenger_user_id == user_id)
         )
         .order_by(TransportRequest.created_at.desc())
-        .offset(skip)
-        .limit(limit)
         .all()
     )
 

@@ -196,7 +196,7 @@ Fahrgast oder Organisation stellt Anfrage mit Vorlaufzeit. Disponent weist Fahrz
 #### Linienfahrt (Sprint 15)
 Wiederkehrende oder fest geplante Fahrten mit Fahrplan und Reihenfolge. Disponenten konfigurieren Touren. Optimierte Fahrgastliste für Fahrer.
 
-#### Spontane Fahrt / Sofortfahrt (Sprint 12B–12D, Hotfix 12F-A, Sprint 12I)
+#### Spontane Fahrt / Sofortfahrt (Sprint 12B–12D, Hotfix 12F-A, Sprint 12I, Sprint 12J)
 Fahrgast bucht jetzt sofort. GPS-Standort als Abholort (Reverse-Geocoding). System zeigt passende freie Fahrzeuge in der Nähe. Fahrer nimmt an oder lehnt ab. Kein Disponent erforderlich.
 
 **Adressauswahl (Sprint 12F + Hotfix 12F-A):**
@@ -219,6 +219,14 @@ Fahrgast bucht jetzt sofort. GPS-Standort als Abholort (Reverse-Geocoding). Syst
 - Matching exkludiert Fahrer mit aktiver Fahrt aus Ergebnisliste
 - Nach `ride_completed` wird Fahrer sofort wieder als verfügbar betrachtet
 - Dashboard zeigt Hinweismeldung statt offener Anfragen, solange Fahrer gebunden ist
+
+**Fahrgast-Stornierung (Sprint 12J):**
+- Fahrgast kann eigene spontane Fahrt stornieren solange kein Pickup-Event gesetzt wurde
+- Stornierbar: Status `spontaneous_requested` oder `assigned` ohne `passenger_picked_up`/`ride_started` Event
+- Nicht stornierbar: nach Fahrgastaufnahme, nach Fahrtstart, nach Fahrtabschluss, bereits stornierte Fahrt
+- Frontend: "Fahrt stornieren"-Button in aktiver Tracking-Ansicht; nach Storno zeigt Polling `cancelled`-Status + "Erneut suchen"-Button
+- Fahrer: stornierte Fahrt verschwindet beim nächsten Dashboard-Poll (10s); Fahrer wird sofort wieder verfügbar
+- Nach Fahrerablehnung: klarer Status "Vom Fahrer abgelehnt" + "Erneut suchen"-Button
 
 **GPS-Datenschutz (Spontanfahrten):**
 - Standort nur mit ausdrücklicher Zustimmung
