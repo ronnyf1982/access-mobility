@@ -415,9 +415,9 @@ Wenn ein Fahrer ablehnt oder die 2-Minuten-Wartezeit abläuft, sucht das System 
 - Ein-Button-Buchung: Fahrgast tippt nur „Fahrt buchen" — kein Fahrzeug-Auswahlschritt
 - Passender Fahrer wird automatisch aus Matching-Ergebnis übernommen
 
-## Sprint 12K-D — Fahrer-Flow nach Rematch wiederherstellen ⚠️ teilweise offen
+## Sprint 12K-D — Fahrer-Flow nach Rematch wiederherstellen ✅
 
-**committed + gepusht (b94cb30) — Fahrer-Statusbuttons nach Annahme online noch nicht abgenommen**
+**committed + gepusht (b94cb30)**
 
 Umgesetzt:
 - `POST /driver/spontaneous-ride-requests/{id}/cancel`: Fahrer-Storno → `driver_declined` + Auto-Rematch
@@ -427,20 +427,29 @@ Umgesetzt:
 - Test-Isolation-Fix: `_get_assigned_request()` filtert deterministisch auf `driver@access.test`
 - 364 passed, 9 skipped, 0 failed
 
-Offener Punkt:
-- ⚠️ Fahrer-Statusbuttons (Fahrer unterwegs / Angekommen / Fahrgast aufgenommen / Fahrt gestartet / Fahrt abgeschlossen) nach Rematch-Annahme online nicht sichtbar → Sprint 12K-E
+Fehlende Fahrer-Statusbuttons → behoben in Sprint 12K-E.
 
 ---
 
-## Sprint 12K-E — Fahrer-Statusbuttons nach Rematch/Annahme final sichtbar machen _(Hotfix, nächster Sprint)_
+## Sprint 12K-E — Fahrer-Statusbuttons nach Rematch/Annahme final sichtbar machen ✅
 
-**Ziel:** Nach Annahme einer spontanen Fahrt (auch nach Rematch) muss Fahrer B den vollständigen Statusfluss bedienen können.
+**Commit `3f40bc3` — online abgenommen 2026-07-22**
 
-- Statusbuttons nach Annahme vollständig sichtbar und bedienbar
-- Nur der nächste sinnvolle Button sichtbar (aus Sprint 12G)
-- Statusereignisse werden korrekt auf dem Backend erstellt
-- `ride_completed` setzt Fahrt auf `completed`; Fahrgast- und Fahreransicht aktualisieren sich
-- Kein neuer Produktumfang — reiner Regression-Fix
+Ursache: Die "Linienfahrten"-Platzhaltersektion (141 px) stand zwischen "Spontane Fahrtanfragen" und "Spontane Fahrten" und schob den Statusbutton 140 px unter die Viewport-Untergrenze (720 px).
+
+Änderung: `frontend/src/views/DriverDashboardView.vue` — reine Template-Neuordnung:
+- "Spontane Fahrten"-Sektion an erste Position gesetzt (vor Fahrtanfragen und Linienfahrten)
+- `v-if="assignmentsLoading || assignments.length > 0"` ergänzt (Sektion unsichtbar wenn keine aktive Fahrt)
+- Button "Ich bin unterwegs" jetzt bei y≈511 (innerhalb 720-px-Viewport) statt y=860
+- Kein Backend-Code geändert, kein neuer Produktumfang, kein neues Design
+
+Online abgenommen:
+- Fahrer nimmt spontane/rematchte Fahrt an → Statusbuttons sofort sichtbar
+- Vollständiger Fluss: Fahrer unterwegs → Fahrer angekommen → Fahrgast aufgenommen → Fahrt gestartet → Fahrt abgeschlossen ✅
+- Auto-Rematch weiterhin funktionsfähig ✅
+- Fahrgast-Flow weiterhin funktionsfähig ✅
+- Fahrer-Storno / Fahrgast-Storno weiterhin funktionsfähig ✅
+- 373 Tests grün
 
 ---
 
@@ -547,7 +556,7 @@ Fahrando plant nicht täglich neu. Stammtouren bleiben stabil — Änderungen l�
 |---|---|---|
 | **Angefragte/geplante Fahrt** | Fahrgast oder Org stellt Anfrage mit Vorlaufzeit; Disponent weist Fahrzeug + Fahrer zu | ✅ Sprint 6–12A |
 | **Linienfahrt / Stammtour** | Wiederkehrende oder fest geplante Fahrten mit Fahrplan/Route; feste Fahrer-Fahrgast-Zuordnung | geplant Sprint 15+ |
-| **Spontane Fahrt** | Sofortfahrt-Modus: Fahrgast bucht jetzt, GPS-Standort als Abholort, nächstes freies Fahrzeug, Auto-Rematch bei Ablehnung/Timeout | ✅ Sprint 12B–12K-D |
+| **Spontane Fahrt** | Sofortfahrt-Modus: Fahrgast bucht jetzt, GPS-Standort als Abholort, nächstes freies Fahrzeug, Auto-Rematch bei Ablehnung/Timeout | ✅ Sprint 12B–12K-E |
 
 ## Bewusst außerhalb des MVP
 

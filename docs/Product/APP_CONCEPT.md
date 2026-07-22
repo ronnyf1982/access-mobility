@@ -108,7 +108,7 @@ Erhalten ihre Tagesaufträge digital:
 | **Fahrer-Statusfluss & Fahrgast-Fahrtverlauf** | Nur nächster Button, Statushistorie, vergangene Fahrten | ✅ Sprint 12G+12H |
 | **Fahrer-Verfügbarkeit & Stornierung** | Kein Parallel-Accept, Fahrgast-Storno, Rematch | ✅ Sprint 12I–12J |
 | **Auto-Rematch & vereinfachte Buchung** | Automatische Weiterleitung, 1-Button-Buchung | ✅ Sprint 12K–12K-C |
-| **Fahrer-Flow nach Rematch** | Fahrer-Storno, Fahrgast-Storno-Erkennung; Statusbuttons ⚠️ offen | ⚠️ Sprint 12K-D |
+| **Fahrer-Flow nach Rematch** | Fahrer-Storno, Fahrgast-Storno-Erkennung, Statusbuttons im Viewport | ✅ Sprint 12K-D+12K-E |
 | **Mandantenfähiges Rollen- und Berechtigungsmodell** | Organizations, Rollen, Permissions, Mandantentrennung | Sprint 13 |
 | **Vertrauenspersonen-View & Benachrichtigungen** | Dedizierte View, echter Notification-Dispatch | Sprint 14 |
 | **Stammtouren & Linienverkehr** | Regelmäßige Fahrten, feste Fahrer-Fahrgast-Zuordnung | Sprint 15 |

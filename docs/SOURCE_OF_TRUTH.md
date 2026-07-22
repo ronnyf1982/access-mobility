@@ -4,7 +4,7 @@
 Architekturgrundsätze und Claude-Arbeitsregeln.**
 
 Bei Widersprüchen zwischen diesem Dokument und anderen Docs gilt dieses Dokument.
-Letzte Aktualisierung: 2026-07-22 · Sprint 12K-D committed+gepusht (b94cb30) · Fahrer-Statusbuttons nach Rematch online noch offen (→ Sprint 12K-E)
+Letzte Aktualisierung: 2026-07-22 · Sprint 12K-E committed+gepusht (3f40bc3) · online abgenommen · Fahrer-Statusbuttons nach Rematch/Annahme sichtbar
 
 ---
 
@@ -136,7 +136,8 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 | **Sprint 12K-A** | **Demo-Daten für zweiten Fahrer und Rematch-Szenarien vorbereitet** | ✅ abgeschlossen |
 | **Sprint 12K-B** | **Rematch-Fortschritt statt roter Ablehnungsstatus im Fahrgast-Header** | ✅ abgeschlossen |
 | **Sprint 12K-C** | **Fahrgast-Buchung vereinfacht: kein Fahrzeugauswahl-Screen, nur „Fahrt buchen"** | ✅ abgeschlossen |
-| **Sprint 12K-D** | **Fahrer-Storno-Endpoint + Fahrgast-Storno-Erkennung; Statusbuttons online noch offen** | ⚠️ teilweise offen |
+| **Sprint 12K-D** | **Fahrer-Storno-Endpoint + Fahrgast-Storno-Erkennung (b94cb30)** | ✅ abgeschlossen |
+| **Sprint 12K-E** | **Fahrer-Statusbuttons nach Rematch/Annahme im Viewport sichtbar — Sektionsreihenfolge (3f40bc3) — online abgenommen** | ✅ abgeschlossen |
 
 ---
 
@@ -144,7 +145,6 @@ Oberflächen-Grundsätze: `docs/Product/DESIGN_AND_ACCESSIBILITY_GUIDE.md`
 
 | Sprint | Schwerpunkt | Typ |
 |---|---|---|
-| Sprint 12K-E | Fahrer-Statusbuttons nach Rematch/Annahme final sichtbar machen (Hotfix) | Spontan |
 | Sprint 13 | Mandantenfähiges Rollen- und Berechtigungsmodell | Plattform |
 | Sprint 14 | Vertrauenspersonen-Ansicht und Benachrichtigungen | Alle |
 | Sprint 15 | Stammtouren und regelmäßige Fahrgäste | Linie |

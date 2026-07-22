@@ -1040,9 +1040,9 @@ Fahrgast kann eine wartende oder angenommene spontane Fahrt selbst stornieren. N
 
 ---
 
-## Sprint 12K-D — Fahrer-Flow nach Rematch wiederherstellen ⚠️ teilweise offen
+## Sprint 12K-D — Fahrer-Flow nach Rematch wiederherstellen ✅
 
-**committed + gepusht (b94cb30) — Fahrer-Statusbuttons nach Annahme online noch nicht abgenommen**
+**committed + gepusht (b94cb30) — Fahrer-Storno + Fahrgast-Storno-Erkennung. Statusbuttons → behoben in Sprint 12K-E.**
 
 ### Ziel
 
@@ -1087,14 +1087,46 @@ Nach Auto-Rematch (Sprint 12K) fehlten beim Fahrer B die Statusbuttons, konnte a
 - [x] Vite-Build (`npm run build`): ✅ (index-MSEx--l6.js / index-CYktQp64.css)
 - [x] `git diff --check`: keine Whitespace-Fehler
 
-### Offener Punkt (→ Sprint 12K-E)
+### Constraints (alle erhalten in Sprint 12K-E verifiziert)
 
-- ⚠️ Fahrer-Statusbuttons (Fahrer unterwegs / Angekommen / Fahrgast aufgenommen / Fahrt gestartet / Fahrt abgeschlossen) nach Rematch-Annahme online nicht sichtbar
-- Auto-Rematch, vereinfachter Fahrgast-Button und Fahrgast-Storno funktionieren online
+- Auto-Rematch aus 12K ✅
+- Vereinfachter Fahrgast-Button aus 12K-C ✅
+- Fahrer-Verfügbarkeit aus 12I ✅
+- Fahrgast-Storno aus 12J ✅
 
-### Constraints (bleiben aktiv)
+---
 
-- Auto-Rematch aus 12K darf nicht kaputt gehen ✅
-- Vereinfachter Fahrgast-Button aus 12K-C bleibt ✅
-- Fahrer-Verfügbarkeit aus 12I bleibt ✅
-- Fahrgast-Storno aus 12J bleibt ✅
+## Sprint 12K-E — Fahrer-Statusbuttons nach Rematch/Annahme final sichtbar machen ✅
+
+**Commit `3f40bc3` fix: show driver status buttons for spontaneous assignments — committed + gepusht 2026-07-22 — online abgenommen**
+
+### Ursache
+
+Playwright-Messung nach Sprint 12K-D: Button "Ich bin unterwegs" bei y=860, Viewport-Höhe 720 px → 140 px below the fold. Ursache: "Linienfahrten"-Platzhaltersektion (141 px) stand zwischen "Spontane Fahrtanfragen" und "Spontane Fahrten" und schob die Auftrags-Karte mit den Statusbuttons aus dem sichtbaren Bereich.
+
+### Änderung
+
+- [x] `frontend/src/views/DriverDashboardView.vue` — reine Template-Neuordnung:
+  - "Spontane Fahrten"-Sektion an erste Position im Auftragsbereich (war bisher dritte Sektion)
+  - `v-if="assignmentsLoading || assignments.length > 0"` auf der Sektion — kein leerer Platzhalter wenn keine aktive Fahrt
+  - Neue Reihenfolge: **Spontane Fahrten → Spontane Fahrtanfragen → Linienfahrten**
+  - Button "Ich bin unterwegs" jetzt bei y≈511 (innerhalb 720-px-Viewport)
+
+Keine Backend-Änderung. Kein neuer Produktumfang. Kein neues Design.
+
+### Checks
+
+- [x] TypeScript-Check (`vue-tsc --noEmit`): ✅ keine Fehler
+- [x] Vite-Build (`npm run build`): ✅ built in 4.17s
+- [x] `pytest` (373 passed, 0 failed): ✅
+- [x] `git diff --check`: ✅ keine Whitespace-Fehler
+- [x] Nur eine Datei geändert: `frontend/src/views/DriverDashboardView.vue`
+
+### Online-Abnahme (2026-07-22)
+
+- Fahrer nimmt spontane Fahrt an → "Spontane Fahrten"-Sektion erscheint oben im Dashboard
+- Button "Ich bin unterwegs" sofort sichtbar ohne Scrollen ✅
+- Vollständiger Statusfluss durchlaufen: Fahrer unterwegs → Fahrer angekommen → Fahrgast aufgenommen → Fahrt gestartet → Fahrt abgeschlossen ✅
+- Auto-Rematch (12K) weiterhin funktionsfähig ✅
+- Fahrgast-Flow weiterhin funktionsfähig ✅
+- Fahrer-Storno / Fahrgast-Storno weiterhin funktionsfähig ✅
