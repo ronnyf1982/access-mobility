@@ -97,6 +97,15 @@ export async function declineSpontaneousRideRequest(
   return data
 }
 
+export async function cancelSpontaneousRideRequest(
+  requestId: string,
+): Promise<{ status: string }> {
+  const { data } = await apiClient.post<{ status: string }>(
+    `/driver/spontaneous-ride-requests/${requestId}/cancel`,
+  )
+  return data
+}
+
 export async function updateDriverLocation(payload: DriverLocationUpdate): Promise<void> {
   await apiClient.post('/driver/location', payload)
 }

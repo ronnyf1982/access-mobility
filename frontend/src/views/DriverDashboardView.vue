@@ -10,6 +10,15 @@
       </button>
     </div>
 
+    <!-- ── Fahrgast-Storno-Hinweis ────────────────────────────────────────── -->
+    <div v-if="passengerCancelledMsg" class="driver-info-msg" role="status">
+      <i class="pi pi-info-circle" aria-hidden="true"></i>
+      {{ passengerCancelledMsg }}
+      <button class="error-dismiss" aria-label="Schließen" @click="passengerCancelledMsg = null">
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </div>
+
     <!-- ── Laden ─────────────────────────────────────────────────────────── -->
     <div v-if="loading" class="driver-loading" aria-live="polite">
       <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
@@ -468,10 +477,26 @@
                   </div>
                 </div>
 
+                <!-- Fahrer-Storno (nur spontane Fahrten vor Fahrgastaufnahme) -->
+                <div v-if="req.is_spontaneous && canDriverCancelRide(req.id)" class="ride-cancel-section">
+                  <button
+                    class="ride-status-btn ride-status-btn--cancel"
+                    :disabled="statusActionLoading[req.id] || !!rideCancelLoading[req.id]"
+                    @click="rideCancelConfirmId = req.id"
+                  >
+                    <i class="pi pi-times-circle" aria-hidden="true"></i>
+                    Fahrt stornieren
+                  </button>
+                </div>
+
                 <!-- Fehler -->
                 <div v-if="statusError[req.id]" class="ride-status-error" role="alert">
                   <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
                   {{ statusError[req.id] }}
+                </div>
+                <div v-if="rideCancelError[req.id]" class="ride-status-error" role="alert">
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                  {{ rideCancelError[req.id] }}
                 </div>
               </template>
             </div>
@@ -494,6 +519,31 @@
       :request-id="emergencyModeRequestId"
       @close="emergencyModeRequestId = null"
     />
+
+    <!-- ── Bestätigungs-Dialog: Fahrt stornieren ─────────────────────────── -->
+    <div v-if="rideCancelConfirmId" class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="ride-cancel-title">
+      <div class="confirm-panel">
+        <h2 id="ride-cancel-title" class="confirm-title">Fahrt wirklich stornieren?</h2>
+        <p class="confirm-body">Das System versucht automatisch, einen Ersatzfahrer für den Fahrgast zu finden.</p>
+        <div class="confirm-btns">
+          <button
+            class="driver-btn driver-btn--ghost"
+            :disabled="!!rideCancelLoading[rideCancelConfirmId]"
+            @click="rideCancelConfirmId = null"
+          >
+            Abbrechen
+          </button>
+          <button
+            class="driver-btn driver-btn--danger"
+            :disabled="!!rideCancelLoading[rideCancelConfirmId]"
+            @click="confirmRideCancel"
+          >
+            <i v-if="rideCancelLoading[rideCancelConfirmId]" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+            Fahrt stornieren
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- ── Bestätigungs-Dialog: Schicht beenden ──────────────────────────── -->
     <div v-if="confirmEndShift" class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
@@ -521,6 +571,7 @@ import {
   getDriverContext, startShift, endShift, pauseShift, resumeShift, searchVehicles,
   getDriverAssignments, createRideStatusEvent, getRideStatusEvents,
   getSpontaneousRideRequests, acceptSpontaneousRideRequest, declineSpontaneousRideRequest,
+  cancelSpontaneousRideRequest,
   updateDriverLocation,
 } from '@/api/driver'
 import type {
@@ -557,6 +608,17 @@ const spontaneousError = ref<Record<string, string | null>>({})
 
 const SPONTANEOUS_POLL_INTERVAL_MS = 10_000
 let spontaneousPollingInterval: ReturnType<typeof setInterval> | null = null
+
+// ── Fahrer-Storno ──────────────────────────────────────────────────────────────
+
+const rideCancelConfirmId = ref<string | null>(null)
+const rideCancelLoading = ref<Record<string, boolean>>({})
+const rideCancelError = ref<Record<string, string | null>>({})
+
+// ── Fahrgast-Storno-Erkennung ──────────────────────────────────────────────────
+
+const passengerCancelledMsg = ref<string | null>(null)
+const driverCompletedIds = ref<Set<string>>(new Set())
 
 // ── Notfallakte (Sprint 12E) ──────────────────────────────────────────────────
 
@@ -678,6 +740,7 @@ async function setStatus(requestId: string, eventStatus: RideStatusEventType) {
     if (!statusEventsMap.value[requestId]) statusEventsMap.value[requestId] = []
     statusEventsMap.value[requestId].push(event)
     if (eventStatus === 'ride_completed' || eventStatus === 'ride_cancelled') {
+      driverCompletedIds.value.add(requestId)
       await loadAssignments()
       await loadSpontaneousRequests()
     }
@@ -748,9 +811,21 @@ const statusIconPi = computed(() => {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 
+async function pollAll(): Promise<void> {
+  const prevIds = new Set(assignments.value.filter(r => r.is_spontaneous).map(r => r.id))
+  await Promise.all([loadSpontaneousRequests(), loadAssignments()])
+  const nowIds = new Set(assignments.value.filter(r => r.is_spontaneous).map(r => r.id))
+  for (const id of prevIds) {
+    if (!nowIds.has(id) && !driverCompletedIds.value.has(id)) {
+      passengerCancelledMsg.value = 'Die Fahrt wurde vom Fahrgast storniert. Sie sind wieder für neue Anfragen verfügbar.'
+      break
+    }
+  }
+}
+
 onMounted(async () => {
   await Promise.all([loadContext(), loadAssignments(), loadSpontaneousRequests()])
-  spontaneousPollingInterval = setInterval(loadSpontaneousRequests, SPONTANEOUS_POLL_INTERVAL_MS)
+  spontaneousPollingInterval = setInterval(pollAll, SPONTANEOUS_POLL_INTERVAL_MS)
 })
 
 onUnmounted(() => {
@@ -821,6 +896,31 @@ async function declineRequest(requestId: string) {
     spontaneousError.value[requestId] = extractError(err)
   } finally {
     spontaneousActionLoading.value[requestId] = false
+  }
+}
+
+function canDriverCancelRide(requestId: string): boolean {
+  const events = statusEventsMap.value[requestId]
+  if (!events || events.length === 0) return true
+  const blocking = new Set<string>(['passenger_picked_up', 'ride_started', 'ride_completed'])
+  return !events.some(e => blocking.has(e.status))
+}
+
+async function confirmRideCancel(): Promise<void> {
+  const requestId = rideCancelConfirmId.value
+  if (!requestId) return
+  rideCancelLoading.value[requestId] = true
+  rideCancelError.value[requestId] = null
+  try {
+    await cancelSpontaneousRideRequest(requestId)
+    driverCompletedIds.value.add(requestId)
+    rideCancelConfirmId.value = null
+    await Promise.all([loadAssignments(), loadSpontaneousRequests()])
+  } catch (err: unknown) {
+    rideCancelError.value[requestId] = extractError(err)
+    rideCancelConfirmId.value = null
+  } finally {
+    rideCancelLoading.value[requestId] = false
   }
 }
 
@@ -1421,6 +1521,7 @@ function extractError(err: unknown): string {
 
 /* ─── Notfall-Buttons (Sprint 12E) ───────────────────────────────────── */
 .emergency-btns {
+  grid-column: 1 / -1;
   display: flex;
   gap: var(--am-space-s);
   padding: var(--am-space-s) 0;
@@ -1448,6 +1549,35 @@ function extractError(err: unknown): string {
 .driver-btn--emergency:hover:not(:disabled) {
   background: var(--am-danger, #dc2626);
   color: #fff;
+}
+
+/* ─── Fahrgast-Storno-Hinweis ────────────────────────────────────────── */
+.driver-info-msg {
+  display: flex;
+  align-items: center;
+  gap: var(--am-space-s);
+  background: rgba(99,102,241,0.08);
+  color: var(--am-accent);
+  border: 1px solid var(--am-accent);
+  border-radius: var(--am-radius-s);
+  padding: var(--am-space-m);
+  font-size: 0.9rem;
+}
+
+/* ─── Fahrer-Storno ──────────────────────────────────────────────────── */
+.ride-cancel-section {
+  margin-top: 2px;
+}
+
+.ride-status-btn--cancel {
+  border-color: var(--am-warning, #f59e0b);
+  color: var(--am-warning, #d97706);
+  background: rgba(245,158,11,0.08);
+}
+
+.ride-status-btn--cancel:hover:not(:disabled) {
+  background: rgba(245,158,11,0.18);
+  border-color: var(--am-warning, #d97706);
 }
 
 /* ─── Bestätigungs-Dialog ────────────────────────────────────────────── */

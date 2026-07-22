@@ -9,6 +9,7 @@ from app.crud import crud_driver_shift, crud_passenger_contact
 from app.services import spontaneous_matching as _sm
 from app.models.driver_shift import DriverShift, ShiftStatus
 from app.models.mobility_profile import MobilityProfile
+from app.models.ride_status_event import RideStatusEvent, RideStatusEventType
 from app.models.passenger_contact import PassengerContact
 from app.models.transport_request import TransportRequest, TransportRequestStatus
 from app.models.user import User, UserRole
@@ -366,6 +367,64 @@ def decline_spontaneous_ride_request(
     db.commit()
     db.refresh(req)
     return _build_spontaneous_request_item(req, db)
+
+
+@router.post(
+    "/spontaneous-ride-requests/{request_id}/cancel",
+    status_code=status.HTTP_200_OK,
+)
+def cancel_spontaneous_ride_by_driver(
+    request_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Fahrer storniert eine angenommene spontane Fahrt vor Fahrgastaufnahme.
+
+    Vor passenger_picked_up: wie Ablehnung → Auto-Rematch wird ausgelöst.
+    Nach passenger_picked_up/ride_started/ride_completed: blockiert (409).
+    """
+    _require_driver(current_user)
+    profile = _get_driver_profile_or_404(db, current_user.id)
+    req = db.get(TransportRequest, request_id)
+    if not req or not req.is_spontaneous:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Spontane Fahrtanfrage nicht gefunden.",
+        )
+    if req.assigned_driver_profile_id != profile.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Diese Anfrage gehört nicht zu Ihrem Profil.",
+        )
+    if req.status != TransportRequestStatus.assigned:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nur zugewiesene Fahrten können storniert werden.",
+        )
+
+    blocking = (
+        db.query(RideStatusEvent.id)
+        .filter(
+            RideStatusEvent.transport_request_id == request_id,
+            RideStatusEvent.status.in_([
+                RideStatusEventType.passenger_picked_up,
+                RideStatusEventType.ride_started,
+                RideStatusEventType.ride_completed,
+            ]),
+        )
+        .first()
+    )
+    if blocking:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Fahrt kann nach Fahrgastaufnahme nicht mehr vom Fahrer storniert werden.",
+        )
+
+    # Vor Fahrgastaufnahme: wie Ablehnung behandeln → Auto-Rematch
+    _sm.do_rematch(db, req)
+    db.commit()
+    db.refresh(req)
+    return {"status": req.status.value}
 
 
 # ── Fahrerstandort aktualisieren (Sprint 12D) ─────────────────────────────────

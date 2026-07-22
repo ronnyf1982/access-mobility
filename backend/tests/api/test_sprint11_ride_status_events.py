@@ -11,9 +11,18 @@ from app.models.vehicle import Vehicle
 
 
 def _get_assigned_request(db: Session) -> TransportRequest | None:
+    driver_user = db.query(User).filter(User.email == "driver@access.test").first()
+    if not driver_user:
+        return None
+    profile = db.query(DriverProfile).filter(DriverProfile.user_id == driver_user.id).first()
+    if not profile:
+        return None
     return (
         db.query(TransportRequest)
-        .filter(TransportRequest.status == TransportRequestStatus.assigned)
+        .filter(
+            TransportRequest.status == TransportRequestStatus.assigned,
+            TransportRequest.assigned_driver_profile_id == profile.id,
+        )
         .first()
     )
 
