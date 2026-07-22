@@ -535,11 +535,13 @@ onUnmounted(() => stopTracking())
 // ── Tracking-Anzeige ──────────────────────────────────────────────────────────
 
 const trackingStatusLabel = computed<string>(() => {
+  if (rematchMessage.value) return 'Wir suchen ein anderes Fahrzeug …'
   if (!trackingData.value) return 'Verbindung wird aufgebaut …'
   return trackingData.value.ride_status_label
 })
 
 const trackingStatusClass = computed<string>(() => {
+  if (rematchMessage.value) return 'sr-view__tracking-status--waiting'
   const s = trackingData.value?.status
   if (s === 'assigned') return 'sr-view__tracking-status--active'
   if (s === 'driver_declined' || s === 'cancelled') return 'sr-view__tracking-status--error'
@@ -548,6 +550,7 @@ const trackingStatusClass = computed<string>(() => {
 })
 
 const trackingStatusIcon = computed<string>(() => {
+  if (rematchMessage.value) return 'pi-spin pi-spinner'
   const s = trackingData.value?.status
   if (s === 'assigned') return 'pi-car'
   if (s === 'driver_declined' || s === 'cancelled') return 'pi-times-circle'
