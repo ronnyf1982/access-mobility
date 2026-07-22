@@ -143,63 +143,46 @@
         <span>Bitte Zieladresse eingeben.</span>
       </div>
 
-      <!-- Karte -->
+      <!-- Karte: bestes verfügbares Fahrzeug -->
       <SpontaneousRideMap
-        v-if="pickupLat !== null && pickupLon !== null"
+        v-if="pickupLat !== null && pickupLon !== null && matches.length > 0"
         :pickup-lat="pickupLat"
         :pickup-lon="pickupLon"
-        :matches="matches"
+        :matches="matches.slice(0, 1)"
         class="sr-view__map"
       />
-      <p class="sr-view__map-note">
-        Karte zeigt verfügbare Fahrzeuge (Demo-Positionen, kein Echtzeit-GPS).
+      <p v-if="matches.length > 0" class="sr-view__map-note">
+        Karte zeigt den Standort des nächsten verfügbaren Fahrzeugs.
       </p>
 
-      <!-- Keine Ergebnisse -->
+      <!-- Kein passendes Fahrzeug -->
       <div v-if="matches.length === 0" class="sr-view__empty" role="status">
         <span class="pi pi-inbox" aria-hidden="true"></span>
         <p>Derzeit sind keine passenden Fahrzeuge verfügbar. Bitte später erneut versuchen.</p>
       </div>
 
-      <!-- Ergebnisliste -->
-      <ul v-else class="sr-view__list" aria-label="Verfügbare Fahrzeuge">
-        <li v-for="m in matches" :key="m.vehicle_id" class="sr-view__list-item">
-          <div class="sr-list-item">
-            <div class="sr-list-item__header">
-              <span class="sr-list-item__icon pi pi-car" aria-hidden="true"></span>
-              <strong class="sr-list-item__name">{{ m.vehicle_label }}</strong>
-              <span class="sr-list-item__type">{{ vehicleTypeLabel(m.vehicle_type) }}</span>
-            </div>
-            <dl class="sr-list-item__details">
-              <div class="sr-list-item__detail-row">
-                <dt>Entfernung</dt>
-                <dd>ca. {{ m.distance_km.toFixed(1) }} km</dd>
-              </div>
-              <div class="sr-list-item__detail-row">
-                <dt>Geschätzte Ankunft</dt>
-                <dd>ca. {{ m.estimated_arrival_minutes }} Min.</dd>
-              </div>
-              <div v-if="m.matched_capabilities.length" class="sr-list-item__detail-row">
-                <dt>Passende Ausstattung</dt>
-                <dd>{{ m.matched_capabilities.join(' · ') }}</dd>
-              </div>
-              <div class="sr-list-item__detail-row">
-                <dt>Fahrer</dt>
-                <dd>{{ m.driver_display_name }}</dd>
-              </div>
-            </dl>
-            <button
-              class="sr-view__btn sr-view__btn--primary"
-              :disabled="!!bookingLoading[m.vehicle_id] || !pickupAddress.trim() || !destinationAddress.trim() || geocodingStatus === 'loading'"
-              @click="bookRide(m)"
-            >
-              <span v-if="bookingLoading[m.vehicle_id]" class="pi pi-spin pi-spinner" aria-hidden="true"></span>
-              <span v-else class="pi pi-send" aria-hidden="true"></span>
-              Fahrzeug anfragen
-            </button>
+      <!-- Bestes Fahrzeug gefunden → Buchungs-Card -->
+      <div v-else class="sr-view__best-match">
+        <div class="sr-view__best-match-info">
+          <span class="pi pi-check-circle sr-view__best-match-icon" aria-hidden="true"></span>
+          <div>
+            <strong>Passendes barrierefreies Fahrzeug gefunden</strong>
+            <p v-if="matches[0]?.estimated_arrival_minutes != null" class="sr-view__best-match-eta">
+              Geschätzte Ankunft: ca. {{ matches[0].estimated_arrival_minutes }} Minuten
+            </p>
           </div>
-        </li>
-      </ul>
+        </div>
+        <button
+          class="sr-view__btn sr-view__btn--primary sr-view__btn--book"
+          :disabled="bookingLoading || !pickupAddress.trim() || !destinationAddress.trim() || geocodingStatus === 'loading'"
+          aria-label="Fahrt jetzt buchen"
+          @click="bookBestMatch"
+        >
+          <span v-if="bookingLoading" class="pi pi-spin pi-spinner" aria-hidden="true"></span>
+          <span v-else class="pi pi-send" aria-hidden="true"></span>
+          Fahrt buchen
+        </button>
+      </div>
 
       <!-- Suchergebnis-Fehler / Buchungsfehler -->
       <div v-if="searchError || bookingError" class="sr-view__error" role="alert">
@@ -255,7 +238,7 @@
       <!-- Fahrer abgelehnt, kein weiterer Rematch möglich -->
       <div v-if="trackingData?.status === 'driver_declined' && !trackingData?.next_request_id" class="sr-view__error" role="alert">
         <span class="pi pi-times-circle" aria-hidden="true"></span>
-        <span>Leider kein Fahrzeug verfügbar. Bitte versuchen Sie es später erneut.</span>
+        <span>Der Fahrer konnte die Anfrage nicht übernehmen. Leider ist aktuell kein weiteres Fahrzeug verfügbar.</span>
       </div>
 
       <!-- Tracking-Detailkarte (Text) -->
@@ -364,7 +347,7 @@ const pickupAddress = ref('')
 const matches = ref<SpontaneousRideMatchResult[]>([])
 const geoErrorMessage = ref('')
 const searchError = ref('')
-const bookingLoading = ref<Record<string, boolean>>({})
+const bookingLoading = ref<boolean>(false)
 const bookingError = ref<string | null>(null)
 const bookingResult = ref<SpontaneousRideBookResponse | null>(null)
 const activeRequestId = ref<string | null>(null)
@@ -508,6 +491,11 @@ async function pollTracking(): Promise<void> {
       return
     }
 
+    // Sprint 12K: Rematch abgeschlossen — Banner löschen wenn Ergebnis feststeht
+    if (rematchMessage.value && data.status !== 'spontaneous_requested') {
+      rematchMessage.value = null
+    }
+
     if (TERMINAL_STATUSES.has(data.status)) {
       stopTracking()
     }
@@ -537,6 +525,9 @@ onUnmounted(() => stopTracking())
 const trackingStatusLabel = computed<string>(() => {
   if (rematchMessage.value) return 'Wir suchen ein anderes Fahrzeug …'
   if (!trackingData.value) return 'Verbindung wird aufgebaut …'
+  if (trackingData.value.status === 'driver_declined' && !trackingData.value.next_request_id) {
+    return 'Kein Fahrzeug verfügbar'
+  }
   return trackingData.value.ride_status_label
 })
 
@@ -590,7 +581,7 @@ function reset(): void {
   matches.value = []
   geoErrorMessage.value = ''
   searchError.value = ''
-  bookingLoading.value = {}
+  bookingLoading.value = false
   bookingError.value = null
   bookingResult.value = null
   activeRequestId.value = null
@@ -617,9 +608,10 @@ async function cancelRide(): Promise<void> {
   }
 }
 
-async function bookRide(match: SpontaneousRideMatchResult): Promise<void> {
-  if (!pickupLat.value || !pickupLon.value) return
-  bookingLoading.value[match.vehicle_id] = true
+async function bookBestMatch(): Promise<void> {
+  const match = matches.value[0]
+  if (!match || !pickupLat.value || !pickupLon.value) return
+  bookingLoading.value = true
   bookingError.value = null
   try {
     const result = await bookSpontaneousRide({
@@ -635,9 +627,15 @@ async function bookRide(match: SpontaneousRideMatchResult): Promise<void> {
     phase.value = 'booked'
   } catch (err: unknown) {
     const e = err as { response?: { data?: { detail?: string } } }
-    bookingError.value = e?.response?.data?.detail ?? 'Buchung fehlgeschlagen. Bitte erneut versuchen.'
+    const httpStatus = (err as { response?: { status?: number } })?.response?.status
+    if (httpStatus === 409 || httpStatus === 404) {
+      bookingError.value = 'Das Fahrzeug ist gerade nicht mehr verfügbar. Wir suchen erneut …'
+      await searchMatches(pickupLat.value, pickupLon.value)
+    } else {
+      bookingError.value = e?.response?.data?.detail ?? 'Buchung fehlgeschlagen. Bitte erneut versuchen.'
+    }
   } finally {
-    bookingLoading.value[match.vehicle_id] = false
+    bookingLoading.value = false
   }
 }
 
@@ -1121,5 +1119,42 @@ function requestLocation(): void {
   color: #93c5fd;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.sr-view__best-match {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  padding: 1.25rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sr-view__best-match-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.sr-view__best-match-icon {
+  color: #86efac;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.sr-view__best-match-eta {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: #b8b8b8;
+}
+
+.sr-view__btn--book {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  font-size: 1.05rem;
 }
 </style>
