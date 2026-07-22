@@ -210,104 +210,8 @@
 
       <!-- ══ AUFTRAGSBEREICH ═══════════════════════════════════════════════ -->
 
-      <!-- Spontane Fahrtanfragen (ausstehend) -->
-      <section class="assignments-section" aria-labelledby="spontan-req-heading">
-        <div class="section-title-row">
-          <h2 id="spontan-req-heading" class="section-heading">
-            <i class="pi pi-bell" aria-hidden="true"></i>
-            Spontane Fahrtanfragen
-          </h2>
-          <div class="section-title-actions">
-            <span class="section-auto-refresh-label">
-              <i class="pi pi-clock" aria-hidden="true"></i>
-              Aktualisiert automatisch
-            </span>
-            <button class="driver-btn-link driver-btn-link--sm" :disabled="spontaneousLoading" @click="loadSpontaneousRequests">
-              <i class="pi pi-refresh" aria-hidden="true"></i>
-              Aktualisieren
-            </button>
-          </div>
-        </div>
-
-        <div v-if="hasActiveSpontaneousRide" class="active-ride-hint" role="status">
-          <i class="pi pi-car" aria-hidden="true"></i>
-          Sie haben aktuell eine aktive Fahrt. Neue Anfragen erscheinen nach Abschluss wieder.
-        </div>
-        <div v-else-if="spontaneousLoading" class="section-loading" aria-live="polite">
-          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Lädt…
-        </div>
-        <div v-else-if="spontaneousRequests.length === 0" class="section-placeholder">
-          <i class="pi pi-inbox" aria-hidden="true"></i>
-          Keine offenen Fahrtanfragen.
-        </div>
-        <div v-else class="assignment-list" role="list">
-          <div
-            v-for="req in spontaneousRequests"
-            :key="req.id"
-            class="assignment-card spontan-req-card"
-            role="listitem"
-          >
-            <div v-if="req.passenger_display_name" class="assignment-passenger">
-              <i class="pi pi-user" aria-hidden="true"></i>
-              {{ req.passenger_display_name }}
-            </div>
-            <div class="assignment-route">
-              <div class="assignment-address">
-                <i class="pi pi-map-marker" aria-hidden="true"></i>
-                <span v-if="req.pickup_address">{{ req.pickup_address }}</span>
-                <span v-else-if="req.pickup_latitude != null" class="pickup-coords">
-                  Aktueller Standort des Fahrgasts
-                  <small>{{ req.pickup_latitude.toFixed(4) }}, {{ req.pickup_longitude.toFixed(4) }}</small>
-                </span>
-                <span v-else>Abholort nicht angegeben</span>
-              </div>
-              <div class="assignment-arrow" aria-hidden="true">↓</div>
-              <div class="assignment-address">
-                <i class="pi pi-flag" aria-hidden="true"></i>
-                {{ req.destination_address ?? 'Zieladresse nicht angegeben' }}
-              </div>
-            </div>
-            <div class="spontan-req-actions">
-              <button
-                class="driver-btn driver-btn--success"
-                :disabled="spontaneousActionLoading[req.id]"
-                @click="acceptRequest(req.id)"
-              >
-                <i v-if="spontaneousActionLoading[req.id]" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-                <i v-else class="pi pi-check" aria-hidden="true"></i>
-                Annehmen
-              </button>
-              <button
-                class="driver-btn driver-btn--ghost"
-                :disabled="spontaneousActionLoading[req.id]"
-                @click="declineRequest(req.id)"
-              >
-                <i class="pi pi-times" aria-hidden="true"></i>
-                Ablehnen
-              </button>
-            </div>
-            <div v-if="spontaneousError[req.id]" class="ride-status-error" role="alert">
-              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-              {{ spontaneousError[req.id] }}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Linienfahrten -->
-      <section class="assignments-section" aria-labelledby="line-heading">
-        <h2 id="line-heading" class="section-heading">
-          <i class="pi pi-map" aria-hidden="true"></i>
-          Linienfahrten
-        </h2>
-        <div class="section-placeholder">
-          <i class="pi pi-info-circle" aria-hidden="true"></i>
-          Regelmäßige Touren und optimierte Fahrgastlisten werden in einem späteren Sprint ergänzt.
-        </div>
-      </section>
-
-      <!-- Spontane Fahrten -->
-      <section class="assignments-section" aria-labelledby="spontan-heading">
+      <!-- Spontane Fahrten (aktive Zuweisung — zuerst, damit Statusbuttons im Viewport sichtbar bleiben) -->
+      <section v-if="assignmentsLoading || assignments.length > 0" class="assignments-section" aria-labelledby="spontan-heading">
         <div class="section-title-row">
           <h2 id="spontan-heading" class="section-heading">
             <i class="pi pi-car" aria-hidden="true"></i>
@@ -501,6 +405,102 @@
               </template>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Spontane Fahrtanfragen (ausstehend) -->
+      <section class="assignments-section" aria-labelledby="spontan-req-heading">
+        <div class="section-title-row">
+          <h2 id="spontan-req-heading" class="section-heading">
+            <i class="pi pi-bell" aria-hidden="true"></i>
+            Spontane Fahrtanfragen
+          </h2>
+          <div class="section-title-actions">
+            <span class="section-auto-refresh-label">
+              <i class="pi pi-clock" aria-hidden="true"></i>
+              Aktualisiert automatisch
+            </span>
+            <button class="driver-btn-link driver-btn-link--sm" :disabled="spontaneousLoading" @click="loadSpontaneousRequests">
+              <i class="pi pi-refresh" aria-hidden="true"></i>
+              Aktualisieren
+            </button>
+          </div>
+        </div>
+
+        <div v-if="hasActiveSpontaneousRide" class="active-ride-hint" role="status">
+          <i class="pi pi-car" aria-hidden="true"></i>
+          Sie haben aktuell eine aktive Fahrt. Neue Anfragen erscheinen nach Abschluss wieder.
+        </div>
+        <div v-else-if="spontaneousLoading" class="section-loading" aria-live="polite">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Lädt…
+        </div>
+        <div v-else-if="spontaneousRequests.length === 0" class="section-placeholder">
+          <i class="pi pi-inbox" aria-hidden="true"></i>
+          Keine offenen Fahrtanfragen.
+        </div>
+        <div v-else class="assignment-list" role="list">
+          <div
+            v-for="req in spontaneousRequests"
+            :key="req.id"
+            class="assignment-card spontan-req-card"
+            role="listitem"
+          >
+            <div v-if="req.passenger_display_name" class="assignment-passenger">
+              <i class="pi pi-user" aria-hidden="true"></i>
+              {{ req.passenger_display_name }}
+            </div>
+            <div class="assignment-route">
+              <div class="assignment-address">
+                <i class="pi pi-map-marker" aria-hidden="true"></i>
+                <span v-if="req.pickup_address">{{ req.pickup_address }}</span>
+                <span v-else-if="req.pickup_latitude != null" class="pickup-coords">
+                  Aktueller Standort des Fahrgasts
+                  <small>{{ req.pickup_latitude.toFixed(4) }}, {{ req.pickup_longitude.toFixed(4) }}</small>
+                </span>
+                <span v-else>Abholort nicht angegeben</span>
+              </div>
+              <div class="assignment-arrow" aria-hidden="true">↓</div>
+              <div class="assignment-address">
+                <i class="pi pi-flag" aria-hidden="true"></i>
+                {{ req.destination_address ?? 'Zieladresse nicht angegeben' }}
+              </div>
+            </div>
+            <div class="spontan-req-actions">
+              <button
+                class="driver-btn driver-btn--success"
+                :disabled="spontaneousActionLoading[req.id]"
+                @click="acceptRequest(req.id)"
+              >
+                <i v-if="spontaneousActionLoading[req.id]" class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                <i v-else class="pi pi-check" aria-hidden="true"></i>
+                Annehmen
+              </button>
+              <button
+                class="driver-btn driver-btn--ghost"
+                :disabled="spontaneousActionLoading[req.id]"
+                @click="declineRequest(req.id)"
+              >
+                <i class="pi pi-times" aria-hidden="true"></i>
+                Ablehnen
+              </button>
+            </div>
+            <div v-if="spontaneousError[req.id]" class="ride-status-error" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              {{ spontaneousError[req.id] }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Linienfahrten -->
+      <section class="assignments-section" aria-labelledby="line-heading">
+        <h2 id="line-heading" class="section-heading">
+          <i class="pi pi-map" aria-hidden="true"></i>
+          Linienfahrten
+        </h2>
+        <div class="section-placeholder">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          Regelmäßige Touren und optimierte Fahrgastlisten werden in einem späteren Sprint ergänzt.
         </div>
       </section>
 
